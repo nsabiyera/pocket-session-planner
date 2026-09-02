@@ -1,0 +1,12 @@
+# Docs are hand-formatted (tables, diagrams) — don't let Prettier reflow them.
+*.md
+docs/**
+
+# Generated / vendored
+.next/
+out/
+node_modules/
+coverage/
+public/sw.js
+public/sw.js.map
+package-lock.json

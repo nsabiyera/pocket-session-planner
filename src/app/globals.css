@@ -1,0 +1,1221 @@
+/*
+ * Design tokens, built for DIRECT SUNLIGHT first.
+ *
+ * Body text clears AAA (7:1), not merely AA, because glare eats perceived contrast and a
+ * coach reads this at arm's length on a bright pitch. Shadows are near-useless outdoors, so
+ * surfaces separate by fill and border weight rather than by elevation.
+ *
+ * Contrast ratios in the comments are against --canvas unless stated otherwise.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --ink: #0c1116; /* 17.5:1  text, numerals              */
+  --ink-soft: #333c45; /* 10.4:1  secondary                   */
+  --muted: #5b6670; /*  5.3:1  labels only, never critical */
+
+  --canvas: #f6f7f4; /* slightly warm, to cut glare bloom   */
+  --card: #ffffff;
+  --sunk: #eceee8;
+  --line: #d5dad3;
+  --line-strong: #aab2a8; /* 3.1:1 vs card — WCAG 1.4.11 controls */
+
+  --signal: #0b6b33; /* 6.7:1  primary CTA, running          */
+  --accent: #4338ca; /* 7.8:1  focus players, observations   */
+  --warn: #b45309; /* 5.1:1  last minute, paused           */
+  --stop: #b3261e; /* 6.6:1  end session, destructive      */
+  --on-fill: #ffffff;
+
+  --signal-wash: #e3f0e8;
+  --accent-wash: #e8e7fb;
+  --warn-wash: #fbeedd;
+  --stop-wash: #fbe6e4;
+
+  /*
+   * The display face is currently the system stack. A webfont here MUST be self-hosted —
+   * a Google Fonts <link> fails in airplane mode, which is the one condition this app is
+   * built for. See src/app/fonts/README.md to add one.
+   */
+  --font-display:
+    ui-rounded, 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --fs-timer: clamp(4.5rem, 22vw, 8rem);
+  --fs-xl: 2rem;
+  --fs-lg: 1.5rem;
+  --fs-md: 1.125rem;
+  --fs-sm: 1rem; /* hard floor for anything read outdoors */
+  --fs-xs: 0.8125rem; /* uppercase eyebrows ONLY               */
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  /* Touch — gloves and rain, well above the 44px minimum */
+  --tap: 56px; /* default interactive height          */
+  --tap-lg: 72px; /* Do-mode chips, sheet tokens         */
+  --tap-xl: 96px; /* Pause / Next, home hero             */
+  --tap-gap: 12px; /* minimum gap between adjacent targets */
+
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --maxw: 640px;
+
+  --border: 1px solid var(--line);
+  --border-strong: 2px solid var(--line-strong);
+}
+
+/*
+ * Dark mode is for floodlit evening sessions, not for taste. Both the explicit toggle and
+ * the system preference are handled, and the media query is guarded so an explicit "light"
+ * choice wins over a dark system setting.
+ */
+:root[data-theme='dark'] {
+  --ink: #f2f5f3;
+  --ink-soft: #c3ccc6;
+  --muted: #93a09a;
+
+  --canvas: #0b0f12;
+  --card: #151b20;
+  --sunk: #1e262c;
+  --line: #2b353c;
+  --line-strong: #4d5a62;
+
+  --signal: #34d07a;
+  --accent: #a5a1ff;
+  --warn: #f0a63c;
+  --stop: #ff6b60;
+  --on-fill: #06120a;
+
+  --signal-wash: #12301f;
+  --accent-wash: #241f4a;
+  --warn-wash: #33240f;
+  --stop-wash: #3a1512;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ink: #f2f5f3;
+    --ink-soft: #c3ccc6;
+    --muted: #93a09a;
+
+    --canvas: #0b0f12;
+    --card: #151b20;
+    --sunk: #1e262c;
+    --line: #2b353c;
+    --line-strong: #4d5a62;
+
+    --signal: #34d07a;
+    --accent: #a5a1ff;
+    --warn: #f0a63c;
+    --stop: #ff6b60;
+    --on-fill: #06120a;
+
+    --signal-wash: #12301f;
+    --accent-wash: #241f4a;
+    --warn-wash: #33240f;
+    --stop-wash: #3a1512;
+  }
+}
+
+/* Promotes every muted label to full secondary weight, thickens borders, kills shadows. */
+:root[data-contrast='high'],
+:root[data-contrast='high'] * {
+  --muted: var(--ink-soft);
+}
+
+:root[data-contrast='high'] {
+  --line: var(--line-strong);
+  --border: 2px solid var(--line-strong);
+}
+
+@media (prefers-contrast: more) {
+  :root:not([data-contrast='normal']) {
+    --muted: var(--ink-soft);
+    --line: var(--line-strong);
+    --border: 2px solid var(--line-strong);
+  }
+}
+
+/* ------------------------------------------------------------------ base */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* No pull-to-refresh nuking Do mode when a wet thumb drags the top of the screen. */
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  line-height: 1.15;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: var(--fs-xl);
+}
+h2 {
+  font-size: var(--fs-lg);
+}
+h3 {
+  font-size: var(--fs-md);
+}
+
+p {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/*
+ * Every interactive element clears the glove-and-rain floor, and `touch-action:
+ * manipulation` kills the 300ms double-tap delay that makes a native app feel instant and a
+ * web app feel like a web app.
+ */
+button,
+[role='button'],
+a.btn,
+label.tap,
+summary {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --------------------------------------------------------------- layout */
+
+.screen {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: calc(var(--safe-t) + var(--sp-4)) var(--sp-4) var(--sp-4);
+  /* Room for the pinned bottom nav, plus the home indicator on a notched phone. */
+  padding-bottom: calc(var(--tap) + var(--sp-7) + var(--safe-b));
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.screen--mode {
+  /* Do mode is a mode, not a page: no bottom nav, so no room reserved for it. */
+  padding-bottom: calc(var(--sp-4) + var(--safe-b));
+  min-height: 100dvh;
+  gap: var(--sp-3);
+}
+
+.screen-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.eyebrow {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.stack--tight {
+  gap: var(--sp-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--tap-gap);
+}
+
+.row--between {
+  justify-content: space-between;
+}
+
+.row--wrap {
+  flex-wrap: wrap;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ---------------------------------------------------------------- cards */
+
+.card {
+  background: var(--card);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.card--sunk {
+  background: var(--sunk);
+  border-color: transparent;
+}
+
+.card--link {
+  text-align: left;
+  width: 100%;
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.card-meta {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+/* -------------------------------------------------------------- buttons */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-5);
+  min-height: var(--tap);
+  border-radius: var(--radius);
+  border: var(--border-strong);
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--on-fill);
+}
+
+.btn--accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-fill);
+}
+
+.btn--danger {
+  background: var(--card);
+  border-color: var(--stop);
+  color: var(--stop);
+}
+
+.btn--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn--xl {
+  min-height: var(--tap-xl);
+  font-size: var(--fs-lg);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-display);
+}
+
+.btn--lg {
+  min-height: var(--tap-lg);
+  font-size: var(--fs-md);
+}
+
+.btn-sub {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* ---------------------------------------------------------------- chips */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  border-radius: var(--radius-pill);
+  border: var(--border-strong);
+  background: var(--card);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+
+.chip[aria-pressed='true'],
+.chip--on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-fill);
+}
+
+.chip--lg {
+  min-height: var(--tap-lg);
+  font-size: var(--fs-md);
+}
+
+/* Dimmed to 55% when a focus player has no observations in this phase — so the coach can
+   see at a glance who they are neglecting, which is the entire reason focus players exist. */
+.chip--neglected {
+  opacity: 0.55;
+}
+
+.chip-count {
+  font-size: var(--fs-xs);
+  background: var(--sunk);
+  color: var(--ink-soft);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--sp-2);
+  min-width: 22px;
+  text-align: center;
+}
+
+.chip[aria-pressed='true'] .chip-count,
+.chip--on .chip-count {
+  background: rgb(255 255 255 / 0.25);
+  color: var(--on-fill);
+}
+
+.chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--tap-gap);
+}
+
+/* ----------------------------------------------------------- segmented */
+
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  background: var(--sunk);
+  padding: var(--sp-1);
+  border-radius: var(--radius);
+}
+
+.segmented button {
+  flex: 1 1 auto;
+  min-height: var(--tap);
+  padding: 0 var(--sp-3);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--card);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+/* --------------------------------------------------------------- inputs */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.field label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.field input[type='text'],
+.field input[type='number'],
+.field textarea,
+.field select {
+  min-height: var(--tap);
+  padding: var(--sp-3);
+  border: var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--card);
+  /* 16px minimum, or iOS Safari zooms the whole page on focus. */
+  font-size: var(--fs-sm);
+}
+
+.field textarea {
+  min-height: calc(var(--tap) * 2);
+  resize: vertical;
+}
+
+/* A −5 / value / +5 stepper, so a duration never needs the number keypad. */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--tap-gap);
+}
+
+.stepper button {
+  width: var(--tap);
+  height: var(--tap);
+  border-radius: var(--radius);
+  border: var(--border-strong);
+  background: var(--card);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.stepper-value {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  min-width: 6ch;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------ bottom nav */
+
+.bottom-nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--card);
+  border-top: var(--border);
+  padding-bottom: var(--safe-b);
+}
+
+.bottom-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tap);
+  padding: var(--sp-2) 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.bottom-nav a[aria-current='page'] {
+  color: var(--signal);
+}
+
+.bottom-nav .nav-icon {
+  font-size: var(--fs-md);
+  line-height: 1;
+}
+
+/* ----------------------------------------------------------------- misc */
+
+.banner {
+  border-radius: var(--radius);
+  padding: var(--sp-3) var(--sp-4);
+  font-weight: 600;
+  border: var(--border-strong);
+}
+
+.banner--warn {
+  background: var(--warn-wash);
+  border-color: var(--warn);
+  color: var(--ink);
+}
+
+.banner--signal {
+  background: var(--signal-wash);
+  border-color: var(--signal);
+  color: var(--ink);
+}
+
+.banner--stop {
+  background: var(--stop-wash);
+  border-color: var(--stop);
+  color: var(--ink);
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: var(--sp-6) var(--sp-4);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.divider {
+  height: 1px;
+  background: var(--line);
+  border: 0;
+  margin: 0;
+}
+
+.pill {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--sunk);
+  color: var(--ink-soft);
+}
+
+.pill--carried {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.pill--over {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+
+/* --------------------------------------------------------------- toasts */
+
+/*
+ * Undo toasts sit above the bottom nav, not over the primary action — a toast that covers
+ * `Next phase` is worse than no toast at all.
+ */
+.toast-host {
+  position: fixed;
+  left: var(--sp-3);
+  right: var(--sp-3);
+  bottom: calc(var(--tap) + var(--sp-4) + var(--safe-b));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  pointer-events: none;
+}
+
+.toast-host--update {
+  bottom: calc(var(--tap) + var(--sp-8) + var(--safe-b));
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: var(--maxw);
+  margin: 0 auto;
+  width: 100%;
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--canvas);
+  border: 2px solid transparent;
+}
+
+.toast--warn {
+  background: var(--warn);
+  color: var(--on-fill);
+}
+
+.toast--stop {
+  background: var(--stop);
+  color: var(--on-fill);
+}
+
+.toast-message {
+  flex: 1;
+  font-weight: 600;
+}
+
+.toast-action {
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  border: 2px solid currentColor;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+}
+
+.toast-action--dismiss {
+  min-width: var(--tap);
+  padding: 0;
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+
+.reload-banner {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin: 0;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+/* ---------------------------------------------------------------- sheet */
+
+.sheet {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  max-width: 100%;
+  width: 100%;
+  margin: auto auto 0;
+}
+
+.sheet::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.sheet-body {
+  background: var(--card);
+  color: var(--ink);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  border-top: var(--border);
+  padding: var(--sp-4) var(--sp-4) calc(var(--sp-5) + var(--safe-b));
+  max-width: var(--maxw);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
+.sheet-head h2 {
+  font-size: var(--fs-lg);
+}
+
+/* --------------------------------------------------------------- rating */
+
+.rating {
+  display: flex;
+  gap: var(--tap-gap);
+}
+
+.rating-dot {
+  flex: 1;
+  min-height: var(--tap-lg);
+  border-radius: var(--radius-pill);
+  border: var(--border-strong);
+  background: var(--card);
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+
+.rating-dot[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-fill);
+}
+
+/* ------------------------------------------------------------- checklists */
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: var(--border-strong);
+  font-weight: 800;
+  color: var(--signal);
+}
+
+[aria-pressed='true'] > .row > .check,
+[aria-pressed='true'] .check {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--on-fill);
+}
+
+.objective-chip {
+  justify-content: flex-start;
+  text-align: left;
+  line-height: 1.2;
+  padding: var(--sp-3) var(--sp-4);
+  height: auto;
+  min-height: var(--tap-lg);
+}
+
+/* ------------------------------------------------------------------- run */
+
+/*
+ * Do mode must fit 667px with ZERO scrolling. The grid gives every fixed region its natural
+ * height and hands the remainder to the coaching-points box, which is the only part allowed
+ * to scroll internally.
+ */
+.screen--mode {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto;
+}
+
+.run-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.run-phase-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  min-height: 0;
+}
+
+.run-phase-title .card-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+}
+
+/* The persistent reminder of the intervention the coach is about to break. */
+.run-intervention {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.run-objective {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.timer-value {
+  font-family: var(--font-display);
+  font-size: var(--fs-timer);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.timer-value--ink {
+  color: var(--ink);
+}
+.timer-value--warn {
+  color: var(--warn);
+}
+.timer-value--stop {
+  color: var(--stop);
+}
+
+@keyframes timer-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Suppressed under prefers-reduced-motion by the global rule; colour still changes. */
+.timer-value--pulse {
+  animation: timer-pulse 1s steps(2, end) infinite;
+}
+
+.timer-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--sunk);
+  overflow: hidden;
+}
+
+.timer-bar span {
+  display: block;
+  height: 100%;
+  background: var(--signal);
+}
+
+.timer-bar--warn span {
+  background: var(--warn);
+}
+.timer-bar--stop span {
+  background: var(--stop);
+}
+
+.timer-label {
+  min-height: 1.2em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: var(--fs-xs);
+}
+
+.timer-label--warn {
+  color: var(--warn);
+}
+.timer-label--stop {
+  color: var(--stop);
+}
+
+/* The only internally scrollable region on the whole screen. */
+.run-points {
+  overflow-y: auto;
+  min-height: 0;
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  background: var(--card);
+}
+
+.point {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: var(--sp-2) 0;
+  min-height: var(--tap);
+}
+
+.point[aria-pressed='true'] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.point-check {
+  color: var(--signal);
+  font-size: var(--fs-md);
+}
+
+.run-focus {
+  overflow-x: auto;
+}
+
+.run-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--tap-gap);
+}
+
+.run-actions--secondary {
+  grid-template-columns: 1fr 1fr auto;
+}
+
+.btn--warn {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: var(--on-fill);
+}
+
+.intervention-bar {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------- observation tokens */
+
+.observation-tokens {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--tap-gap);
+}
+
+.observation-tokens .btn {
+  min-height: var(--tap-lg);
+}
+
+.observation-token--good[aria-pressed='true'],
+.observation-token--good:active {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--on-fill);
+}
+
+.observation-token--working:active {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: var(--on-fill);
+}
+
+.observation-token--struggled:active {
+  background: var(--stop);
+  border-color: var(--stop);
+  color: var(--on-fill);
+}
+
+/* Tablet and landscape: the same components, two columns. */
+@media (min-width: 720px) {
+  .screen--mode {
+    max-width: 960px;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    column-gap: var(--sp-5);
+    align-content: start;
+  }
+
+  .run-head,
+  .timer {
+    grid-column: 1;
+  }
+
+  .run-points,
+  .run-focus {
+    grid-column: 2;
+  }
+
+  .run-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --------------------------------------------------- the FA 4 Corner Model */
+
+/*
+ * One hue per corner, used consistently everywhere the model appears: the tag groups in the
+ * observation sheet, the balance bars, the assessment rows and the timeline pills. The
+ * colour is a *secondary* cue throughout — every one of those places also carries the
+ * corner's name in words, because colour alone fails WCAG 1.4.1 and is the first thing to go
+ * in direct sunlight.
+ */
+:root {
+  --corner-technical: var(--signal);
+  --corner-physical: var(--warn);
+  --corner-psychological: var(--accent);
+  --corner-social: #0369a1; /* 5.6:1 on --canvas */
+}
+
+:root[data-theme='dark'] {
+  --corner-social: #56b6e8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --corner-social: #56b6e8;
+  }
+}
+
+[data-corner='technical'] {
+  --corner: var(--corner-technical);
+}
+[data-corner='physical'] {
+  --corner: var(--corner-physical);
+}
+[data-corner='psychological'] {
+  --corner: var(--corner-psychological);
+}
+[data-corner='social'] {
+  --corner: var(--corner-social);
+}
+[data-corner='phase'] {
+  --corner: var(--ink-soft);
+}
+
+.corner-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border-left: 4px solid var(--corner, var(--line));
+  padding-left: var(--sp-3);
+}
+
+.corner-group .eyebrow {
+  color: var(--corner, var(--muted));
+}
+
+.pill[data-corner] {
+  background: transparent;
+  color: var(--corner);
+  border: 2px solid var(--corner);
+}
+
+/* ------------------------------------------------------------ balance bars */
+
+.corner-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.corner-bar {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 3rem;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.corner-bar-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--corner, var(--ink-soft));
+}
+
+.corner-bar-track {
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--sunk);
+  /* An empty corner still shows its track, so "nothing here" is visible rather than absent. */
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.corner-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--corner, var(--signal));
+  min-width: 0;
+}
+
+.corner-bar-count {
+  text-align: right;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+/* -------------------------------------------------------- assessment rows */
+
+.corner-scores {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-2);
+}
+
+.corner-scores li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  border-top: 3px solid var(--corner, var(--line));
+}
+
+.corner-score-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.corner-score {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.corner-rating {
+  border-left: 4px solid var(--corner, var(--line));
+  padding-left: var(--sp-3);
+}

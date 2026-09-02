@@ -1,0 +1,328 @@
+import { err, ok, type Result } from '@/lib/result';
+import {
+  asInterventionEventId,
+  asObservationId,
+  type ObservationId,
+  type PhaseId,
+  type PlayerId,
+  type SessionId,
+} from '@/domain/ids';
+import {
+  attributeForTag,
+  CORNER_ATTRIBUTES,
+  FOUR_CORNERS,
+  type CornerAttribute,
+  type FourCorner,
+} from '@/domain/four-corners';
+import type {
+  InterventionAudience,
+  InterventionMechanic,
+  InterventionMethod,
+} from '@/domain/intervention';
+import {
+  ObservationSchema,
+  OBSERVATION_RATING_KIND,
+  OBSERVATION_RATING_VALUE,
+  type Observation,
+  type ObservationRatingKind,
+} from '@/domain/observation';
+import { CURRENT_SCHEMA_VERSION } from '@/domain/primitives';
+import { currentPhase, currentPhaseRun } from '@/domain/session/selectors';
+import {
+  applySessionCommand,
+  type SessionCommand,
+  type TransitionError,
+} from '@/domain/session/state-machine';
+import { phaseElapsedMs } from '@/domain/session/timer';
+import type { Session } from '@/domain/session';
+import { writeResumeMirror, clearResumeMirror } from '@/lib/resume-mirror';
+import { now, type ServiceContext } from '../context';
+
+/**
+ * Do mode's backend.
+ *
+ * Two rules govern everything here:
+ *
+ *  - **Write-through.** Every timer command persists *before* the UI re-renders, so a crash
+ *    loses at most one frame. There is no debounce, no batching and no optimistic layer.
+ *  - **Observations persist immediately**, as their own records. A coach logging three
+ *    observations in ten seconds while the timer is also writing must not lose one to a
+ *    read-modify-write race on a multi-KB session document.
+ */
+
+export type RunError =
+  | { kind: 'session_not_found' }
+  | { kind: 'no_active_session' }
+  | { kind: 'no_current_phase' }
+  | { kind: 'transition'; error: TransitionError };
+
+/**
+ * Applies a session command and persists the result.
+ *
+ * The `localStorage` mirror is refreshed on the same call, so a cold start immediately after
+ * any command can paint `Resume — Main practice, 8:42 left` before IndexedDB opens.
+ */
+export async function dispatch(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  command: SessionCommand,
+): Promise<Result<Session, RunError>> {
+  const session = await ctx.store.sessions.get(sessionId);
+  if (!session) return err({ kind: 'session_not_found' });
+
+  const applied = applySessionCommand(session, command, now(ctx));
+  if (!applied.ok) return err({ kind: 'transition', error: applied.error });
+
+  await ctx.store.sessions.put(applied.value);
+  await syncActivePointer(ctx, applied.value);
+
+  return ok(applied.value);
+}
+
+/** Keeps `app_meta` and the synchronous mirror in step with the session's real state. */
+async function syncActivePointer(ctx: ServiceContext, session: Session): Promise<void> {
+  const at = now(ctx);
+  const stillActive =
+    session.status === 'draft' || session.status === 'planned' || session.status === 'in_progress';
+
+  await ctx.store.meta.patch(
+    { activeSessionId: stillActive ? session.id : null, activeSquadId: session.squadId },
+    at,
+  );
+
+  if (!stillActive) {
+    clearResumeMirror();
+    return;
+  }
+
+  const phase = currentPhase(session);
+  const phaseRun = currentPhaseRun(session);
+
+  writeResumeMirror({
+    activeSessionId: session.id,
+    squadId: session.squadId,
+    sessionTitle: session.title,
+    phaseTitle: phase?.title ?? null,
+    status: session.status,
+    phaseRunningSince: phaseRun?.runningSince ?? null,
+    phaseAccumulatedMs: phaseRun?.accumulatedMs ?? null,
+    phasePlannedMs: phase ? phase.plannedDurationMin * 60_000 : null,
+    updatedAt: at,
+  });
+}
+
+export interface LogInterventionInput {
+  method?: InterventionMethod;
+  mechanic?: InterventionMechanic;
+  audience?: InterventionAudience;
+  playerIds?: readonly PlayerId[];
+  note?: string;
+}
+
+/**
+ * `✋ Intervene` — one tap.
+ *
+ * Everything is pre-filled from the phase's planned intervention, because the overwhelmingly
+ * common case is the coach doing what they said they would, and that must not cost a form.
+ * The long-press sheet supplies overrides through the same call.
+ */
+export async function logIntervention(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  input: LogInterventionInput = {},
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, {
+    kind: 'logIntervention',
+    id: asInterventionEventId(ctx.ids.uuid()),
+    ...input,
+  });
+}
+
+export interface LogObservationInput {
+  sessionId: SessionId;
+  /** Omitted entirely for a team-wide note — never null. See ADR 0001. */
+  playerId?: PlayerId;
+  ratingKind?: ObservationRatingKind;
+  tags?: readonly string[];
+  text?: string;
+  phaseId?: PhaseId;
+  /**
+   * The FA 4 Corner Model corner. Rarely passed explicitly — it is normally *inferred* from
+   * the tag the coach tapped, which is what keeps logging at two taps.
+   */
+  corner?: FourCorner;
+  attribute?: string;
+  /** When the observation was logged against a specific coaching point, it inherits its corner. */
+  coachingPointId?: string;
+}
+
+/**
+ * Two taps: a focus-player chip, then one of `Good` / `Working` / `Struggled`.
+ *
+ * Written straight away as its own record. If the coach taps `Undo` on the toast we delete
+ * it; we do not hold it in memory waiting to find out.
+ */
+export async function logObservation(
+  ctx: ServiceContext,
+  input: LogObservationInput,
+): Promise<Result<Observation, RunError>> {
+  const session = await ctx.store.sessions.get(input.sessionId);
+  if (!session) return err({ kind: 'session_not_found' });
+
+  const phase = input.phaseId
+    ? session.phases.find((p) => p.id === input.phaseId)
+    : currentPhase(session);
+  if (!phase) return err({ kind: 'no_current_phase' });
+
+  const at = now(ctx);
+  const phaseRun = currentPhaseRun(session);
+  const elapsed = phaseRun ? phaseElapsedMs(phaseRun, ctx.clock.now()) : 0;
+
+  // Corner resolution, cheapest signal first: what the caller said, then the attribute the
+  // tapped tag maps to, then the coaching point the observation was logged against. An
+  // untagged note stays unclassified rather than being filed under a guess.
+  const tagged = (input.tags ?? [])
+    .map((tag) => attributeForTag(tag))
+    .find((attribute): attribute is CornerAttribute => attribute !== undefined);
+  const point = input.coachingPointId
+    ? phase.coachingPoints.find((candidate) => candidate.id === input.coachingPointId)
+    : undefined;
+
+  const corner = input.corner ?? tagged?.corner ?? point?.corner ?? undefined;
+  const attribute = input.attribute ?? tagged?.id;
+
+  const observation = ObservationSchema.parse({
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    createdAt: at,
+    updatedAt: at,
+    id: asObservationId(ctx.ids.uuid()),
+    sessionId: session.id,
+    squadId: session.squadId,
+    // Spread, so an unclassified observation has no `corner` key at all and stays out of
+    // the `by-player-corner` index. See ADR 0001.
+    ...(corner !== undefined ? { corner } : {}),
+    ...(attribute !== undefined ? { attribute } : {}),
+    // Spread rather than assigned, so a team-wide observation has no `playerId` key at all.
+    ...(input.playerId !== undefined ? { playerId: input.playerId } : {}),
+    phaseId: phase.id,
+    at,
+    phaseElapsedMs: elapsed,
+    kind: input.ratingKind ? OBSERVATION_RATING_KIND[input.ratingKind] : 'note',
+    ratingKind: input.ratingKind ?? null,
+    rating: input.ratingKind ? OBSERVATION_RATING_VALUE[input.ratingKind] : null,
+    tags: input.tags ?? [],
+    text: input.text ?? '',
+    coachingPointId: input.coachingPointId ?? null,
+  });
+
+  await ctx.store.observations.put(observation);
+  return ok(observation);
+}
+
+/**
+ * The `Logged for Maya · Undo` toast.
+ *
+ * A hard delete, not a soft one: a mis-tap seconds ago is not history, and leaving a
+ * tombstone would make the chip count wrong.
+ */
+export async function undoObservation(
+  ctx: ServiceContext,
+  observationId: ObservationId,
+): Promise<void> {
+  await ctx.store.observations.hardDelete(observationId);
+}
+
+/** Everything `/run` needs for one repaint, in one round trip. */
+export interface RunSnapshot {
+  session: Session;
+  observations: Observation[];
+  /** Observation counts for the current phase, keyed by player — drives the chip badges. */
+  phaseCountsByPlayer: Map<PlayerId, number>;
+}
+
+export async function loadRunSnapshot(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+): Promise<Result<RunSnapshot, RunError>> {
+  const session = await ctx.store.sessions.get(sessionId);
+  if (!session) return err({ kind: 'session_not_found' });
+
+  const observations = await ctx.store.observations.listBySession(sessionId);
+  const phase = currentPhase(session);
+
+  const phaseCountsByPlayer = new Map<PlayerId, number>();
+  for (const observation of observations) {
+    if (observation.playerId === undefined) continue;
+    if (phase && observation.phaseId !== phase.id) continue;
+    phaseCountsByPlayer.set(
+      observation.playerId,
+      (phaseCountsByPlayer.get(observation.playerId) ?? 0) + 1,
+    );
+  }
+
+  return ok({ session, observations, phaseCountsByPlayer });
+}
+
+/**
+ * Called every ~30 seconds while a session runs.
+ *
+ * Cheap, and the only thing standing between a forgotten session and a history entry
+ * claiming a five-hour drill. If the gap since the last heartbeat is large, `/run` offers
+ * the reconciliation sheet instead of silently carrying on.
+ */
+export async function heartbeat(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, { kind: 'heartbeat' });
+}
+
+/**
+ * The observation sheet's tag bank, grouped by corner.
+ *
+ * This grouping is the whole mechanism behind corner tracking. The coach is already tapping
+ * a tag to say what they saw; presenting those tags under four headings means the corner is
+ * captured as a side effect rather than as a third decision — **and** it makes the empty
+ * corner visible at the moment of logging, not just in the report afterwards.
+ */
+export interface ObservationTagGroup {
+  /** `null` for this phase's own coaching points, which may not map to a corner. */
+  readonly corner: FourCorner | null;
+  readonly label: string;
+  readonly tags: readonly string[];
+}
+
+export function observationTagGroups(session: Session, phaseId?: PhaseId): ObservationTagGroup[] {
+  const phase = phaseId ? session.phases.find((p) => p.id === phaseId) : currentPhase(session);
+  const pointTexts = (phase?.coachingPoints ?? []).map((point) => point.text);
+
+  const groups: ObservationTagGroup[] = [];
+  if (pointTexts.length > 0) {
+    // This phase's own points come first: they are what the coach is actually looking for.
+    groups.push({ corner: null, label: 'This phase', tags: pointTexts });
+  }
+
+  const used = new Set(pointTexts.map((tag) => tag.toLowerCase()));
+  for (const corner of FOUR_CORNERS) {
+    const tags = CORNER_ATTRIBUTES[corner]
+      .map((attribute) => attribute.label)
+      .filter((label) => !used.has(label.toLowerCase()));
+    if (tags.length > 0) groups.push({ corner, label: cornerGroupLabel(corner), tags });
+  }
+
+  return groups;
+}
+
+function cornerGroupLabel(corner: FourCorner): string {
+  return {
+    technical_tactical: 'Technical / Tactical',
+    physical: 'Physical',
+    psychological: 'Psychological',
+    social: 'Social',
+  }[corner];
+}
+
+/** Flat list, kept for callers that only need something to show. */
+export function observationTagsFor(session: Session, phaseId?: PhaseId): string[] {
+  return observationTagGroups(session, phaseId).flatMap((group) => group.tags);
+}
