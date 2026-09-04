@@ -29,3 +29,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Generated seed data — reproduce with `npm run seed`.
+seed/

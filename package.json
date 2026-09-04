@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "seed": "vitest run src/dev/seed.test.ts"
   },
   "dependencies": {
     "idb": "^8.0.0",
