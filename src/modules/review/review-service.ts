@@ -13,6 +13,12 @@ import {
   type SquadId,
 } from '@/domain/ids';
 import { cornerBalance, type CornerBalance } from '@/domain/four-corners/balance';
+import {
+  challengeSummary,
+  sessionChallengeProgress,
+  type ChallengeProgress,
+  type ChallengeSummary,
+} from '@/domain/session/challenges';
 import type { Observation } from '@/domain/observation';
 import { CURRENT_SCHEMA_VERSION } from '@/domain/primitives';
 import {
@@ -60,6 +66,16 @@ export interface ReviewDraftData {
   seededActions: CarryForwardAction[];
   /** Which corners this session actually touched — the FA 4 Corner coverage line. */
   cornerCoverage: CornerBalance;
+  /**
+   * Every challenge with its final tally, still-open first.
+   *
+   * Read the **session-wide** fields only — `count`, `label`, `status`. The phases are over,
+   * so `countThisPhase` and `liveNow` (which resolve against whichever phase the run
+   * happened to end in) have nothing left to mean here.
+   */
+  challenges: ChallengeProgress[];
+  /** *"2 of 3 challenges met."* — the headline, and the prompt to rule on the rest. */
+  challengeSummary: ChallengeSummary;
 }
 
 export async function loadReviewData(
@@ -87,6 +103,8 @@ export async function loadReviewData(
       .filter((playerId) => !seen.has(playerId)),
     seededActions,
     cornerCoverage: cornerBalance(observations),
+    challenges: sessionChallengeProgress(session),
+    challengeSummary: challengeSummary(session),
   });
 }
 

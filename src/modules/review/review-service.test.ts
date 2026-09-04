@@ -8,13 +8,20 @@ import {
   saveReview,
 } from './review-service';
 import { commitAndStart, startDraft } from '../planning/planning-service';
-import { dispatch, logObservation } from '../run/run-service';
+import { addChallenge } from '../planning/challenges';
+import {
+  dispatch,
+  logChallengeProgress,
+  logObservation,
+  setChallengeStatus,
+} from '../run/run-service';
 import { addPlayer, createSquad } from '../squad/squad-service';
+import { describeChallengeSummary } from '@/domain/session/challenges';
 import { FakeDataStore } from '@/data/ports/fake-data-store';
 import { FakeClock } from '@/lib/fake-clock';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { isErr, unwrap } from '@/lib/result';
-import { asSessionId, type PlayerId, type SquadId } from '@/domain/ids';
+import { asSessionId, type ChallengeId, type PlayerId, type SquadId } from '@/domain/ids';
 import { sessionStage } from '@/domain/session/selectors';
 import { aReview, T0, testId } from '@/test/builders';
 import type { Session } from '@/domain/session';
@@ -57,6 +64,61 @@ async function runASession(objectiveText = 'Playing out from the back'): Promise
 const reviewFor = (session: Session, over: Partial<SessionReview> = {}) =>
   aReview({ sessionId: session.id, squadId, ...over });
 
+/** Adds a challenge and hands back its id. */
+async function challengeFor(
+  sessionId: Session['id'],
+  input: Parameters<typeof addChallenge>[2],
+): Promise<ChallengeId> {
+  const session = unwrap(await addChallenge(ctx, sessionId, input));
+  const challenge = session.challenges[session.challenges.length - 1];
+  if (!challenge) throw new Error('addChallenge returned a session with no challenges');
+  return challenge.id;
+}
+
+/**
+ * A finished session carrying the two cases Review has to handle: a counted challenge with
+ * `sightings` logged against a target of three, and a judged one that only a coach can settle.
+ *
+ * The sightings go in **before** `finish`, because they have to: logging one needs a live
+ * phase to stamp it against. Ruling is the half that deliberately outlives the run.
+ */
+async function runWithChallenges(sightings = 1): Promise<{
+  session: Session;
+  kaiChallenge: ChallengeId;
+  mayaChallenge: ChallengeId;
+}> {
+  const draft = unwrap(
+    await startDraft(ctx, {
+      squadId,
+      objectiveText: 'Playing out from the back',
+      focusPlayerIds: [kai, maya],
+    }),
+  );
+
+  const kaiChallenge = await challengeFor(draft.id, {
+    playerId: kai,
+    text: 'Three forward passes',
+    targetCount: 3,
+  });
+  const mayaChallenge = await challengeFor(draft.id, {
+    playerId: maya,
+    text: 'Stay positive when you lose it',
+    measure: 'judged',
+  });
+
+  const started = unwrap(await commitAndStart(ctx, draft.id));
+  for (let i = 0; i < sightings; i += 1) {
+    unwrap(await logChallengeProgress(ctx, started.id, kaiChallenge));
+  }
+  clock().advanceMinutes(55);
+
+  return {
+    session: unwrap(await dispatch(ctx, started.id, { kind: 'finish' })),
+    kaiChallenge,
+    mayaChallenge,
+  };
+}
+
 describe('loadReviewData', () => {
   it('pre-computes everything the screen would otherwise have to ask for', async () => {
     const session = await runASession();
@@ -82,6 +144,92 @@ describe('loadReviewData', () => {
     const data = unwrap(await loadReviewData(ctx, finished.id));
     expect(data.overruns[0]?.phase.id).toBe(firstPhase.id);
     expect(data.overruns[0]?.overrunMs).toBe(7 * 60_000);
+  });
+
+  it('hands the screen every challenge with its final tally, and the headline', async () => {
+    const { session, kaiChallenge, mayaChallenge } = await runWithChallenges();
+    const data = unwrap(await loadReviewData(ctx, session.id));
+
+    // Furthest from target leads: Kai is two short, the judged one has no distance to be.
+    expect(data.challenges.map((progress) => progress.challenge.id)).toEqual([
+      kaiChallenge,
+      mayaChallenge,
+    ]);
+
+    const kais = data.challenges.find((progress) => progress.challenge.id === kaiChallenge);
+    expect(kais?.count).toBe(1);
+    expect(kais?.label).toBe('1/3');
+    expect(kais?.status).toBe('open');
+
+    const mayas = data.challenges.find((progress) => progress.challenge.id === mayaChallenge);
+    expect(mayas?.label).toBe('—');
+    expect(mayas?.status).toBe('open');
+
+    expect(data.challengeSummary).toEqual({
+      total: 2,
+      met: 0,
+      partly: 0,
+      missed: 0,
+      open: 2,
+      sightings: 1,
+    });
+    expect(describeChallengeSummary(data.challengeSummary)).toBe(
+      '0 of 2 challenges met — 2 not judged.',
+    );
+  });
+
+  it('settles the judged challenge that Do mode could never have settled', async () => {
+    const { session, mayaChallenge } = await runWithChallenges();
+
+    // The whole point of this screen: the session is finished and this still works.
+    unwrap(await setChallengeStatus(ctx, session.id, mayaChallenge, 'met', 'Never dropped once'));
+
+    const data = unwrap(await loadReviewData(ctx, session.id));
+    const mayas = data.challenges.find((progress) => progress.challenge.id === mayaChallenge);
+
+    expect(mayas?.status).toBe('met');
+    expect(mayas?.challenge.settledAt).not.toBeNull();
+    expect(mayas?.challenge.note).toBe('Never dropped once');
+    expect(data.challengeSummary.met).toBe(1);
+    expect(data.challengeSummary.open).toBe(1);
+    expect(describeChallengeSummary(data.challengeSummary)).toBe(
+      '1 of 2 challenges met — 1 not judged.',
+    );
+  });
+
+  it('drops a challenge to the bottom once it has been ruled on', async () => {
+    const { session, kaiChallenge, mayaChallenge } = await runWithChallenges();
+    unwrap(await setChallengeStatus(ctx, session.id, kaiChallenge, 'missed'));
+
+    const data = unwrap(await loadReviewData(ctx, session.id));
+
+    // Kai led before the ruling; the one still needing an answer now does.
+    expect(data.challenges.map((progress) => progress.challenge.id)).toEqual([
+      mayaChallenge,
+      kaiChallenge,
+    ]);
+    expect(data.challengeSummary.missed).toBe(1);
+  });
+
+  it('counts a challenge the tally already settled as met, with no ruling recorded', async () => {
+    const { session, kaiChallenge } = await runWithChallenges(3);
+    const data = unwrap(await loadReviewData(ctx, session.id));
+    const kais = data.challenges.find((progress) => progress.challenge.id === kaiChallenge);
+
+    expect(kais?.label).toBe('3/3');
+    expect(kais?.status).toBe('met');
+    // Displayed met, stored open: the screen must not claim the coach ruled on it.
+    expect(kais?.challenge.status).toBe('open');
+    expect(data.challengeSummary.met).toBe(1);
+  });
+
+  it('reports nothing to show for a session with no challenges', async () => {
+    const session = await runASession();
+    const data = unwrap(await loadReviewData(ctx, session.id));
+
+    expect(data.challenges).toEqual([]);
+    expect(data.challengeSummary.total).toBe(0);
+    expect(describeChallengeSummary(data.challengeSummary)).toBe('No challenges set.');
   });
 
   it('refuses a session that is still running, and reports one that is missing', async () => {

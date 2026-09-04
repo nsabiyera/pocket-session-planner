@@ -12,7 +12,10 @@ import {
   saveReview,
   type ReviewDraftData,
 } from '@/modules/review/review-service';
+import { setChallengeStatus } from '@/modules/run/run-service';
 import type { CarryForwardProposal } from '@/domain/carry-forward';
+import { CHALLENGE_STATUSES, challengeStatusLabel, type ChallengeStatus } from '@/domain/challenge';
+import { describeChallengeSummary } from '@/domain/session/challenges';
 import {
   SessionReviewSchema,
   type FocusPlayerProgress,
@@ -25,7 +28,7 @@ import { shortPlayerName } from '@/domain/player';
 import { CURRENT_SCHEMA_VERSION } from '@/domain/primitives';
 import { asReviewId } from '@/domain/ids';
 import { isErr } from '@/lib/result';
-import type { PlayerId } from '@/domain/ids';
+import type { ChallengeId, PlayerId } from '@/domain/ids';
 
 /**
  * `/review` — **five taps and zero required typing.**
@@ -64,6 +67,7 @@ export default function ReviewPage() {
   const [whatWorked, setWhatWorked] = useState('');
   const [whatDidnt, setWhatDidnt] = useState('');
   const [busy, setBusy] = useState(false);
+  const [rulingOn, setRulingOn] = useState<ChallengeId | null>(null);
 
   const session = state.reviewSession;
 
@@ -136,6 +140,54 @@ export default function ReviewPage() {
       </Screen>
     );
   }
+
+  const playerName = (playerId: PlayerId): string => {
+    const player = state.players.find((candidate) => candidate.id === playerId);
+    return player ? shortPlayerName(player, state.players) : 'Someone';
+  };
+
+  /**
+   * The ruling the challenge has been waiting for.
+   *
+   * Written straight through to the session rather than held in page state until `Save
+   * review`: the verdict on a promise made to a player is not a draft, and a coach who taps
+   * `Met` and then closes the app has said what they meant. The carry-forward chips read the
+   * session, so they pick it up on the next render.
+   *
+   * Tapping the verdict already recorded clears it back to open — the same gesture both
+   * ways, because *"I shouldn't have ruled that yet"* is as common as ruling it.
+   */
+  const ruleChallenge = async (
+    challengeId: ChallengeId,
+    status: ChallengeStatus,
+    recorded: ChallengeStatus,
+  ) => {
+    if (!session || rulingOn !== null) return;
+    setRulingOn(challengeId);
+    try {
+      const result = await setChallengeStatus(
+        getServiceContext(),
+        session.id,
+        challengeId,
+        recorded === status ? 'open' : status,
+      );
+      if (isErr(result)) {
+        showToast('Could not save that ruling.', { tone: 'stop' });
+        return;
+      }
+
+      // Both reads at once. They are independent, and every millisecond here is one where
+      // the verdict buttons sit disabled — a coach ruling three challenges in a row should
+      // not be tapping into dead time.
+      const [reloaded] = await Promise.all([
+        loadReviewData(getServiceContext(), session.id),
+        refresh(),
+      ]);
+      if (!isErr(reloaded)) setData(reloaded.value);
+    } finally {
+      setRulingOn(null);
+    }
+  };
 
   const save = async () => {
     if (outcome === null || busy) return;
@@ -251,13 +303,18 @@ export default function ReviewPage() {
 
           {data.unobservedFocusPlayerIds.length > 0 ? (
             <p className="card card--sunk">
-              {data.unobservedFocusPlayerIds
-                .map((playerId) => {
-                  const player = state.players.find((candidate) => candidate.id === playerId);
-                  return player ? shortPlayerName(player, state.players) : 'Someone';
-                })
-                .join(' and ')}
-              : no observations logged.
+              {data.unobservedFocusPlayerIds.map(playerName).join(' and ')}: no observations logged.
+            </p>
+          ) : null}
+
+          {/*
+            The challenge headline. Sits with the other worked-out lines, and before the
+            rows below it: it is what tells the coach whether there is anything left to rule
+            on at all.
+          */}
+          {data.challengeSummary.total > 0 ? (
+            <p className="banner banner--signal">
+              {describeChallengeSummary(data.challengeSummary)}
             </p>
           ) : null}
 
@@ -354,6 +411,65 @@ export default function ReviewPage() {
               </div>
             );
           })}
+        </section>
+      ) : null}
+
+      {/*
+        The challenges, and the last chance to rule on them.
+
+        Placed after the focus players and *before* the carry-forward chips, for the same
+        reason the intervention report is: these are the answers, and the chips are what the
+        app proposes doing about them. A judged challenge has no tally to speak for it, so
+        this screen is the only place it can ever be settled — Do mode is gone by now.
+      */}
+      {data && data.challenges.length > 0 ? (
+        <section className="stack">
+          <h2>Challenges</h2>
+          <p className="card-meta">
+            One thing each player was asked to do. Tap a verdict to settle it; tap it again to take
+            it back.
+          </p>
+          <ul className="stack stack--tight">
+            {data.challenges.map(({ challenge, label, status, count }) => (
+              <li key={challenge.id} className="card challenge-row">
+                <div className="row row--between">
+                  <span className="card-title">{playerName(challenge.playerId)}</span>
+                  {status === 'open' ? (
+                    <span className="pill">Not judged</span>
+                  ) : (
+                    <span className={`pill pill--${status}`}>{challengeStatusLabel(status)}</span>
+                  )}
+                </div>
+
+                <span className="challenge-text">{challenge.text}</span>
+
+                <span className="card-meta tabular">
+                  {challenge.measure === 'judged'
+                    ? 'Judged, not counted'
+                    : `${label} · ${count === 1 ? '1 sighting' : `${count} sightings`}`}
+                </span>
+
+                <div className="observation-tokens">
+                  {CHALLENGE_STATUSES.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`btn challenge-token challenge-token--${option}`}
+                      // The *recorded* status drives this, not the effective one: a tally
+                      // that reached its target reads as met without anyone having said so,
+                      // and pre-pressing a button the coach never tapped would put words in
+                      // their mouth.
+                      aria-pressed={challenge.status === option}
+                      disabled={rulingOn !== null}
+                      onClick={() => void ruleChallenge(challenge.id, option, challenge.status)}
+                    >
+                      {challengeStatusLabel(option)}
+                    </button>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 
