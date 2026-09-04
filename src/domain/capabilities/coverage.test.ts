@@ -3,10 +3,15 @@ import {
   capabilityCoverage,
   capabilityOfObservation,
   describeCapabilityCoverage,
+  describeMomentCoverage,
   hasEnoughForCapabilityView,
+  hasEnoughForMomentView,
   MIN_OBSERVATIONS_FOR_CAPABILITY_VIEW,
+  MIN_OBSERVATIONS_FOR_MOMENT_VIEW,
+  momentCoverage,
   type CapabilityCoverage,
 } from './coverage';
+import type { ActionMoment } from '../capabilities';
 import type { Observation } from '../observation';
 import { anObservation } from '@/test/builders';
 
@@ -170,6 +175,93 @@ describe('hasEnoughForCapabilityView', () => {
     );
     expect(mostlyUnclassifiable.total).toBe(20);
     expect(hasEnoughForCapabilityView(mostlyUnclassifiable)).toBe(false);
+  });
+});
+
+describe('momentCoverage', () => {
+  const at = (label: string, moment: ActionMoment): Observation =>
+    anObservation(label, { actionMoment: moment });
+
+  it('counts only the observations the coach placed in the action', () => {
+    const coverage = momentCoverage([
+      at('o1', 'during'),
+      at('o2', 'during'),
+      at('o3', 'after'),
+      anObservation('o4'),
+    ]);
+
+    expect(coverage.countByMoment).toEqual({ before: 0, during: 2, after: 1 });
+    expect(coverage.total).toBe(4);
+    expect(coverage.recorded).toBe(3);
+  });
+
+  it('names the part of the action going unwatched', () => {
+    const coverage = momentCoverage([at('o1', 'during'), at('o2', 'during')]);
+    expect(coverage.missing).toEqual(['before', 'after']);
+  });
+
+  it('flags the moment holding more than half of everything recorded', () => {
+    const coverage = momentCoverage([at('o1', 'during'), at('o2', 'during'), at('o3', 'before')]);
+    expect(coverage.dominant).toBe('during');
+  });
+
+  it('flags nothing on an even spread, or when nothing was recorded', () => {
+    expect(momentCoverage([at('o1', 'before'), at('o2', 'after')]).dominant).toBeNull();
+    expect(momentCoverage([anObservation('o1')]).dominant).toBeNull();
+    expect(momentCoverage([]).recorded).toBe(0);
+  });
+
+  it('stays quiet until the coach has recorded enough to be a habit', () => {
+    const during = (count: number) =>
+      momentCoverage(Array.from({ length: count }, (_, i) => at(`o${i}`, 'during')));
+
+    expect(hasEnoughForMomentView(during(MIN_OBSERVATIONS_FOR_MOMENT_VIEW - 1))).toBe(false);
+    expect(hasEnoughForMomentView(during(MIN_OBSERVATIONS_FOR_MOMENT_VIEW))).toBe(true);
+  });
+
+  it('counts recorded moments, not raw observations, towards that threshold', () => {
+    const unplaced = momentCoverage(Array.from({ length: 20 }, (_, i) => anObservation(`o${i}`)));
+    expect(unplaced.total).toBe(20);
+    expect(hasEnoughForMomentView(unplaced)).toBe(false);
+  });
+});
+
+describe('describeMomentCoverage', () => {
+  const at = (label: string, moment: ActionMoment): Observation =>
+    anObservation(label, { actionMoment: moment });
+
+  it('says so plainly when the coach never placed one', () => {
+    expect(describeMomentCoverage(momentCoverage([anObservation('o1')]), 'this session')).toBe(
+      'No moments recorded for this session yet.',
+    );
+  });
+
+  it('names the part of the action nobody watched — the whole point of the report', () => {
+    const coverage = momentCoverage([
+      at('o1', 'during'),
+      at('o2', 'during'),
+      at('o3', 'during'),
+      at('o4', 'during'),
+      at('o5', 'after'),
+    ]);
+
+    expect(describeMomentCoverage(coverage, 'this session')).toBe(
+      '5 moments recorded for this session: 4 as they receive, 1 after they receive — nothing before the ball arrives.',
+    );
+  });
+
+  it('drops the clause once all three have been watched', () => {
+    const coverage = momentCoverage([at('o1', 'before'), at('o2', 'during'), at('o3', 'after')]);
+
+    expect(describeMomentCoverage(coverage, 'Kai')).toBe(
+      '3 moments recorded for Kai: 1 before the ball arrives, 1 as they receive, 1 after they receive.',
+    );
+  });
+
+  it('gets the singular right', () => {
+    expect(describeMomentCoverage(momentCoverage([at('o1', 'before')]), 'Kai')).toBe(
+      '1 moment recorded for Kai: 1 before the ball arrives — nothing as they receive or after they receive.',
+    );
   });
 });
 

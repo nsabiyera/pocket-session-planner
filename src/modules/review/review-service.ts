@@ -13,7 +13,12 @@ import {
   type SquadId,
 } from '@/domain/ids';
 import { cornerBalance, type CornerBalance } from '@/domain/four-corners/balance';
-import { capabilityCoverage, type CapabilityCoverage } from '@/domain/capabilities/coverage';
+import {
+  capabilityCoverage,
+  momentCoverage,
+  type CapabilityCoverage,
+  type MomentCoverage,
+} from '@/domain/capabilities/coverage';
 import {
   challengeSummary,
   sessionChallengeProgress,
@@ -75,6 +80,11 @@ export interface ReviewDraftData {
    */
   capabilityCoverage: CapabilityCoverage;
   /**
+   * Which part of the action the coach was watching, where they said. Opt-in, so this is
+   * empty for a coach who never used it — and the screen shows nothing rather than nagging.
+   */
+  momentCoverage: MomentCoverage;
+  /**
    * Every challenge with its final tally, still-open first.
    *
    * Read the **session-wide** fields only — `count`, `label`, `status`. The phases are over,
@@ -112,6 +122,7 @@ export async function loadReviewData(
     seededActions,
     cornerCoverage: cornerBalance(observations),
     capabilityCoverage: capabilityCoverage(observations),
+    momentCoverage: momentCoverage(observations),
     challenges: sessionChallengeProgress(session),
     challengeSummary: challengeSummary(session),
   });

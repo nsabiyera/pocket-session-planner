@@ -1,9 +1,12 @@
 import {
+  ACTION_MOMENTS,
   capabilityForAttribute,
   capabilityForTag,
   capabilityLabel,
   CORE_CAPABILITIES,
+  momentPhrase,
   unreachableCapabilities,
+  type ActionMoment,
   type CoreCapability,
 } from '../capabilities';
 import { attributeForTag } from '../four-corners';
@@ -158,6 +161,81 @@ export function describeCapabilityCoverage(coverage: CapabilityCoverage, subject
   }
 
   return sentence;
+}
+
+/**
+ * The other axis: **when** in the action the coach was watching.
+ *
+ * Unlike the capability, the moment cannot be inferred from anything the coach taps — only
+ * they know whether they were watching the scan or the touch. So this counts an *opt-in*
+ * field, and the report exists to answer one question a coach cannot answer about themselves:
+ * *am I only ever watching the moment of contact?*
+ */
+export interface MomentCoverage {
+  readonly countByMoment: Record<ActionMoment, number>;
+  /** Every observation considered, moment or not. */
+  readonly total: number;
+  /** Those the coach actually recorded a moment against. */
+  readonly recorded: number;
+  /** Moments never once recorded — the part of the action going unwatched. */
+  readonly missing: ActionMoment[];
+  readonly dominant: ActionMoment | null;
+}
+
+/**
+ * Four is enough to be a habit worth naming.
+ *
+ * Lower than the capability threshold on purpose: the moment is opt-in, so a coach who has
+ * bothered to record it four times has told the app something deliberate, and making them
+ * reach eight before it says anything back would waste the effort.
+ */
+export const MIN_OBSERVATIONS_FOR_MOMENT_VIEW = 4;
+
+export function momentCoverage(observations: readonly Observation[]): MomentCoverage {
+  const countByMoment: Record<ActionMoment, number> = { before: 0, during: 0, after: 0 };
+  let recorded = 0;
+
+  for (const observation of observations) {
+    if (observation.actionMoment === undefined) continue;
+    countByMoment[observation.actionMoment] += 1;
+    recorded += 1;
+  }
+
+  return {
+    countByMoment,
+    total: observations.length,
+    recorded,
+    missing: ACTION_MOMENTS.filter((moment) => countByMoment[moment] === 0),
+    dominant:
+      ACTION_MOMENTS.find(
+        (moment) =>
+          recorded > 0 && countByMoment[moment] / recorded > DOMINANT_CAPABILITY_THRESHOLD,
+      ) ?? null,
+  };
+}
+
+export function hasEnoughForMomentView(coverage: MomentCoverage): boolean {
+  return coverage.recorded >= MIN_OBSERVATIONS_FOR_MOMENT_VIEW;
+}
+
+/**
+ * *"6 moments recorded for this session: 5 as they receive, 1 after they receive — nothing
+ * before the ball arrives."*
+ *
+ * The last clause is the whole report. A coach who never watches the scan cannot see that
+ * about themselves, and no amount of observation volume reveals it on its own.
+ */
+export function describeMomentCoverage(coverage: MomentCoverage, subject: string): string {
+  if (coverage.recorded === 0) return `No moments recorded for ${subject} yet.`;
+
+  const present = ACTION_MOMENTS.filter((moment) => coverage.countByMoment[moment] > 0).map(
+    (moment) => `${coverage.countByMoment[moment]} ${momentPhrase(moment)}`,
+  );
+
+  const head = `${coverage.recorded} moment${plural(coverage.recorded)} recorded for ${subject}: ${present.join(', ')}`;
+  if (coverage.missing.length === 0) return `${head}.`;
+
+  return `${head} — nothing ${formatList(coverage.missing.map(momentPhrase))}.`;
 }
 
 const lower = (capability: CoreCapability): string => capabilityLabel(capability).toLowerCase();

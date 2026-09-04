@@ -10,7 +10,12 @@ import {
   type SessionId,
 } from '@/domain/ids';
 import type { ChallengeStatus } from '@/domain/challenge';
-import { CAPABILITY_TAG_CORNER, CAPABILITY_TAGS, capabilityForTag } from '@/domain/capabilities';
+import {
+  CAPABILITY_TAG_CORNER,
+  CAPABILITY_TAGS,
+  capabilityForTag,
+  type ActionMoment,
+} from '@/domain/capabilities';
 import {
   challengeSummary,
   sessionChallengeProgress,
@@ -162,6 +167,12 @@ export interface LogObservationInput {
    */
   corner?: FourCorner;
   attribute?: string;
+  /**
+   * Which part of the action the coach was watching. Never inferred — nothing in a tag says
+   * whether they were watching the scan or the touch — so it arrives only when the coach
+   * chose it on the sheet.
+   */
+  actionMoment?: ActionMoment;
   /** When the observation was logged against a specific coaching point, it inherits its corner. */
   coachingPointId?: string;
 }
@@ -220,6 +231,9 @@ export async function logObservation(
     // the `by-player-corner` index. See ADR 0001.
     ...(corner !== undefined ? { corner } : {}),
     ...(attribute !== undefined ? { attribute } : {}),
+    // Same treatment: an observation the coach did not place in the action has no key at all,
+    // rather than a null that would have to be told apart from a real answer.
+    ...(input.actionMoment !== undefined ? { actionMoment: input.actionMoment } : {}),
     // Spread rather than assigned, so a team-wide observation has no `playerId` key at all.
     ...(input.playerId !== undefined ? { playerId: input.playerId } : {}),
     phaseId: phase.id,

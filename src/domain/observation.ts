@@ -7,6 +7,7 @@ import {
   SessionIdSchema,
   SquadIdSchema,
 } from './ids';
+import { ActionMomentSchema } from './capabilities';
 import { CornerAttributeIdSchema, FourCornerSchema } from './four-corners';
 import { IsoDateTimeSchema, optionalText, RatingSchema, RecordMetaSchema } from './primitives';
 
@@ -86,6 +87,18 @@ export const ObservationSchema = RecordMetaSchema.extend({
   corner: FourCornerSchema.optional(),
   /** The specific attribute within that corner, when one was chosen. */
   attribute: CornerAttributeIdSchema.optional(),
+  /**
+   * **When** in the action this was seen: before the ball arrives, as it arrives, or after
+   * it has gone. The FA's window — *"what each player does before, during and after they
+   * receive the ball"*.
+   *
+   * **Optional-omitted, and genuinely optional.** Unlike the corner, this cannot be inferred
+   * from anything: only the coach knows which part of the action they were watching. So it is
+   * offered as a pre-selection on the observation sheet and never required — logging stays at
+   * two taps, and an observation with no moment is a normal observation, not an incomplete
+   * one.
+   */
+  actionMoment: ActionMomentSchema.optional(),
 });
 export type Observation = z.infer<typeof ObservationSchema>;
 export type ObservationInput = z.input<typeof ObservationSchema>;

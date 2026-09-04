@@ -97,8 +97,20 @@ const MOMENT_SHORT_LABELS: Record<ActionMoment, string> = {
   after: 'After',
 };
 
+/**
+ * The same three, phrased to sit inside a sentence: *"5 as they receive, 1 after they
+ * receive — nothing before the ball arrives."* The button labels do not read as prose, and a
+ * report that says "nothing before receiving" is a report nobody parses at arm's length.
+ */
+const MOMENT_PHRASES: Record<ActionMoment, string> = {
+  before: 'before the ball arrives',
+  during: 'as they receive',
+  after: 'after they receive',
+};
+
 export const momentLabel = (moment: ActionMoment): string => MOMENT_LABELS[moment];
 export const momentShortLabel = (moment: ActionMoment): string => MOMENT_SHORT_LABELS[moment];
+export const momentPhrase = (moment: ActionMoment): string => MOMENT_PHRASES[moment];
 
 /**
  * Corner attribute id → capability, for the attributes where the two lenses genuinely name

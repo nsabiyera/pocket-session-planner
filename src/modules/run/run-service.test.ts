@@ -516,6 +516,35 @@ describe('corner inference — the reason logging stays at two taps', () => {
     expect(capabilityOfObservation(observation)).toBe('positioning');
   });
 
+  it('records which part of the action the coach was watching, when they said', async () => {
+    const observation = unwrap(
+      await logObservation(ctx, {
+        sessionId: session.id,
+        playerId: kai,
+        ratingKind: 'good',
+        tags: ['Scanning'],
+        actionMoment: 'before',
+      }),
+    );
+
+    expect(observation.actionMoment).toBe('before');
+    expect(capabilityOfObservation(observation)).toBe('scanning');
+  });
+
+  it('leaves the moment absent when they did not — it cannot be inferred', async () => {
+    const observation = unwrap(
+      await logObservation(ctx, {
+        sessionId: session.id,
+        playerId: kai,
+        ratingKind: 'good',
+        tags: ['Scanning'],
+      }),
+    );
+
+    // Absent, not null: there is no answer, rather than an answer meaning "no".
+    expect('actionMoment' in observation).toBe(false);
+  });
+
   it('leaves an untagged note unclassified rather than guessing', async () => {
     const observation = unwrap(
       await logObservation(ctx, { sessionId: session.id, playerId: kai, ratingKind: 'good' }),

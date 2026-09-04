@@ -24,7 +24,9 @@ import {
 import { describeCornerBalance } from '@/domain/four-corners/balance';
 import {
   describeCapabilityCoverage,
+  describeMomentCoverage,
   hasEnoughForCapabilityView,
+  hasEnoughForMomentView,
 } from '@/domain/capabilities/coverage';
 import { describeInterventionSummary } from '@/domain/session/selectors';
 import { formatClock } from '@/domain/session/timer';
@@ -346,6 +348,17 @@ export default function ReviewPage() {
           {hasEnoughForCapabilityView(data.capabilityCoverage) ? (
             <p className="banner banner--signal">
               {describeCapabilityCoverage(data.capabilityCoverage, 'this session')}
+            </p>
+          ) : null}
+
+          {/*
+            And when in the action they were watching. Only appears for a coach who recorded
+            it — it is opt-in, so an empty one is a choice rather than an omission worth
+            reporting.
+          */}
+          {hasEnoughForMomentView(data.momentCoverage) ? (
+            <p className="banner banner--signal">
+              {describeMomentCoverage(data.momentCoverage, 'this session')}
             </p>
           ) : null}
         </section>

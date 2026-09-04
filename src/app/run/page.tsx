@@ -26,15 +26,9 @@ import {
   undoObservation,
   type ObservationTagGroup,
 } from '@/modules/run/run-service';
-import {
-  CHALLENGE_STATUSES,
-  challengeStatusLabel,
-  type ChallengeStatus,
-} from '@/domain/challenge';
-import {
-  sessionChallengeProgress,
-  type ChallengeProgress,
-} from '@/domain/session/challenges';
+import { CHALLENGE_STATUSES, challengeStatusLabel, type ChallengeStatus } from '@/domain/challenge';
+import { sessionChallengeProgress, type ChallengeProgress } from '@/domain/session/challenges';
+import { ACTION_MOMENTS, momentShortLabel, type ActionMoment } from '@/domain/capabilities';
 import type { Observation, ObservationRatingKind } from '@/domain/observation';
 import {
   currentPhase,
@@ -184,9 +178,7 @@ export default function RunPage() {
   );
 
   const challengePlayerName = (progress: ChallengeProgress): string => {
-    const player = state.players.find(
-      (candidate) => candidate.id === progress.challenge.playerId,
-    );
+    const player = state.players.find((candidate) => candidate.id === progress.challenge.playerId);
     return player ? shortPlayerName(player, state.players) : 'Unknown';
   };
 
@@ -506,7 +498,7 @@ export default function RunPage() {
         player={sheetPlayer}
         groups={observationTagGroups(session, phase.id)}
         onClose={() => setSheetPlayer(null)}
-        onLog={async (ratingKind, tags) => {
+        onLog={async (ratingKind, tags, moment) => {
           const player = sheetPlayer;
           if (!player) return;
           setSheetPlayer(null);
@@ -516,6 +508,7 @@ export default function RunPage() {
             playerId: player.id,
             ratingKind,
             tags,
+            ...(moment !== null ? { actionMoment: moment } : {}),
           });
           if (isErr(result)) return;
 
@@ -793,9 +786,14 @@ function ObservationSheet({
   player: Player | null;
   groups: readonly ObservationTagGroup[];
   onClose: () => void;
-  onLog: (rating: ObservationRatingKind, tags: string[]) => Promise<void>;
+  onLog: (
+    rating: ObservationRatingKind,
+    tags: string[],
+    moment: ActionMoment | null,
+  ) => Promise<void>;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [moment, setMoment] = useState<ActionMoment | null>(null);
   const tokens: Array<{ kind: ObservationRatingKind; label: string }> = useMemo(
     () => [
       { kind: 'good', label: 'Good' },
@@ -811,6 +809,7 @@ function ObservationSheet({
       title={player ? player.name : 'Observation'}
       onClose={() => {
         setSelected([]);
+        setMoment(null);
         onClose();
       }}
     >
@@ -822,14 +821,41 @@ function ObservationSheet({
             className={`btn btn--lg observation-token observation-token--${token.kind}`}
             onClick={async () => {
               const chosen = selected;
+              const when = moment;
               setSelected([]);
-              await onLog(token.kind, chosen);
+              setMoment(null);
+              await onLog(token.kind, chosen, when);
             }}
           >
             {token.label}
           </button>
         ))}
       </div>
+
+      {/*
+        When in the action, if the coach wants to say. A **pre-selection**, like the tags:
+        the rating tokens above still commit, so this costs a tap only when it is used and
+        logging stays at two. Nothing here can be inferred — only the coach knows whether
+        they were watching the scan or the touch.
+      */}
+      <section className="corner-group" data-corner="phase">
+        <h3 className="eyebrow">When in the action</h3>
+        <div className="row row--wrap">
+          {ACTION_MOMENTS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className="chip"
+              aria-pressed={moment === option}
+              // Tap the chosen one again to take it back, rather than being stuck with a
+              // moment tapped by accident.
+              onClick={() => setMoment((current) => (current === option ? null : option))}
+            >
+              {momentShortLabel(option)}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {groups.map((group) => (
         <section
