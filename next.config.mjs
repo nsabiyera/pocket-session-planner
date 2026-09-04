@@ -67,7 +67,12 @@ const withSerwist = withSerwistInit({
   // "do not update mid-session" policy are the same concern.
   register: false,
   scope: `${basePath}/`,
-  swUrl: `${basePath}/sw.js`,
+  // **No base path here.** The plugin joins this with `basePath` itself
+  // (`path.posix.join(basePath, swUrl)`), so writing it out produces
+  // `/pocket-session-planner/pocket-session-planner/sw.js` in the `window.serwist` it
+  // injects. `scope` above is used verbatim, which is why that one does carry it — the
+  // asymmetry is the plugin's, not ours.
+  swUrl: '/sw.js',
 
   additionalPrecacheEntries: [...ROUTES, ...PUBLIC_ASSETS].map((path) => ({
     url: `${basePath}${path}`,
