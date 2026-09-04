@@ -1,5 +1,10 @@
 import { CarryForwardActionSchema, type CarryForwardAction } from '@/domain/carry-forward';
-import { ChallengeEventSchema, PlayerChallengeSchema, type ChallengeEvent, type PlayerChallenge } from '@/domain/challenge';
+import {
+  ChallengeEventSchema,
+  PlayerChallengeSchema,
+  type ChallengeEvent,
+  type PlayerChallenge,
+} from '@/domain/challenge';
 import { CoachingPointSchema, type CoachingPoint } from '@/domain/coaching-point';
 import {
   asCarryForwardActionId,
@@ -126,10 +131,7 @@ export function aChallenge(label: string, over: Partial<PlayerChallenge> = {}): 
 }
 
 /** One sighting, in the `warmup` phase unless told otherwise. */
-export function aChallengeEvent(
-  label: string,
-  over: Partial<ChallengeEvent> = {},
-): ChallengeEvent {
+export function aChallengeEvent(label: string, over: Partial<ChallengeEvent> = {}): ChallengeEvent {
   return ChallengeEventSchema.parse({
     id: asChallengeEventId(testId(label)),
     challengeId: asChallengeId(testId('challenge1')),

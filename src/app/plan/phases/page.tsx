@@ -24,7 +24,12 @@ import {
 } from '@/modules/planning/planning-service';
 import { describeInterventionPlan, resolvePhaseIntervention } from '@/domain/intervention';
 import { phaseKindLabel } from '@/domain/methodology';
-import { phasesInOrder, totalPlannedPhaseMin, type Session, type SessionPhase } from '@/domain/session';
+import {
+  phasesInOrder,
+  totalPlannedPhaseMin,
+  type Session,
+  type SessionPhase,
+} from '@/domain/session';
 import { shortPlayerName, type Player } from '@/domain/player';
 import { isErr } from '@/lib/result';
 

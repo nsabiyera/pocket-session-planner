@@ -6,7 +6,13 @@ import {
   type PlayerChallenge,
 } from '@/domain/challenge';
 import type { FourCorner } from '@/domain/four-corners';
-import { asChallengeId, type ChallengeId, type PhaseId, type PlayerId, type SessionId } from '@/domain/ids';
+import {
+  asChallengeId,
+  type ChallengeId,
+  type PhaseId,
+  type PlayerId,
+  type SessionId,
+} from '@/domain/ids';
 import { SessionSchema, type Session } from '@/domain/session';
 import { now, type ServiceContext } from '../context';
 
@@ -199,9 +205,7 @@ export async function pruneChallengesForPlayer(
         ? null
         : {
             ...run,
-            challengeEvents: run.challengeEvents.filter(
-              (event) => !doomed.has(event.challengeId),
-            ),
+            challengeEvents: run.challengeEvents.filter((event) => !doomed.has(event.challengeId)),
           },
   });
 }

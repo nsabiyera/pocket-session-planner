@@ -80,8 +80,7 @@ export const asInterventionEventId = (v: string): InterventionEventId =>
 export const asPlayerAssessmentId = (v: string): PlayerAssessmentId =>
   PlayerAssessmentIdSchema.parse(v);
 export const asChallengeId = (v: string): ChallengeId => ChallengeIdSchema.parse(v);
-export const asChallengeEventId = (v: string): ChallengeEventId =>
-  ChallengeEventIdSchema.parse(v);
+export const asChallengeEventId = (v: string): ChallengeEventId => ChallengeEventIdSchema.parse(v);
 export const asReviewId = (v: string): ReviewId => ReviewIdSchema.parse(v);
 export const asCarryForwardActionId = (v: string): CarryForwardActionId =>
   CarryForwardActionIdSchema.parse(v);

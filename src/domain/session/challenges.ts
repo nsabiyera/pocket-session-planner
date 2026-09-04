@@ -38,9 +38,7 @@ export interface ChallengeProgress {
 }
 
 function eventsFor(session: Session, challengeId: ChallengeId): ChallengeEvent[] {
-  return (session.run?.challengeEvents ?? []).filter(
-    (event) => event.challengeId === challengeId,
-  );
+  return (session.run?.challengeEvents ?? []).filter((event) => event.challengeId === challengeId);
 }
 
 /** One challenge's derived state. `phaseId` defaults to the phase the run is in. */
@@ -83,10 +81,7 @@ export function findChallenge(
  * left: who still needs a chance? A settled challenge drops to the bottom — it has nothing
  * left to say.
  */
-export function sessionChallengeProgress(
-  session: Session,
-  phaseId?: PhaseId,
-): ChallengeProgress[] {
+export function sessionChallengeProgress(session: Session, phaseId?: PhaseId): ChallengeProgress[] {
   return session.challenges
     .map((challenge) => challengeProgress(session, challenge, phaseId))
     .sort((a, b) => {

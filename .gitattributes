@@ -1,0 +1,13 @@
+# Line endings: LF in the repository, and LF in the working tree on every platform.
+#
+# Git for Windows defaults to `core.autocrlf=true`, which checks text files out with CRLF.
+# Prettier expects LF, so without this a Windows clone fails `npm run format:check` on files
+# nobody has touched — and that failure is indistinguishable from a real formatting mistake,
+# which is how a green gate stops meaning anything. It also silences the "LF will be replaced
+# by CRLF" warning on every `git add`.
+#
+# `text=auto` still lets Git decide what is text; `eol=lf` fixes what text looks like on disk.
+* text=auto eol=lf
+
+# Images are binary: never normalise, never diff as text.
+*.png binary

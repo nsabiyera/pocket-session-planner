@@ -15,23 +15,14 @@ import {
 } from '../../_components/ui';
 import { showToast } from '../../_components/toast-host';
 import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
-import {
-  addChallenge,
-  removeChallenge,
-  updateChallenge,
-} from '@/modules/planning/challenges';
+import { addChallenge, removeChallenge, updateChallenge } from '@/modules/planning/challenges';
 import {
   MAX_CHALLENGE_TARGET,
   MAX_CHALLENGES_PER_SESSION,
   type ChallengeMeasure,
   type PlayerChallenge,
 } from '@/domain/challenge';
-import {
-  cornerShortLabel,
-  cornerSlug,
-  FOUR_CORNERS,
-  type FourCorner,
-} from '@/domain/four-corners';
+import { cornerShortLabel, cornerSlug, FOUR_CORNERS, type FourCorner } from '@/domain/four-corners';
 import { comparePlayers, shortPlayerName, type Player } from '@/domain/player';
 import { phasesInOrder, type Session } from '@/domain/session';
 import type { ChallengeId, PhaseId } from '@/domain/ids';
@@ -105,8 +96,8 @@ export default function ChallengesPage() {
       <ScreenHead eyebrow="Challenges" title={session.objective.text} />
 
       <p className="card-meta">
-        One thing each player is trying to do today. You tally them in Do mode with a single
-        tap, and rule on them afterwards.
+        One thing each player is trying to do today. You tally them in Do mode with a single tap,
+        and rule on them afterwards.
       </p>
 
       {full ? (
@@ -355,8 +346,8 @@ function ChallengeSheet({
         />
       ) : (
         <p className="card-meta">
-          No tally — you rule on it at the end. Best for the things you cannot count, like
-          staying positive after a mistake.
+          No tally — you rule on it at the end. Best for the things you cannot count, like staying
+          positive after a mistake.
         </p>
       )}
 
@@ -364,8 +355,8 @@ function ChallengeSheet({
         <summary>Narrow it down</summary>
 
         <p className="card-meta">
-          By default the challenge is live all session and files under no corner. Both are
-          usually right.
+          By default the challenge is live all session and files under no corner. Both are usually
+          right.
         </p>
 
         <fieldset className="field">
@@ -437,4 +428,3 @@ function ChallengeSheet({
     </Sheet>
   );
 }
-
