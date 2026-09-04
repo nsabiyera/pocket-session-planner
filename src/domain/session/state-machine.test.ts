@@ -4,11 +4,12 @@ import { SessionSchema, type Session, type SessionStatus } from '../session';
 import { isErr, unwrap } from '@/lib/result';
 import { FakeClock } from '@/lib/fake-clock';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
-import { asInterventionEventId } from '../ids';
+import { asChallengeEventId, asInterventionEventId } from '../ids';
+import type { ChallengeStatus, PlayerChallenge } from '../challenge';
 import { isoDateTime } from '../primitives';
 import { buildSessionFromMethodology } from './build-from-methodology';
 import { PLAY_PRACTICE_PLAY } from '../presets';
-import { aSquad, T0 } from '@/test/builders';
+import { aChallenge, aSquad, challengeId, playerId, testId, T0 } from '@/test/builders';
 
 const clockOf = () => new FakeClock(T0);
 const nowIso = (clock: FakeClock) => isoDateTime(clock.nowIso());
@@ -56,6 +57,13 @@ describe('the reducer never throws and always produces a valid session', () => {
     { kind: 'skipPhase' },
     { kind: 'extendPhase', minutes: 5 },
     { kind: 'closeIntervention' },
+    {
+      kind: 'logChallengeProgress',
+      id: asChallengeEventId(testId('sighting')),
+      challengeId: challengeId('c1'),
+    },
+    { kind: 'undoChallengeProgress', challengeId: challengeId('c1') },
+    { kind: 'setChallengeStatus', challengeId: challengeId('c1'), status: 'met' },
     { kind: 'heartbeat' },
     { kind: 'reconcileToLastActivity' },
     { kind: 'finish' },
@@ -327,6 +335,205 @@ describe('coaching points', () => {
       pointId: '00000000-0000-4000-8000-0000000000cc' as never,
       delivered: true,
     });
+    expect(isErr(result) && result.error.code).toBe('not_found');
+  });
+});
+
+const sightingId = (label: string) => asChallengeEventId(testId(label));
+
+const logSighting = (label: string, challenge = 'c1'): SessionCommand => ({
+  kind: 'logChallengeProgress',
+  id: sightingId(label),
+  challengeId: challengeId(challenge),
+});
+
+/** A running session holding one counted challenge for Kai, target 3. */
+function runningWithChallenge(over: Partial<PlayerChallenge> = {}): Session {
+  return { ...runningSession(), challenges: [aChallenge('c1', { targetCount: 3, ...over })] };
+}
+
+const currentPhaseIdOf = (session: Session) =>
+  session.run?.phaseRuns[session.run.currentPhaseIndex]?.phaseId;
+
+describe('logChallengeProgress', () => {
+  it('appends a sighting stamped with the phase, the wall clock and the phase clock', () => {
+    const clock = clockOf();
+    const session = runningWithChallenge();
+    clock.advanceMinutes(4);
+    const logged = applyOk(session, logSighting('e1'), nowIso(clock));
+
+    expect(logged.run?.challengeEvents).toEqual([
+      {
+        id: sightingId('e1'),
+        challengeId: challengeId('c1'),
+        phaseId: currentPhaseIdOf(session),
+        at: nowIso(clock),
+        phaseElapsedMs: 4 * 60_000,
+      },
+    ]);
+    expect(SessionSchema.safeParse(logged).success).toBe(true);
+  });
+
+  it('is the tally: three taps are three events, never a counter', () => {
+    let session = runningWithChallenge();
+    for (const label of ['e1', 'e2', 'e3']) {
+      session = applyOk(session, logSighting(label));
+    }
+
+    expect(session.run?.challengeEvents).toHaveLength(3);
+    // Nothing on the challenge itself moved — the number is derived from the evidence.
+    expect(session.challenges[0]?.status).toBe('open');
+  });
+
+  it('reports a challenge this session does not hold', () => {
+    const result = apply(runningWithChallenge(), logSighting('e1', 'ghost'));
+    expect(isErr(result) && result.error.code).toBe('not_found');
+  });
+
+  it('needs a running session — there is no phase to log a sighting against', () => {
+    const planned = { ...plannedSession(), challenges: [aChallenge('c1', { targetCount: 3 })] };
+    const result = apply(planned, logSighting('e1'));
+    expect(isErr(result) && result.error.code).toBe('illegal_transition');
+  });
+
+  it('counts a sighting in a phase the challenge does not name', () => {
+    // Phase scoping decides what Do mode puts in front of the coach. It does not get to tell
+    // them they did not see what they just saw.
+    const base = runningSession();
+    const elsewhere = base.phases
+      .filter((phase) => phase.id !== currentPhaseIdOf(base))
+      .map((phase) => phase.id);
+    const session = {
+      ...base,
+      challenges: [aChallenge('c1', { targetCount: 3, phaseIds: elsewhere.slice(0, 1) })],
+    };
+
+    const logged = applyOk(session, logSighting('e1'));
+    expect(elsewhere.length).toBeGreaterThan(0);
+    expect(logged.run?.challengeEvents[0]?.phaseId).toBe(currentPhaseIdOf(base));
+  });
+
+  it('counts a sighting after the coach has already ruled on it', () => {
+    const ruled = runningWithChallenge({ status: 'missed', settledAt: T0 });
+    const logged = applyOk(ruled, logSighting('e1'));
+
+    expect(logged.run?.challengeEvents).toHaveLength(1);
+    // The ruling stays in charge of what is displayed; the sighting is still recorded.
+    expect(logged.challenges[0]?.status).toBe('missed');
+  });
+});
+
+describe('undoChallengeProgress', () => {
+  const undo = (challenge = 'c1'): SessionCommand => ({
+    kind: 'undoChallengeProgress',
+    challengeId: challengeId(challenge),
+  });
+
+  it('pops the most recent sighting for that challenge and leaves the others alone', () => {
+    let session: Session = {
+      ...runningSession(),
+      challenges: [
+        aChallenge('c1', { targetCount: 3 }),
+        aChallenge('c2', { targetCount: 3, playerId: playerId('maya') }),
+      ],
+    };
+    session = applyOk(session, logSighting('e1', 'c1'));
+    session = applyOk(session, logSighting('e2', 'c2'));
+    session = applyOk(session, logSighting('e3', 'c1'));
+
+    const undone = applyOk(session, undo('c1'));
+    expect(undone.run?.challengeEvents.map((event) => event.id)).toEqual([
+      sightingId('e1'),
+      sightingId('e2'),
+    ]);
+    expect(SessionSchema.safeParse(undone).success).toBe(true);
+  });
+
+  it('cannot drive a tally below zero — an extra undo simply has nothing to pop', () => {
+    const logged = applyOk(runningWithChallenge(), logSighting('e1'));
+    const undone = applyOk(logged, undo());
+
+    expect(undone.run?.challengeEvents).toEqual([]);
+    const again = apply(undone, undo());
+    expect(isErr(again) && again.error.code).toBe('not_found');
+  });
+
+  it('reports that there is no sighting to undo', () => {
+    const result = apply(runningWithChallenge(), undo());
+    expect(isErr(result) && result.error.code).toBe('not_found');
+  });
+
+  it('needs a running session', () => {
+    const planned = { ...plannedSession(), challenges: [aChallenge('c1', { targetCount: 3 })] };
+    expect(isErr(apply(planned, undo()))).toBe(true);
+  });
+});
+
+describe('setChallengeStatus', () => {
+  const rule = (status: ChallengeStatus, note?: string, challenge = 'c1'): SessionCommand => ({
+    kind: 'setChallengeStatus',
+    challengeId: challengeId(challenge),
+    status,
+    ...(note !== undefined ? { note } : {}),
+  });
+
+  it('records the ruling and when it was made', () => {
+    const clock = clockOf();
+    clock.advanceMinutes(50);
+    const ruled = applyOk(runningWithChallenge(), rule('partly'), nowIso(clock));
+
+    expect(ruled.challenges[0]?.status).toBe('partly');
+    expect(ruled.challenges[0]?.settledAt).toBe(nowIso(clock));
+    expect(SessionSchema.safeParse(ruled).success).toBe(true);
+  });
+
+  it('stores a note when one is given, and leaves an existing one alone when not', () => {
+    const withNote = applyOk(runningWithChallenge(), rule('met', 'Two of them were superb'));
+    expect(withNote.challenges[0]?.note).toBe('Two of them were superb');
+
+    const reruled = applyOk(withNote, rule('partly'));
+    expect(reruled.challenges[0]?.note).toBe('Two of them were superb');
+  });
+
+  it('un-rules back to open and clears settledAt — the Undo on the ruling toast', () => {
+    const ruled = applyOk(runningWithChallenge(), rule('missed'));
+    const reopened = applyOk(ruled, rule('open'));
+
+    expect(reopened.challenges[0]?.status).toBe('open');
+    expect(reopened.challenges[0]?.settledAt).toBeNull();
+    // "Not ruled on, ruled on at 18:00" is not a state that means anything.
+    expect(SessionSchema.safeParse(reopened).success).toBe(true);
+  });
+
+  it('rules on a finished session, because that is where Review happens', () => {
+    const finished = applyOk(runningWithChallenge(), { kind: 'finish' });
+    const ruled = applyOk(finished, rule('met'));
+
+    expect(ruled.status).toBe('completed');
+    expect(ruled.challenges[0]?.status).toBe('met');
+  });
+
+  it('rules on a session that never ran at all', () => {
+    const planned = { ...plannedSession(), challenges: [aChallenge('c1', { targetCount: 3 })] };
+    expect(applyOk(planned, rule('missed')).challenges[0]?.status).toBe('missed');
+  });
+
+  it('touches only the challenge named', () => {
+    const session: Session = {
+      ...runningSession(),
+      challenges: [
+        aChallenge('c1', { targetCount: 3 }),
+        aChallenge('c2', { targetCount: 3, playerId: playerId('maya') }),
+      ],
+    };
+    const ruled = applyOk(session, rule('met', undefined, 'c2'));
+
+    expect(ruled.challenges[0]?.status).toBe('open');
+    expect(ruled.challenges[1]?.status).toBe('met');
+  });
+
+  it('reports a challenge this session does not hold', () => {
+    const result = apply(runningWithChallenge(), rule('met', undefined, 'ghost'));
     expect(isErr(result) && result.error.code).toBe('not_found');
   });
 });

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ChallengeEventSchema } from './challenge';
 import { InterventionEventSchema } from './intervention';
 import { PhaseIdSchema } from './ids';
 import { IsoDateTimeSchema } from './primitives';
@@ -56,6 +57,12 @@ export const SessionRunStateSchema = z.object({
   lastHeartbeatAt: IsoDateTimeSchema,
   /** Low-volume, same writer as the session document — see the ADR discussion in the plan. */
   interventionEvents: z.array(InterventionEventSchema).max(200).default([]),
+  /**
+   * Challenge sightings, for the same reason interventions live here rather than in their
+   * own store: low-volume, written by the same timer-owning code path, and never queried
+   * across sessions. The **tally is the length of this array**, never a stored counter.
+   */
+  challengeEvents: z.array(ChallengeEventSchema).max(400).default([]),
 });
 export type SessionRunState = z.infer<typeof SessionRunStateSchema>;
 export type SessionRunStateInput = z.input<typeof SessionRunStateSchema>;

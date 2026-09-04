@@ -1,7 +1,10 @@
 import { CarryForwardActionSchema, type CarryForwardAction } from '@/domain/carry-forward';
+import { ChallengeEventSchema, PlayerChallengeSchema, type ChallengeEvent, type PlayerChallenge } from '@/domain/challenge';
 import { CoachingPointSchema, type CoachingPoint } from '@/domain/coaching-point';
 import {
   asCarryForwardActionId,
+  asChallengeEventId,
+  asChallengeId,
   asCoachingPointId,
   asObservationId,
   asPhaseId,
@@ -10,6 +13,7 @@ import {
   asReviewId,
   asSessionId,
   asSquadId,
+  type ChallengeId,
   type PhaseId,
   type PlayerId,
   type SquadId,
@@ -97,6 +101,40 @@ export function aCoachingPoint(label: string, over: Partial<CoachingPoint> = {})
     id: asCoachingPointId(testId(label)),
     text: `Coaching point ${label}`,
     source: 'methodology',
+    ...over,
+  });
+}
+
+export function challengeId(label: string): ChallengeId {
+  return asChallengeId(testId(label));
+}
+
+/**
+ * A counted challenge with a target of 3 for Kai, unless told otherwise. Counted rather than
+ * judged because the tally is the half with arithmetic in it.
+ */
+export function aChallenge(label: string, over: Partial<PlayerChallenge> = {}): PlayerChallenge {
+  return PlayerChallengeSchema.parse({
+    id: asChallengeId(testId(label)),
+    playerId: asPlayerId(testId('kai')),
+    text: `Challenge ${label}`,
+    measure: 'count',
+    targetCount: 3,
+    source: 'coach',
+    ...over,
+  });
+}
+
+/** One sighting, in the `warmup` phase unless told otherwise. */
+export function aChallengeEvent(
+  label: string,
+  over: Partial<ChallengeEvent> = {},
+): ChallengeEvent {
+  return ChallengeEventSchema.parse({
+    id: asChallengeEventId(testId(label)),
+    challengeId: asChallengeId(testId('challenge1')),
+    phaseId: asPhaseId(testId('warmup')),
+    at: T0,
     ...over,
   });
 }

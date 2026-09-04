@@ -3,13 +3,17 @@ import {
   dispatch,
   heartbeat,
   loadRunSnapshot,
+  logChallengeProgress,
   logIntervention,
   logObservation,
   observationTagGroups,
   observationTagsFor,
+  setChallengeStatus,
+  undoChallengeProgress,
   undoObservation,
 } from './run-service';
 import { commitAndStart, startDraft } from '../planning/planning-service';
+import { addChallenge } from '../planning/challenges';
 import { addPlayer, createSquad } from '../squad/squad-service';
 import { FakeDataStore } from '@/data/ports/fake-data-store';
 import { FakeClock } from '@/lib/fake-clock';
@@ -19,7 +23,7 @@ import { asSessionId, type PlayerId, type SquadId } from '@/domain/ids';
 import { interventionSummary } from '@/domain/session/selectors';
 import { phaseElapsedMs } from '@/domain/session/timer';
 import { readResumeMirror, mirrorRemainingMs } from '@/lib/resume-mirror';
-import { T0, testId } from '@/test/builders';
+import { challengeId, T0, testId } from '@/test/builders';
 import type { Session } from '@/domain/session';
 import type { ServiceContext } from '../context';
 
@@ -268,6 +272,119 @@ describe('loadRunSnapshot', () => {
   it('reports a session that does not exist', async () => {
     const result = await loadRunSnapshot(ctx, asSessionId(testId('ghost')));
     expect(isErr(result) && result.error.kind).toBe('session_not_found');
+  });
+});
+
+describe('challenges in Do mode', () => {
+  /** Adds a challenge to the running session and hands back the one it added. */
+  const challengeFor = async (
+    playerId: PlayerId,
+    text: string,
+    over: Partial<Parameters<typeof addChallenge>[2]> = {},
+  ) => {
+    const updated = unwrap(await addChallenge(ctx, session.id, { playerId, text, ...over }));
+    const challenge = updated.challenges[updated.challenges.length - 1];
+    if (!challenge) throw new Error('addChallenge returned a session with no challenges');
+    return challenge;
+  };
+
+  it('counts a sighting write-through, stamped with the phase clock', async () => {
+    const challenge = await challengeFor(kai, 'Three forward passes', { targetCount: 3 });
+    clock().advanceMinutes(2);
+    const after = unwrap(await logChallengeProgress(ctx, session.id, challenge.id));
+
+    expect(after.run?.challengeEvents).toHaveLength(1);
+
+    const stored = await ctx.store.sessions.get(session.id);
+    expect(stored?.run?.challengeEvents[0]?.challengeId).toBe(challenge.id);
+    expect(stored?.run?.challengeEvents[0]?.phaseElapsedMs).toBe(2 * 60_000);
+  });
+
+  it('gives every sighting its own id, so three taps are three events', async () => {
+    const challenge = await challengeFor(kai, 'Forward passes', { targetCount: 3 });
+    await logChallengeProgress(ctx, session.id, challenge.id);
+    const after = unwrap(await logChallengeProgress(ctx, session.id, challenge.id));
+
+    const ids = after.run?.challengeEvents.map((event) => event.id) ?? [];
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('pops the most recent sighting on undo', async () => {
+    const challenge = await challengeFor(kai, 'Forward passes', { targetCount: 3 });
+    await logChallengeProgress(ctx, session.id, challenge.id);
+    await logChallengeProgress(ctx, session.id, challenge.id);
+
+    const undone = unwrap(await undoChallengeProgress(ctx, session.id, challenge.id));
+    expect(undone.run?.challengeEvents).toHaveLength(1);
+    expect((await ctx.store.sessions.get(session.id))?.run?.challengeEvents).toHaveLength(1);
+  });
+
+  it('reports that there is nothing to undo', async () => {
+    const challenge = await challengeFor(kai, 'Forward passes', { targetCount: 3 });
+    const result = await undoChallengeProgress(ctx, session.id, challenge.id);
+    expect(isErr(result) && result.error.kind).toBe('transition');
+  });
+
+  it('records the coach’s ruling, with the note they typed', async () => {
+    const challenge = await challengeFor(kai, 'Forward passes', { targetCount: 3 });
+    const ruled = unwrap(
+      await setChallengeStatus(ctx, session.id, challenge.id, 'partly', 'One, and looking'),
+    );
+
+    expect(ruled.challenges[0]?.status).toBe('partly');
+    expect(ruled.challenges[0]?.note).toBe('One, and looking');
+    expect(ruled.challenges[0]?.settledAt).toBe(T0);
+  });
+
+  it('rules on a challenge after the session is finished — that is where Review is', async () => {
+    const challenge = await challengeFor(kai, 'Forward passes', { targetCount: 3 });
+    unwrap(await dispatch(ctx, session.id, { kind: 'finish' }));
+
+    const ruled = unwrap(await setChallengeStatus(ctx, session.id, challenge.id, 'met'));
+    expect(ruled.status).toBe('completed');
+    expect(ruled.challenges[0]?.status).toBe('met');
+  });
+
+  it('reports a challenge this session does not hold', async () => {
+    const result = await logChallengeProgress(ctx, session.id, challengeId('ghost'));
+    expect(isErr(result) && result.error.kind).toBe('transition');
+  });
+
+  it('hands /run its challenges scoped to the current phase, and a summary', async () => {
+    const unscoped = await challengeFor(kai, 'Forward passes', { targetCount: 3 });
+    const later = session.phases[1];
+    const scoped = await challengeFor(maya, 'Left foot only', {
+      targetCount: 2,
+      phaseIds: later ? [later.id] : [],
+    });
+    unwrap(await logChallengeProgress(ctx, session.id, unscoped.id));
+
+    const snapshot = unwrap(await loadRunSnapshot(ctx, session.id));
+
+    expect(snapshot.challenges).toHaveLength(2);
+    const progress = snapshot.challenges.find((p) => p.challenge.id === unscoped.id);
+    expect(progress?.count).toBe(1);
+    expect(progress?.countThisPhase).toBe(1);
+    expect(progress?.label).toBe('1/3');
+    expect(progress?.liveNow).toBe(true);
+    // Scoped to the next phase, so it is not being watched for yet.
+    expect(snapshot.challenges.find((p) => p.challenge.id === scoped.id)?.liveNow).toBe(false);
+
+    expect(snapshot.challengeSummary).toEqual({
+      total: 2,
+      met: 0,
+      partly: 0,
+      missed: 0,
+      open: 2,
+      sightings: 1,
+    });
+  });
+
+  it('reports an empty challenge list and a zeroed summary when none were set', async () => {
+    const snapshot = unwrap(await loadRunSnapshot(ctx, session.id));
+    expect(snapshot.challenges).toEqual([]);
+    expect(snapshot.challengeSummary.total).toBe(0);
+    expect(snapshot.challengeSummary.sightings).toBe(0);
   });
 });
 

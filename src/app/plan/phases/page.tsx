@@ -24,8 +24,8 @@ import {
 } from '@/modules/planning/planning-service';
 import { describeInterventionPlan, resolvePhaseIntervention } from '@/domain/intervention';
 import { phaseKindLabel } from '@/domain/methodology';
-import { phasesInOrder, totalPlannedPhaseMin, type SessionPhase } from '@/domain/session';
-import { shortPlayerName } from '@/domain/player';
+import { phasesInOrder, totalPlannedPhaseMin, type Session, type SessionPhase } from '@/domain/session';
+import { shortPlayerName, type Player } from '@/domain/player';
 import { isErr } from '@/lib/result';
 
 /**
@@ -113,6 +113,20 @@ export default function PhaseEditorPage() {
         </div>
         <p>{describeInterventionPlan(session.intervention)}</p>
         {session.objective.sourceActionId ? <CarriedPill /> : null}
+      </div>
+
+      {/*
+        Challenges cost **zero taps** on the default path: one summary line and a link into
+        the detour, exactly like intervention. A session with none says so in a single word.
+      */}
+      <div className="card card--sunk">
+        <div className="row row--between">
+          <span className="eyebrow">Player challenges</span>
+          <Link href="/plan/challenges" className="btn btn--quiet">
+            {session.challenges.length === 0 ? 'Set' : 'Edit'}
+          </Link>
+        </div>
+        <p>{describeChallengePlan(session, state.players)}</p>
       </div>
 
       <Stepper
@@ -248,6 +262,24 @@ export default function PhaseEditorPage() {
       />
     </Screen>
   );
+}
+
+/**
+ * *"Kai · three forward passes, and 2 others"* — the one line the plan editor shows.
+ *
+ * Names the first player rather than counting them, because "3 challenges" tells the coach
+ * nothing they can check and a name tells them whether they set the one they meant to.
+ */
+function describeChallengePlan(session: Session, roster: readonly Player[]): string {
+  const [first] = session.challenges;
+  if (!first) return 'None set.';
+
+  const player = roster.find((candidate) => candidate.id === first.playerId);
+  const who = player ? shortPlayerName(player, roster) : 'Someone';
+  const rest = session.challenges.length - 1;
+
+  const head = `${who} · ${first.text}`;
+  return rest === 0 ? `${head}.` : `${head}, and ${rest} other${rest === 1 ? '' : 's'}.`;
 }
 
 function PhaseSheet({

@@ -1,9 +1,11 @@
 import { err, ok, type Result } from '@/lib/result';
 import {
+  asChallengeId,
   asCoachingPointId,
   asPhaseId,
   asSessionId,
   type MethodologyId,
+  type PhaseId,
   type PlayerId,
   type SessionId,
   type SquadId,
@@ -381,6 +383,13 @@ export async function repeatSession(
       : options.focusPlayerIds.map((playerId) => ({ playerId, sourceActionId: null }));
   const focusIds = new Set(focusPlayers.map((f) => f.playerId));
 
+  // Phases get fresh ids, so anything pointing at a phase has to be remapped rather than
+  // copied — a challenge still holding the *source* session's phase id would be rejected by
+  // the schema, and silently dropping its scope would quietly widen the challenge.
+  const phaseIdBySource = new Map<string, PhaseId>(
+    source.phases.map((phase) => [phase.id as string, asPhaseId(ctx.ids.uuid())]),
+  );
+
   const draft = SessionSchema.parse({
     ...source,
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -396,9 +405,22 @@ export async function repeatSession(
     seededFromActionIds: [],
     objective: { ...source.objective, sourceActionId: null },
     focusPlayers,
+    // The *asks* are worth repeating; last week's verdict on them is not. Every challenge
+    // comes back open, with no sightings and no ruling, for a player still in the squad.
+    challenges: source.challenges.map((challenge) => ({
+      ...challenge,
+      id: asChallengeId(ctx.ids.uuid()),
+      status: 'open',
+      settledAt: null,
+      note: '',
+      sourceActionId: null,
+      phaseIds: challenge.phaseIds
+        .map((phaseId) => phaseIdBySource.get(phaseId))
+        .filter((phaseId): phaseId is PhaseId => phaseId !== undefined),
+    })),
     phases: source.phases.map((phase) => ({
       ...phase,
-      id: asPhaseId(ctx.ids.uuid()),
+      id: phaseIdBySource.get(phase.id) ?? asPhaseId(ctx.ids.uuid()),
       focusPlayerIds: phase.focusPlayerIds.filter((id) => focusIds.has(id)),
       sourceActionId: null,
       coachingPoints: phase.coachingPoints.map((point) => ({

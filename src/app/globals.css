@@ -1020,6 +1020,153 @@ summary {
   font-variant-numeric: tabular-nums;
 }
 
+/* ------------------------------------------------------ player challenges */
+
+/*
+ * The challenge strip in Do mode, and the editor rows in `/plan/challenges`.
+ *
+ * Status is carried by a word in a pill, never by colour alone — the strip is read in direct
+ * sunlight, which is the first place a colour-only cue fails (WCAG 1.4.1). The left border
+ * tint is a secondary cue on top of that, and reuses the corner hue when the challenge has
+ * one so a challenge and its observations read as the same thread.
+ */
+
+.run-challenges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.run-challenges + .eyebrow {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: var(--border);
+}
+
+.challenge-live {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-2);
+  border-left: 4px solid var(--corner, var(--accent));
+  padding-left: var(--sp-3);
+  border-radius: var(--radius-sm);
+}
+
+/* A ruled challenge has had its say. Still legible, no longer competing for attention. */
+.challenge-live[data-status='met'],
+.challenge-live[data-status='partly'],
+.challenge-live[data-status='missed'] {
+  opacity: 0.72;
+}
+
+/* The `+1` target: the whole row, because it is tapped mid-drill. */
+.challenge-live-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: var(--tap);
+  width: 100%;
+  padding: var(--sp-2) 0;
+  background: transparent;
+  border: 0;
+  text-align: left;
+}
+
+.challenge-live-who {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--corner, var(--accent));
+}
+
+.challenge-live-text {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.challenge-live-state {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.challenge-live-tally {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* The ruling affordance. Small on purpose — it is not the thing being tapped in the rain. */
+.challenge-live-rule {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+
+.pill--met {
+  background: var(--signal-wash);
+  color: var(--signal);
+}
+
+.pill--partly {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+
+.pill--missed {
+  background: var(--stop-wash);
+  color: var(--stop);
+}
+
+.challenge-token--met:active,
+.challenge-token--met[aria-pressed='true'] {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--on-fill);
+}
+
+.challenge-token--partly:active,
+.challenge-token--partly[aria-pressed='true'] {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: var(--on-fill);
+}
+
+.challenge-token--missed:active,
+.challenge-token--missed[aria-pressed='true'] {
+  background: var(--stop);
+  border-color: var(--stop);
+  color: var(--on-fill);
+}
+
+/* --------------------------------------------- the challenge editor rows */
+
+.challenge-row {
+  gap: var(--sp-2);
+}
+
+.challenge-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  width: 100%;
+  text-align: left;
+  border-left: 4px solid var(--corner, var(--line-strong));
+}
+
+.challenge-text {
+  font-weight: 600;
+  color: var(--ink);
+}
+
 /* --------------------------------------------------- observation tokens */
 
 .observation-tokens {

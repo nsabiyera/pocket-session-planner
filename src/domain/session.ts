@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_CHALLENGES_PER_SESSION, PlayerChallengeSchema } from './challenge';
 import { CoachingPointSchema } from './coaching-point';
 import {
   CarryForwardActionIdSchema,
@@ -96,6 +97,15 @@ const SessionShape = {
    */
   interventionTouched: z.boolean().default(false),
   focusPlayers: z.array(FocusPlayerAssignmentSchema).max(30).default([]),
+  /**
+   * Per-player challenges: *one thing* this player is trying to do today.
+   *
+   * Session-level rather than per-phase because that is how a coach says it — "Kai, three
+   * forward passes today" — with `PlayerChallenge.phaseIds` narrowing it when they mean
+   * only the rondo. Unlike `SessionPhase.focusPlayerIds` these are **not** constrained to
+   * the session's focus players; see the note on `PlayerChallenge.playerId`.
+   */
+  challenges: z.array(PlayerChallengeSchema).max(MAX_CHALLENGES_PER_SESSION).default([]),
   phases: z.array(SessionPhaseSchema).max(12).default([]),
   plannedDurationMin: DurationMinSchema,
   /**
@@ -163,6 +173,30 @@ function refineSession(session: z.infer<z.ZodObject<typeof SessionShape>>, ctx: 
     }
   });
 
+  const challengeIds = new Set(session.challenges.map((c) => c.id));
+  if (challengeIds.size !== session.challenges.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['challenges'],
+      message: 'Challenge ids must be unique.',
+    });
+  }
+
+  // A challenge scoped to a phase that no longer exists would be watched for in no phase at
+  // all — invisible in Do mode, and silently unjudgeable. Better to reject the write than to
+  // let the coach set something they will never be shown.
+  session.challenges.forEach((challenge, index) => {
+    for (const phaseId of challenge.phaseIds) {
+      if (!phaseIds.has(phaseId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['challenges', index, 'phaseIds'],
+          message: `Challenge phase ${phaseId} is not a phase of this session.`,
+        });
+      }
+    }
+  });
+
   if (session.status === 'in_progress' && session.run === null) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -214,6 +248,25 @@ function refineSession(session: z.infer<z.ZodObject<typeof SessionShape>>, ctx: 
           code: z.ZodIssueCode.custom,
           path: ['run', 'interventionEvents', index, 'phaseId'],
           message: `Intervention event references unknown phase ${event.phaseId}.`,
+        });
+      }
+    }
+
+    // A sighting whose challenge has been deleted would inflate no tally and belong to
+    // nobody, but it would still be exported as evidence of something that is gone.
+    for (const [index, event] of session.run.challengeEvents.entries()) {
+      if (!challengeIds.has(event.challengeId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['run', 'challengeEvents', index, 'challengeId'],
+          message: `Challenge event references unknown challenge ${event.challengeId}.`,
+        });
+      }
+      if (!phaseIds.has(event.phaseId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['run', 'challengeEvents', index, 'phaseId'],
+          message: `Challenge event references unknown phase ${event.phaseId}.`,
         });
       }
     }

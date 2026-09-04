@@ -1,12 +1,21 @@
 import { err, ok, type Result } from '@/lib/result';
 import {
+  asChallengeEventId,
   asInterventionEventId,
   asObservationId,
+  type ChallengeId,
   type ObservationId,
   type PhaseId,
   type PlayerId,
   type SessionId,
 } from '@/domain/ids';
+import type { ChallengeStatus } from '@/domain/challenge';
+import {
+  challengeSummary,
+  sessionChallengeProgress,
+  type ChallengeProgress,
+  type ChallengeSummary,
+} from '@/domain/session/challenges';
 import {
   attributeForTag,
   CORNER_ATTRIBUTES,
@@ -232,12 +241,64 @@ export async function undoObservation(
   await ctx.store.observations.hardDelete(observationId);
 }
 
+/**
+ * `+1` on a challenge row — the coach saw the thing they asked for.
+ *
+ * One tap, no sheet, no confirmation. The whole value of a challenge is that it gets counted
+ * in the two seconds between the pass landing and the next phase of play, and anything more
+ * than a single tap means it does not get counted at all.
+ */
+export async function logChallengeProgress(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  challengeId: ChallengeId,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, {
+    kind: 'logChallengeProgress',
+    id: asChallengeEventId(ctx.ids.uuid()),
+    challengeId,
+  });
+}
+
+/** The `Undo` on the `+1` toast. Pops the most recent sighting, never a counter. */
+export async function undoChallengeProgress(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  challengeId: ChallengeId,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, { kind: 'undoChallengeProgress', challengeId });
+}
+
+/**
+ * The coach's ruling — met, partly, missed, or back to `open`.
+ *
+ * Works after the session is finished as well as during it, because ruling on a challenge is
+ * a natural part of Review and the state machine deliberately puts no run guard on it.
+ */
+export async function setChallengeStatus(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  challengeId: ChallengeId,
+  status: ChallengeStatus,
+  note?: string,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, {
+    kind: 'setChallengeStatus',
+    challengeId,
+    status,
+    ...(note !== undefined ? { note } : {}),
+  });
+}
+
 /** Everything `/run` needs for one repaint, in one round trip. */
 export interface RunSnapshot {
   session: Session;
   observations: Observation[];
   /** Observation counts for the current phase, keyed by player — drives the chip badges. */
   phaseCountsByPlayer: Map<PlayerId, number>;
+  /** Derived challenge state, still-open and furthest from target first. */
+  challenges: ChallengeProgress[];
+  challengeSummary: ChallengeSummary;
 }
 
 export async function loadRunSnapshot(
@@ -260,7 +321,13 @@ export async function loadRunSnapshot(
     );
   }
 
-  return ok({ session, observations, phaseCountsByPlayer });
+  return ok({
+    session,
+    observations,
+    phaseCountsByPlayer,
+    challenges: sessionChallengeProgress(session, phase?.id),
+    challengeSummary: challengeSummary(session),
+  });
 }
 
 /**

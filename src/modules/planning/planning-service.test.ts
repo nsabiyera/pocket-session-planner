@@ -12,6 +12,7 @@ import {
   updateDraft,
   updatePhase,
 } from './planning-service';
+import { addChallenge } from './challenges';
 import { addPlayer, createSquad } from '../squad/squad-service';
 import { FakeDataStore } from '@/data/ports/fake-data-store';
 import { FakeClock } from '@/lib/fake-clock';
@@ -336,6 +337,70 @@ describe('repeatSession', () => {
 
     const repeated = unwrap(await repeatSession(ctx, draft.id));
     expect(repeated.phases.flatMap((p) => p.coachingPoints).every((p) => !p.delivered)).toBe(true);
+  });
+
+  it('repeats the asks but not last week’s verdicts', async () => {
+    const draft = await draftFor({ focusPlayerIds: [kai] });
+    const added = unwrap(
+      await addChallenge(ctx, draft.id, {
+        playerId: kai,
+        text: 'Three forward passes',
+        targetCount: 3,
+        corner: 'technical_tactical',
+      }),
+    );
+    // Judge it, the way the coach would have at the end of the session.
+    await ctx.store.sessions.put({
+      ...added,
+      challenges: added.challenges.map((challenge) => ({
+        ...challenge,
+        status: 'met' as const,
+        settledAt: T0,
+        note: 'All three, second half',
+      })),
+    });
+
+    const repeated = unwrap(await repeatSession(ctx, added.id));
+    const challenge = repeated.challenges[0];
+
+    expect(repeated.challenges).toHaveLength(1);
+    expect(challenge?.text).toBe('Three forward passes');
+    expect(challenge?.targetCount).toBe(3);
+    expect(challenge?.corner).toBe('technical_tactical');
+    expect(challenge?.playerId).toBe(kai);
+    expect(challenge?.id).not.toBe(added.challenges[0]?.id);
+    expect(challenge?.status).toBe('open');
+    expect(challenge?.settledAt).toBeNull();
+    expect(challenge?.note).toBe('');
+  });
+
+  it('remaps a phase-scoped challenge onto the new session’s phases', async () => {
+    const draft = await draftFor();
+    const rondo = draft.phases[1];
+    const added = unwrap(
+      await addChallenge(ctx, draft.id, {
+        playerId: kai,
+        text: 'Left foot only',
+        phaseIds: rondo ? [rondo.id] : [],
+      }),
+    );
+
+    const repeated = unwrap(await repeatSession(ctx, added.id));
+    const position = added.phases.findIndex((phase) => phase.id === rondo?.id);
+
+    // Same position in the plan, a new id: the schema would reject a phase id from last week.
+    expect(repeated.challenges[0]?.phaseIds).toEqual([repeated.phases[position]?.id]);
+    expect(repeated.challenges[0]?.phaseIds).not.toEqual([rondo?.id]);
+  });
+
+  it('leaves an unscoped challenge live for the whole session', async () => {
+    const draft = await draftFor();
+    const added = unwrap(
+      await addChallenge(ctx, draft.id, { playerId: kai, text: 'Talk to your full back' }),
+    );
+
+    const repeated = unwrap(await repeatSession(ctx, added.id));
+    expect(repeated.challenges[0]?.phaseIds).toEqual([]);
   });
 
   it('swaps in the carry-forward focus players when given some', async () => {

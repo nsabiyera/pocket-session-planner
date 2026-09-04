@@ -316,6 +316,17 @@ async function checkReferences(
       });
       continue;
     }
+    const unknownChallengePlayer = session.challenges.some(
+      (challenge) => !playerExists(challenge.playerId),
+    );
+    if (unknownChallengePlayer) {
+      dropped.push({
+        store: 'sessions',
+        id: session.id,
+        reason: 'A challenged player is missing.',
+      });
+      continue;
+    }
     validSessions.add(session.id);
   }
 

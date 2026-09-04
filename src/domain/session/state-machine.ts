@@ -1,5 +1,13 @@
 import { err, ok, type Result } from '@/lib/result';
-import type { CoachingPointId, InterventionEventId, PhaseId, PlayerId } from '../ids';
+import type {
+  ChallengeEventId,
+  ChallengeId,
+  CoachingPointId,
+  InterventionEventId,
+  PhaseId,
+  PlayerId,
+} from '../ids';
+import type { ChallengeEvent, ChallengeStatus } from '../challenge';
 import {
   mechanicStopsPlay,
   resolvePhaseIntervention,
@@ -74,6 +82,19 @@ export type SessionCommand =
       readonly pointId: CoachingPointId;
       readonly delivered: boolean;
     }
+  | {
+      readonly kind: 'logChallengeProgress';
+      readonly id: ChallengeEventId;
+      readonly challengeId: ChallengeId;
+    }
+  | { readonly kind: 'undoChallengeProgress'; readonly challengeId: ChallengeId }
+  | {
+      readonly kind: 'setChallengeStatus';
+      readonly challengeId: ChallengeId;
+      /** `open` un-rules it, which is what the Undo on the ruling toast sends. */
+      readonly status: ChallengeStatus;
+      readonly note?: string;
+    }
   | { readonly kind: 'heartbeat' }
   | { readonly kind: 'reconcileToLastActivity' }
   | { readonly kind: 'finish' }
@@ -128,6 +149,12 @@ function reduce(
       return closeIntervention(session, now);
     case 'setCoachingPointDelivered':
       return setCoachingPointDelivered(session, command.pointId, command.delivered, now);
+    case 'logChallengeProgress':
+      return logChallengeProgress(session, command, now);
+    case 'undoChallengeProgress':
+      return undoChallengeProgress(session, command.challengeId);
+    case 'setChallengeStatus':
+      return setChallengeStatus(session, command, now);
     case 'heartbeat':
       return heartbeat(session, now);
     case 'reconcileToLastActivity':
@@ -197,6 +224,7 @@ function start(session: Session, now: IsoDateTime): Result<Session, TransitionEr
     openInterventionId: null,
     lastHeartbeatAt: now,
     interventionEvents: [],
+    challengeEvents: [],
   };
 
   return ok({ ...session, status: 'in_progress', run });
@@ -473,6 +501,116 @@ function setCoachingPointDelivered(
 
   if (!found) return fail('not_found', `No coaching point ${pointId} in this session.`);
   return ok({ ...session, phases });
+}
+
+// ---------------------------------------------------------------------------
+// Challenges
+// ---------------------------------------------------------------------------
+
+/**
+ * `+1` on a challenge row — the coach saw it happen.
+ *
+ * Deliberately **does not check that the challenge is live in this phase**. Phase scoping
+ * decides what Do mode puts in front of the coach; it does not get to tell them they did not
+ * see what they just saw. The event carries its own `phaseId`, so Review can still say the
+ * left-foot challenge was met twice outside the rondo.
+ *
+ * Nor does it refuse a challenge the coach has already ruled on. Seeing the thing happen
+ * after calling it missed is information, and `effectiveChallengeStatus` keeps the explicit
+ * ruling in charge of what is displayed.
+ */
+function logChallengeProgress(
+  session: Session,
+  command: Extract<SessionCommand, { kind: 'logChallengeProgress' }>,
+  now: IsoDateTime,
+): Result<Session, TransitionError> {
+  const running = requireRun(session);
+  if (!running.ok) return running;
+  const { run, phaseRun } = running.value;
+
+  const challenge = session.challenges.find((c) => c.id === command.challengeId);
+  if (!challenge) {
+    return fail('not_found', `No challenge ${command.challengeId} in this session.`);
+  }
+
+  const event: ChallengeEvent = {
+    id: command.id,
+    challengeId: challenge.id,
+    phaseId: phaseRun.phaseId,
+    at: now,
+    phaseElapsedMs: phaseElapsedMs(phaseRun, msOf(now)),
+  };
+
+  return ok(withRun(session, { ...run, challengeEvents: [...run.challengeEvents, event] }));
+}
+
+/**
+ * The `Undo` on the `+1` toast. Pops the **most recent** sighting for that challenge.
+ *
+ * A pop rather than a decrement is the whole reason the tally is derived: there is no counter
+ * to drive below zero, and the evidence and the number cannot come apart.
+ */
+function undoChallengeProgress(
+  session: Session,
+  challengeId: ChallengeId,
+): Result<Session, TransitionError> {
+  const running = requireRun(session);
+  if (!running.ok) return running;
+  const { run } = running.value;
+
+  // A reverse scan rather than `findLastIndex`, which is ES2023 and this project targets
+  // ES2022 — and iOS Safari is the platform that actually matters here.
+  let lastIndex = -1;
+  for (let i = run.challengeEvents.length - 1; i >= 0; i -= 1) {
+    if (run.challengeEvents[i]?.challengeId === challengeId) {
+      lastIndex = i;
+      break;
+    }
+  }
+  if (lastIndex === -1) return fail('not_found', 'There is no sighting to undo.');
+
+  return ok(
+    withRun(session, {
+      ...run,
+      challengeEvents: [
+        ...run.challengeEvents.slice(0, lastIndex),
+        ...run.challengeEvents.slice(lastIndex + 1),
+      ],
+    }),
+  );
+}
+
+/**
+ * The coach's ruling: met, partly, missed — or back to `open`, which is what the Undo on the
+ * ruling toast sends.
+ *
+ * **No run required**, following `setCoachingPointDelivered`. Ruling on challenges is a
+ * natural part of Review, which happens after `finish`, and a guard here would make the
+ * obvious moment the impossible one.
+ */
+function setChallengeStatus(
+  session: Session,
+  command: Extract<SessionCommand, { kind: 'setChallengeStatus' }>,
+  now: IsoDateTime,
+): Result<Session, TransitionError> {
+  if (!session.challenges.some((challenge) => challenge.id === command.challengeId)) {
+    return fail('not_found', `No challenge ${command.challengeId} in this session.`);
+  }
+
+  const challenges = session.challenges.map((challenge) =>
+    challenge.id === command.challengeId
+      ? {
+          ...challenge,
+          status: command.status,
+          // `open` must carry no `settledAt` — the schema refuses the combination, because
+          // "not ruled on, ruled on at 19:42" is not a state that means anything.
+          settledAt: command.status === 'open' ? null : now,
+          ...(command.note !== undefined ? { note: command.note } : {}),
+        }
+      : challenge,
+  );
+
+  return ok({ ...session, challenges });
 }
 
 // ---------------------------------------------------------------------------

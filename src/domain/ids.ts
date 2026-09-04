@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Ids are **branded**. There are twelve of them in this model and most are UUIDs, so
+ * Ids are **branded**. There are fourteen of them in this model and most are UUIDs, so
  * structurally they are all just `string` — which means without a brand nothing stops a
  * `PhaseId` being passed where a `PlayerId` belongs. Branding costs one `.brand<>()` call
  * and a cast at the parse boundary, and buys a compile error on every such mix-up.
@@ -49,6 +49,14 @@ export type InterventionEventId = z.infer<typeof InterventionEventIdSchema>;
 export const PlayerAssessmentIdSchema = z.string().uuid().brand<'PlayerAssessmentId'>();
 export type PlayerAssessmentId = z.infer<typeof PlayerAssessmentIdSchema>;
 
+/** A per-player challenge set at plan time. */
+export const ChallengeIdSchema = z.string().uuid().brand<'ChallengeId'>();
+export type ChallengeId = z.infer<typeof ChallengeIdSchema>;
+
+/** One logged sighting of a challenge being met, during the run. */
+export const ChallengeEventIdSchema = z.string().uuid().brand<'ChallengeEventId'>();
+export type ChallengeEventId = z.infer<typeof ChallengeEventIdSchema>;
+
 export const ReviewIdSchema = z.string().uuid().brand<'ReviewId'>();
 export type ReviewId = z.infer<typeof ReviewIdSchema>;
 
@@ -71,6 +79,9 @@ export const asInterventionEventId = (v: string): InterventionEventId =>
   InterventionEventIdSchema.parse(v);
 export const asPlayerAssessmentId = (v: string): PlayerAssessmentId =>
   PlayerAssessmentIdSchema.parse(v);
+export const asChallengeId = (v: string): ChallengeId => ChallengeIdSchema.parse(v);
+export const asChallengeEventId = (v: string): ChallengeEventId =>
+  ChallengeEventIdSchema.parse(v);
 export const asReviewId = (v: string): ReviewId => ReviewIdSchema.parse(v);
 export const asCarryForwardActionId = (v: string): CarryForwardActionId =>
   CarryForwardActionIdSchema.parse(v);

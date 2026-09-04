@@ -3,6 +3,7 @@ import { commitImport, exportAll, planImport } from './transfer-service';
 import { EXPORT_FORMAT, exportFilename } from './envelope';
 import { migrateAll, migrateDocument, needsMigration } from './document-migrations';
 import { commitAndStart, startDraft } from '../planning/planning-service';
+import { addChallenge } from '../planning/challenges';
 import { dispatch, logObservation } from '../run/run-service';
 import { proposeCarryForward, saveReview } from '../review/review-service';
 import { addPlayer, createSquad } from '../squad/squad-service';
@@ -256,6 +257,55 @@ describe('planImport', () => {
 
     expect(plan.dropped.some((entry) => entry.store === 'assessments')).toBe(true);
     expect(plan.entries.assessments.create).toBe(0);
+  });
+
+  it('drops a session whose challenged player did not come with it', async () => {
+    // A challenge is not a focus assignment, so it needs its own referential check: a row
+    // reading "undefined · two touches" is worse than a session that did not import.
+    const squad = await createSquad(ctx, { name: 'U12 Reds' });
+    const kai = await addPlayer(ctx, { squadId: squad.id, name: 'Kai' });
+    const maya = await addPlayer(ctx, { squadId: squad.id, name: 'Maya' });
+    const draft = unwrap(
+      await startDraft(ctx, {
+        squadId: squad.id,
+        objectiveText: 'Playing out from the back',
+        focusPlayerIds: [kai.id],
+      }),
+    );
+    unwrap(await addChallenge(ctx, draft.id, { playerId: maya.id, text: 'Two touches' }));
+
+    const envelope = JSON.parse(JSON.stringify(await exportAll(ctx)));
+    envelope.data.players = envelope.data.players.filter(
+      (player: { id: string }) => player.id !== maya.id,
+    );
+
+    const target = freshContext('aaaa');
+    const plan = unwrap(await planImport(target, envelope, 'merge'));
+
+    expect(plan.dropped.find((entry) => entry.store === 'sessions')?.reason).toMatch(
+      /challenged player/i,
+    );
+    expect(plan.entries.sessions.create).toBe(0);
+  });
+
+  it('imports a session whose challenged player came with it', async () => {
+    const squad = await createSquad(ctx, { name: 'U12 Reds' });
+    const maya = await addPlayer(ctx, { squadId: squad.id, name: 'Maya' });
+    const draft = unwrap(
+      await startDraft(ctx, { squadId: squad.id, objectiveText: 'Playing out from the back' }),
+    );
+    unwrap(await addChallenge(ctx, draft.id, { playerId: maya.id, text: 'Two touches' }));
+
+    const envelope = JSON.parse(JSON.stringify(await exportAll(ctx)));
+    const target = freshContext('aaaa');
+    const plan = unwrap(await planImport(target, envelope, 'merge'));
+
+    expect(plan.dropped).toEqual([]);
+    const report = unwrap(await commitImport(target, plan));
+    expect(report.written.sessions).toBe(1);
+
+    const imported = await target.store.sessions.get(draft.id);
+    expect(imported?.challenges[0]?.text).toBe('Two touches');
   });
 
   it('drops rows whose references do not resolve, and says why', async () => {

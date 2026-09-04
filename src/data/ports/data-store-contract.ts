@@ -299,6 +299,7 @@ export function describeDataStoreContract(
             openInterventionId: null,
             lastHeartbeatAt: T0,
             interventionEvents: [],
+            challengeEvents: [],
           },
         });
         await store.sessions.putMany([

@@ -17,12 +17,24 @@ import {
 } from '@/modules/app/app-store';
 import {
   dispatch,
+  logChallengeProgress,
   logIntervention,
   logObservation,
   observationTagGroups,
+  setChallengeStatus,
+  undoChallengeProgress,
   undoObservation,
   type ObservationTagGroup,
 } from '@/modules/run/run-service';
+import {
+  CHALLENGE_STATUSES,
+  challengeStatusLabel,
+  type ChallengeStatus,
+} from '@/domain/challenge';
+import {
+  sessionChallengeProgress,
+  type ChallengeProgress,
+} from '@/domain/session/challenges';
 import type { Observation, ObservationRatingKind } from '@/domain/observation';
 import {
   currentPhase,
@@ -43,7 +55,7 @@ import { cornerSlug } from '@/domain/four-corners';
 import { shortPlayerName, type Player } from '@/domain/player';
 import { haptic } from '@/lib/haptics';
 import { isErr } from '@/lib/result';
-import type { PhaseId } from '@/domain/ids';
+import type { ChallengeId, PhaseId } from '@/domain/ids';
 import type { Session } from '@/domain/session';
 import type { SessionCommand } from '@/domain/session/state-machine';
 
@@ -68,6 +80,7 @@ export default function RunPage() {
   const [observations, setObservations] = useState<readonly Observation[]>([]);
   const [sheetPlayer, setSheetPlayer] = useState<Player | null>(null);
   const [phaseSheetOpen, setPhaseSheetOpen] = useState(false);
+  const [challengeSheet, setChallengeSheet] = useState<ChallengeId | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
   const session = state.activeSession;
@@ -164,6 +177,80 @@ export default function RunPage() {
     return result.value;
   };
 
+  // Every challenge live in *this* phase, settled ones sorted last rather than hidden: a
+  // coach who has just hit 3/3 wants to see it, and wants Undo to still be reachable.
+  const challenges = sessionChallengeProgress(session, phase.id).filter(
+    (progress) => progress.liveNow,
+  );
+
+  const challengePlayerName = (progress: ChallengeProgress): string => {
+    const player = state.players.find(
+      (candidate) => candidate.id === progress.challenge.playerId,
+    );
+    return player ? shortPlayerName(player, state.players) : 'Unknown';
+  };
+
+  /**
+   * `+1` — one tap, no confirmation, with the tally in the toast so the coach gets the
+   * feedback without looking back at the row they just hit.
+   */
+  const countChallenge = async (progress: ChallengeProgress) => {
+    const result = await logChallengeProgress(
+      getServiceContext(),
+      session.id,
+      progress.challenge.id,
+    );
+    if (isErr(result)) return;
+
+    patchActiveSession(result.value);
+    haptic('confirm');
+
+    const next = sessionChallengeProgress(result.value, phase.id).find(
+      (candidate) => candidate.challenge.id === progress.challenge.id,
+    );
+    const name = challengePlayerName(progress);
+    setAnnouncement(`${name}: ${next?.label ?? ''}`);
+
+    showToast(`${name} · ${next?.label ?? ''}`, {
+      action: {
+        label: 'Undo',
+        run: async () => {
+          const undone = await undoChallengeProgress(
+            getServiceContext(),
+            session.id,
+            progress.challenge.id,
+          );
+          if (!isErr(undone)) patchActiveSession(undone.value);
+        },
+      },
+    });
+  };
+
+  const rule = async (challengeId: ChallengeId, status: ChallengeStatus) => {
+    setChallengeSheet(null);
+    const result = await setChallengeStatus(getServiceContext(), session.id, challengeId, status);
+    if (isErr(result)) return;
+
+    patchActiveSession(result.value);
+    haptic('confirm');
+    setAnnouncement(`Marked ${challengeStatusLabel(status).toLowerCase()}`);
+
+    showToast(`Marked ${challengeStatusLabel(status).toLowerCase()}`, {
+      action: {
+        label: 'Undo',
+        run: async () => {
+          const undone = await setChallengeStatus(
+            getServiceContext(),
+            session.id,
+            challengeId,
+            'open',
+          );
+          if (!isErr(undone)) patchActiveSession(undone.value);
+        },
+      },
+    });
+  };
+
   // The stale-run reconciliation sheet, offered rather than assumed.
   const stale = isRunStale(session.run, now);
 
@@ -223,9 +310,37 @@ export default function RunPage() {
 
       <TimerDial clock={clock} paused={paused} nextPhaseTitle={upcoming?.title} />
 
-      <section className="run-points" aria-label="Coaching points">
+      <section className="run-points" aria-label="Challenges and coaching points">
+        {/*
+          Challenges come first. A coaching point is something the coach is carrying in their
+          head anyway; a promise made to one player is the thing that gets forgotten at 7:40
+          on a wet Tuesday, and the tally only means anything if it is in the way.
+        */}
+        {challenges.length > 0 ? (
+          <div className="run-challenges">
+            <h3 className="eyebrow">Challenges</h3>
+            <ul className="stack stack--tight">
+              {challenges.map((progress) => (
+                <ChallengeRow
+                  key={progress.challenge.id}
+                  progress={progress}
+                  name={challengePlayerName(progress)}
+                  onCount={() => void countChallenge(progress)}
+                  onOpenRuling={() => setChallengeSheet(progress.challenge.id)}
+                />
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {challenges.length > 0 && phase.coachingPoints.length > 0 ? (
+          <h3 className="eyebrow">Coaching points</h3>
+        ) : null}
+
         {phase.coachingPoints.length === 0 ? (
-          <p className="card-meta">No coaching points for this phase.</p>
+          challenges.length === 0 ? (
+            <p className="card-meta">No coaching points for this phase.</p>
+          ) : null
         ) : (
           <ul className="stack stack--tight">
             {phase.coachingPoints.map((point) => (
@@ -420,6 +535,20 @@ export default function RunPage() {
         }}
       />
 
+      <ChallengeRulingSheet
+        progress={
+          challengeSheet === null
+            ? null
+            : (sessionChallengeProgress(session).find(
+                (candidate) => candidate.challenge.id === challengeSheet,
+              ) ?? null)
+        }
+        nameOf={challengePlayerName}
+        onClose={() => setChallengeSheet(null)}
+        onRule={rule}
+        onCount={countChallenge}
+      />
+
       <PhaseSheet
         open={phaseSheetOpen}
         session={session}
@@ -439,6 +568,153 @@ export default function RunPage() {
         }}
       />
     </Screen>
+  );
+}
+
+/**
+ * One challenge, monitored.
+ *
+ * A **counted** challenge makes the whole row the `+1` target — the biggest thing on the
+ * strip, because it is tapped mid-drill with cold thumbs and a trailing `⌄` is what opens
+ * the ruling. A **judged** challenge has nothing to count, so the row itself opens the
+ * ruling instead of pretending there is a tally to add to.
+ *
+ * A settled challenge stays on the strip rather than vanishing: the coach who just hit 3/3
+ * wants to see it, and Undo has to stay reachable.
+ */
+function ChallengeRow({
+  progress,
+  name,
+  onCount,
+  onOpenRuling,
+}: {
+  progress: ChallengeProgress;
+  name: string;
+  onCount: () => void;
+  onOpenRuling: () => void;
+}) {
+  const { challenge, label, status, hitTarget } = progress;
+  const counted = challenge.measure === 'count';
+
+  return (
+    <li
+      className="challenge-live"
+      data-status={status}
+      {...(challenge.corner ? { 'data-corner': cornerSlug(challenge.corner) } : {})}
+    >
+      <button
+        type="button"
+        className="challenge-live-main"
+        onClick={counted ? onCount : onOpenRuling}
+        aria-label={
+          counted
+            ? `Log progress for ${name}: ${challenge.text}. ${label}.`
+            : `Rule on ${name}: ${challenge.text}.`
+        }
+      >
+        <span className="challenge-live-who">{name}</span>
+        <span className="challenge-live-text">{challenge.text}</span>
+      </button>
+
+      <span className="challenge-live-state">
+        {counted ? (
+          <span className="challenge-live-tally tabular" aria-hidden="true">
+            {label}
+          </span>
+        ) : null}
+        {status === 'open' ? (
+          counted && hitTarget ? (
+            <span className="pill pill--met">✓</span>
+          ) : null
+        ) : (
+          <span className={`pill pill--${status}`}>{challengeStatusLabel(status)}</span>
+        )}
+      </span>
+
+      {counted ? (
+        <button
+          type="button"
+          className="challenge-live-rule"
+          onClick={onOpenRuling}
+          aria-label={`Rule on ${name}: ${challenge.text}`}
+        >
+          ⌄
+        </button>
+      ) : null}
+    </li>
+  );
+}
+
+/**
+ * The ruling sheet: met, partly, missed — plus `+1` and `Undo` for a counted challenge, so
+ * a coach who has lost count can fix it here rather than tapping the row four more times.
+ */
+function ChallengeRulingSheet({
+  progress,
+  nameOf,
+  onClose,
+  onRule,
+  onCount,
+}: {
+  progress: ChallengeProgress | null;
+  nameOf: (progress: ChallengeProgress) => string;
+  onClose: () => void;
+  onRule: (challengeId: ChallengeId, status: ChallengeStatus) => Promise<void>;
+  onCount: (progress: ChallengeProgress) => Promise<void>;
+}) {
+  const name = progress ? nameOf(progress) : '';
+
+  return (
+    <Sheet
+      open={progress !== null}
+      title={progress ? `${name} · ${progress.challenge.text}` : 'Challenge'}
+      onClose={onClose}
+    >
+      {progress ? (
+        <>
+          {progress.challenge.measure === 'count' ? (
+            <div className="row row--between">
+              <span className="card-meta tabular">
+                {progress.label} · {progress.countThisPhase} this phase
+              </span>
+              <button
+                type="button"
+                className="btn btn--accent"
+                onClick={() => void onCount(progress)}
+              >
+                ＋1
+              </button>
+            </div>
+          ) : (
+            <p className="card-meta">Judged, not counted.</p>
+          )}
+
+          <div className="observation-tokens">
+            {CHALLENGE_STATUSES.map((status) => (
+              <button
+                key={status}
+                type="button"
+                className={`btn btn--lg challenge-token challenge-token--${status}`}
+                aria-pressed={progress.challenge.status === status}
+                onClick={() => void onRule(progress.challenge.id, status)}
+              >
+                {challengeStatusLabel(status)}
+              </button>
+            ))}
+          </div>
+
+          {progress.challenge.status !== 'open' ? (
+            <button
+              type="button"
+              className="btn btn--quiet btn--block"
+              onClick={() => void onRule(progress.challenge.id, 'open')}
+            >
+              Clear the ruling
+            </button>
+          ) : null}
+        </>
+      ) : null}
+    </Sheet>
   );
 }
 

@@ -6,7 +6,15 @@ import {
   isFocusPlayer,
   totalPlannedPhaseMin,
 } from './session';
-import { aPhase, aSession, phaseId, playerId, T0 } from '@/test/builders';
+import {
+  aChallenge,
+  aChallengeEvent,
+  aPhase,
+  aSession,
+  phaseId,
+  playerId,
+  T0,
+} from '@/test/builders';
 
 const focus = (label: string) => ({ playerId: playerId(label), sourceActionId: null });
 
@@ -137,6 +145,64 @@ describe('Session invariants', () => {
       },
     });
     expect(String(result.error)).toMatch(/Intervention event references unknown phase/);
+  });
+
+  it('rejects duplicate challenge ids', () => {
+    const result = SessionSchema.safeParse({
+      ...aSession(),
+      challenges: [aChallenge('c1'), aChallenge('c1', { text: 'Something else' })],
+    });
+    expect(String(result.error)).toMatch(/Challenge ids must be unique/);
+  });
+
+  it('rejects a challenge scoped to a phase this session does not have', () => {
+    // Scoped to no phase at all, it would be watched for in none — invisible and unjudgeable.
+    const result = SessionSchema.safeParse({
+      ...aSession(),
+      challenges: [aChallenge('c1', { phaseIds: [phaseId('ghostphase')] })],
+    });
+    expect(String(result.error)).toMatch(/Challenge phase .* is not a phase of this session/);
+  });
+
+  it('accepts a challenge scoped to a phase the session does have, and an unscoped one', () => {
+    const result = SessionSchema.safeParse({
+      ...aSession(),
+      challenges: [aChallenge('c1', { phaseIds: [phaseId('warmup')] }), aChallenge('c2')],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a sighting logged against a challenge that has been deleted', () => {
+    const result = SessionSchema.safeParse({
+      ...aSession(),
+      status: 'in_progress',
+      challenges: [],
+      run: { ...runFor('warmup'), challengeEvents: [aChallengeEvent('e1')] },
+    });
+    expect(String(result.error)).toMatch(/Challenge event references unknown challenge/);
+  });
+
+  it('rejects a sighting logged against a phase that no longer exists', () => {
+    const result = SessionSchema.safeParse({
+      ...aSession(),
+      status: 'in_progress',
+      challenges: [aChallenge('challenge1')],
+      run: {
+        ...runFor('warmup'),
+        challengeEvents: [aChallengeEvent('e1', { phaseId: phaseId('ghostphase') })],
+      },
+    });
+    expect(String(result.error)).toMatch(/Challenge event references unknown phase/);
+  });
+
+  it('accepts a run whose sightings resolve to a challenge and a phase it holds', () => {
+    const result = SessionSchema.safeParse({
+      ...aSession(),
+      status: 'in_progress',
+      challenges: [aChallenge('challenge1')],
+      run: { ...runFor('warmup'), challengeEvents: [aChallengeEvent('e1')] },
+    });
+    expect(result.success).toBe(true);
   });
 
   it('caps the objective at five success criteria', () => {
