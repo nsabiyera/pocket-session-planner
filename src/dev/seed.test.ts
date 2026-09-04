@@ -46,8 +46,18 @@ import type { TransferEnvelope } from '@/modules/transfer/envelope';
 
 const OUT_FILE = resolve(process.cwd(), 'seed', 'pocket-session-planner-seed.json');
 
-/** Tuesday evening, start of the term. */
-const TERM_START = isoDateTime('2026-09-08T18:00:00.000Z');
+/**
+ * Tuesday evening, start of a summer term — and deliberately **in the past**.
+ *
+ * A fixed anchor keeps the output byte-identical between runs, which is worth more than
+ * always-recent dates for a file that gets regenerated on demand. But it has to be a *past*
+ * anchor: the first version of this used a date four days in the future, and the app duly
+ * offered a session that had not happened yet as "Last session", with a whole term of history
+ * sorting after the session the coach had just finished.
+ *
+ * If this drifts far enough from today to look odd, move it and regenerate.
+ */
+const TERM_START = isoDateTime('2026-05-05T18:00:00.000Z');
 
 const ROSTER: Array<{ name: string; shirtNumber: number }> = [
   { name: 'Kai Roberts', shirtNumber: 7 },
