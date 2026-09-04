@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type {
+  CapabilityScanId,
   CarryForwardActionId,
   MethodologyId,
   ObservationId,
@@ -10,6 +11,7 @@ import type {
   SessionId,
   SquadId,
 } from '@/domain/ids';
+import type { CapabilityScan, ObservedSkill } from '@/domain/capabilities/scan';
 import type { CarryForwardAction, CarryForwardStatus } from '@/domain/carry-forward';
 import type { Methodology, MethodologyPreset } from '@/domain/methodology';
 import type { Observation } from '@/domain/observation';
@@ -37,6 +39,7 @@ export const STORE_NAMES = [
   'reviews',
   'carry_forward_actions',
   'player_assessments',
+  'capability_scans',
   'app_meta',
 ] as const;
 export type StoreName = (typeof STORE_NAMES)[number];
@@ -121,6 +124,22 @@ export interface PlayerAssessmentRepository extends Repository<
   findLatest(playerId: PlayerId): Promise<PlayerAssessment | undefined>;
 }
 
+export interface CapabilityScanRepository extends Repository<CapabilityScanId, CapabilityScan> {
+  /** Newest first — the profile leads with the most recent look. */
+  listByPlayer(playerId: PlayerId, options?: ListOptions): Promise<CapabilityScan[]>;
+  listBySquad(squadId: SquadId, options?: ListOptions): Promise<CapabilityScan[]>;
+  /**
+   * *"Every turning scan of Kai"*, newest first — the comparison the scan exists for. One
+   * skill at a time, because comparing a turning scan against a pressing one says nothing.
+   */
+  listByPlayerSkill(
+    playerId: PlayerId,
+    skill: ObservedSkill,
+    options?: ListOptions,
+  ): Promise<CapabilityScan[]>;
+  findLatest(playerId: PlayerId): Promise<CapabilityScan | undefined>;
+}
+
 export interface ObservationRepository extends Repository<ObservationId, Observation> {
   listBySession(sessionId: SessionId): Promise<Observation[]>;
   /**
@@ -179,6 +198,7 @@ export interface PocketDataStore {
   readonly reviews: ReviewRepository;
   readonly actions: CarryForwardActionRepository;
   readonly assessments: PlayerAssessmentRepository;
+  readonly scans: CapabilityScanRepository;
   readonly meta: MetaRepository;
 
   /**

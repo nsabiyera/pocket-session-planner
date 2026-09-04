@@ -1,6 +1,7 @@
 import { deleteDB, openDB, type IDBPDatabase } from 'idb';
 import { migrateToV1 } from './migrations/v1';
 import { migrateToV2, type IdbUpgradeTx } from './migrations/v2';
+import { migrateToV3 } from './migrations/v3';
 import { DB_NAME, DB_VERSION, type PocketDBSchema } from './schema';
 
 export interface OpenDatabaseOptions {
@@ -49,7 +50,8 @@ export async function openDatabase(
 
       if (runs(1)) migrateToV1(db);
       if (runs(2)) migrateToV2(db, transaction as unknown as IdbUpgradeTx);
-      // if (runs(3)) migrateToV3(db, transaction);  <- append here, never edit above
+      if (runs(3)) migrateToV3(db);
+      // if (runs(4)) migrateToV4(db, transaction);  <- append here, never edit above
     },
     blocked() {
       options.onBlocked?.();

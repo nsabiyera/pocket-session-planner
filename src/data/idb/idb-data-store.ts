@@ -1,5 +1,6 @@
 import type { IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 import type {
+  CapabilityScanId,
   CarryForwardActionId,
   MethodologyId,
   ObservationId,
@@ -10,6 +11,7 @@ import type {
   SessionId,
   SquadId,
 } from '@/domain/ids';
+import type { CapabilityScan, ObservedSkill } from '@/domain/capabilities/scan';
 import type { CarryForwardAction, CarryForwardStatus } from '@/domain/carry-forward';
 import { comparePlayers } from '@/domain/player';
 import type { Methodology } from '@/domain/methodology';
@@ -24,6 +26,7 @@ import type { Squad } from '@/domain/squad';
 import { buildCatalog, resolveMethodology } from '../methodology-catalog';
 import type {
   AppMeta,
+  CapabilityScanRepository,
   CarryForwardActionRepository,
   CatalogEntry,
   ListOptions,
@@ -401,6 +404,41 @@ class IdbPlayerAssessmentRepository
   }
 }
 
+class IdbCapabilityScanRepository
+  extends IdbRepository<CapabilityScanId, CapabilityScan>
+  implements CapabilityScanRepository
+{
+  async listByPlayer(playerId: PlayerId, options?: ListOptions): Promise<CapabilityScan[]> {
+    const rows = await this.fromIndex('by-player-at', squadRange(playerId));
+    const sorted = rows.sort((a, b) => b.scannedAt.localeCompare(a.scannedAt));
+    return applyListOptions(sorted, options, (scan) => scan.scannedAt);
+  }
+
+  async listBySquad(squadId: SquadId, options?: ListOptions): Promise<CapabilityScan[]> {
+    const rows = await this.fromIndex('by-squad-at', squadRange(squadId));
+    const sorted = rows.sort((a, b) => b.scannedAt.localeCompare(a.scannedAt));
+    return applyListOptions(sorted, options, (scan) => scan.scannedAt);
+  }
+
+  async listByPlayerSkill(
+    playerId: PlayerId,
+    skill: ObservedSkill,
+    options?: ListOptions,
+  ): Promise<CapabilityScan[]> {
+    // Three-part key, so the range pins player *and* skill and lets the timestamp vary.
+    const rows = await this.fromIndex(
+      'by-player-skill-at',
+      IDBKeyRange.bound([playerId, skill, ''], [playerId, skill, '￿']),
+    );
+    const sorted = rows.sort((a, b) => b.scannedAt.localeCompare(a.scannedAt));
+    return applyListOptions(sorted, options, (scan) => scan.scannedAt);
+  }
+
+  async findLatest(playerId: PlayerId): Promise<CapabilityScan | undefined> {
+    return (await this.listByPlayer(playerId, { limit: 1 }))[0];
+  }
+}
+
 class IdbMetaRepository implements MetaRepository {
   constructor(private readonly ctx: Context) {}
 
@@ -448,6 +486,7 @@ export class IdbDataStore implements PocketDataStore {
   readonly reviews: ReviewRepository;
   readonly actions: CarryForwardActionRepository;
   readonly assessments: PlayerAssessmentRepository;
+  readonly scans: CapabilityScanRepository;
   readonly meta: MetaRepository;
 
   constructor(private readonly database: IDBPDatabase<PocketDBSchema>) {
@@ -461,6 +500,7 @@ export class IdbDataStore implements PocketDataStore {
     this.reviews = new IdbReviewRepository(ctx, 'reviews');
     this.actions = new IdbCarryForwardActionRepository(ctx, 'carry_forward_actions');
     this.assessments = new IdbPlayerAssessmentRepository(ctx, 'player_assessments');
+    this.scans = new IdbCapabilityScanRepository(ctx, 'capability_scans');
     this.meta = new IdbMetaRepository(ctx);
   }
 

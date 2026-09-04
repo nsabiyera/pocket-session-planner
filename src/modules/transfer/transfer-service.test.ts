@@ -94,6 +94,14 @@ async function seed(target: ServiceContext): Promise<SquadId> {
     focusCorner: 'psychological',
   });
 
+  const { recordScan } = await import('../squad/scan-service');
+  await recordScan(target, {
+    playerId: kai.id,
+    skill: 'turning',
+    ratings: { scanning: 2, timing: 3, techniques: 5 },
+    focusCapability: 'scanning',
+  });
+
   return squad.id;
 }
 
@@ -117,6 +125,23 @@ describe('exportAll', () => {
     expect(envelope.counts.reviews).toBe(1);
     expect(envelope.counts.actions).toBeGreaterThan(0);
     expect(envelope.counts.assessments).toBe(1);
+  });
+
+  it('carries the six-capability scans, which exist nowhere else either', async () => {
+    await seed(ctx);
+    const envelope = await exportAll(ctx);
+
+    expect(envelope.counts.scans).toBe(1);
+    expect(envelope.data.scans[0]?.skill).toBe('turning');
+    expect(envelope.data.scans[0]?.ratings).toEqual({
+      scanning: 2,
+      timing: 3,
+      movement: null,
+      positioning: null,
+      deception: null,
+      techniques: 5,
+    });
+    expect(envelope.data.scans[0]?.focusCapability).toBe('scanning');
   });
 
   it('carries FA 4 Corner assessments, which exist nowhere else', async () => {
@@ -247,6 +272,35 @@ describe('planImport', () => {
     expect(report.written.assessments).toBe(0);
   });
 
+  it('accepts a file written before the microscope existed', async () => {
+    // Same promise as the 4 Corner case: no `scans` key at all must import cleanly rather
+    // than being rejected as malformed.
+    await seed(ctx);
+    const envelope = JSON.parse(JSON.stringify(await exportAll(ctx)));
+    delete envelope.data.scans;
+    delete envelope.counts.scans;
+
+    const target = freshContext('aaaa');
+    const plan = unwrap(await planImport(target, envelope, 'merge'));
+    expect(plan.counts.scans).toBe(0);
+
+    const report = unwrap(await commitImport(target, plan));
+    expect(report.written.sessions).toBe(1);
+    expect(report.written.scans).toBe(0);
+  });
+
+  it('drops a scan whose player did not come with it', async () => {
+    await seed(ctx);
+    const envelope = JSON.parse(JSON.stringify(await exportAll(ctx)));
+    envelope.data.players = [];
+
+    const target = freshContext('aaaa');
+    const plan = unwrap(await planImport(target, envelope, 'merge'));
+
+    expect(plan.dropped.some((entry) => entry.store === 'scans')).toBe(true);
+    expect(plan.entries.scans.create).toBe(0);
+  });
+
   it('drops an assessment whose player did not come with it', async () => {
     await seed(ctx);
     const envelope = JSON.parse(JSON.stringify(await exportAll(ctx)));
@@ -352,6 +406,7 @@ describe('commitImport', () => {
       'observations',
       'reviews',
       'assessments',
+      'scans',
     ] as const) {
       const before = [...envelope.data[key]].sort(byId);
       const after = [...reexported.data[key]].sort(byId);

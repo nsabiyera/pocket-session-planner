@@ -7,6 +7,7 @@ import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import {
   aPlayer,
   anAssessment,
+  aScan,
   aReview,
   aSession,
   aSquad,
@@ -484,6 +485,60 @@ export function describeDataStoreContract(
         ]);
         const page = await store.assessments.listBySquad(SQUAD_ID, { before: later(120) });
         expect(page.map((a) => a.assessedAt)).toEqual([later(0)]);
+      });
+    });
+
+    describe('capability scans', () => {
+      it('lists a player newest first, like the assessment profile', async () => {
+        await store.scans.putMany([
+          aScan('s1', { scannedAt: later(0) }),
+          aScan('s2', { scannedAt: later(120) }),
+          aScan('s3', { scannedAt: later(60) }),
+        ]);
+
+        const listed = await store.scans.listByPlayer(playerId('kai'));
+        expect(listed.map((scan) => scan.scannedAt)).toEqual([later(120), later(60), later(0)]);
+      });
+
+      it('narrows to one skill — comparing turning against pressing says nothing', async () => {
+        await store.scans.putMany([
+          aScan('s1', { skill: 'turning', scannedAt: later(0) }),
+          aScan('s2', { skill: 'pressing', scannedAt: later(60) }),
+          aScan('s3', { skill: 'turning', scannedAt: later(120) }),
+        ]);
+
+        const turning = await store.scans.listByPlayerSkill(playerId('kai'), 'turning');
+        expect(turning.map((scan) => scan.scannedAt)).toEqual([later(120), later(0)]);
+        expect(await store.scans.listByPlayerSkill(playerId('kai'), 'finishing')).toEqual([]);
+      });
+
+      it('does not leak one player scans into another', async () => {
+        await store.scans.putMany([aScan('s1'), aScan('s2', { playerId: playerId('maya') })]);
+
+        expect(await store.scans.listByPlayer(playerId('kai'))).toHaveLength(1);
+        expect(await store.scans.listBySquad(SQUAD_ID)).toHaveLength(2);
+        // Same skill, different player: the compound index must not merge them.
+        expect(await store.scans.listByPlayerSkill(playerId('maya'), 'turning')).toHaveLength(1);
+      });
+
+      it('findLatest is the most recent one, across every skill', async () => {
+        await store.scans.putMany([
+          aScan('s1', { skill: 'turning', scannedAt: later(0) }),
+          aScan('s2', { skill: 'pressing', scannedAt: later(120) }),
+        ]);
+
+        expect((await store.scans.findLatest(playerId('kai')))?.skill).toBe('pressing');
+        expect(await store.scans.findLatest(playerId('nobody'))).toBeUndefined();
+      });
+
+      it('pages a player history backwards', async () => {
+        await store.scans.putMany([
+          aScan('s1', { scannedAt: later(0) }),
+          aScan('s2', { scannedAt: later(120) }),
+        ]);
+
+        const page = await store.scans.listByPlayer(playerId('kai'), { before: later(120) });
+        expect(page.map((scan) => scan.scannedAt)).toEqual([later(0)]);
       });
     });
 

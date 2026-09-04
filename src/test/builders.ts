@@ -5,8 +5,15 @@ import {
   type ChallengeEvent,
   type PlayerChallenge,
 } from '@/domain/challenge';
+import {
+  CapabilityScanSchema,
+  emptyCapabilityNotes,
+  emptyCapabilityRatings,
+  type CapabilityScan,
+} from '@/domain/capabilities/scan';
 import { CoachingPointSchema, type CoachingPoint } from '@/domain/coaching-point';
 import {
+  asCapabilityScanId,
   asCarryForwardActionId,
   asChallengeEventId,
   asChallengeId,
@@ -211,6 +218,21 @@ export function anAssessment(
     assessedAt: T0,
     ratings: emptyCornerRatings(),
     notes: emptyCornerNotes(),
+    ...over,
+  });
+}
+
+/** A turning scan of Kai with nothing rated yet, unless told otherwise. */
+export function aScan(label: string, over: Partial<CapabilityScan> = {}): CapabilityScan {
+  return CapabilityScanSchema.parse({
+    ...meta(),
+    id: asCapabilityScanId(testId(label)),
+    playerId: asPlayerId(testId('kai')),
+    squadId: SQUAD_ID,
+    skill: 'turning',
+    scannedAt: T0,
+    ratings: emptyCapabilityRatings(),
+    notes: emptyCapabilityNotes(),
     ...over,
   });
 }

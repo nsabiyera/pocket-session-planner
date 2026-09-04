@@ -1,4 +1,5 @@
 import type { DBSchema } from 'idb';
+import type { CapabilityScan } from '@/domain/capabilities/scan';
 import type { CarryForwardAction } from '@/domain/carry-forward';
 import type { Methodology } from '@/domain/methodology';
 import type { Observation } from '@/domain/observation';
@@ -19,7 +20,7 @@ export const DB_NAME = 'pocket-session-planner';
  * Document *shape* changes use `RecordMeta.schemaVersion` instead and are applied lazily on
  * read, so a coach with three seasons of observations does not stare at a spinner on launch.
  */
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 /**
  * `idb`'s generic schema type. This is most of the reason the library is worth its 1.2 kB:
@@ -80,6 +81,17 @@ export interface PocketDBSchema extends DBSchema {
     key: string;
     value: PlayerAssessment;
     indexes: { 'by-player-at': [string, string]; 'by-squad-at': [string, string] };
+  };
+  /** One player under the microscope on one skill, across the six core capabilities. */
+  capability_scans: {
+    key: string;
+    value: CapabilityScan;
+    indexes: {
+      'by-player-at': [string, string];
+      'by-squad-at': [string, string];
+      /** *"Every turning scan of Kai"* — the comparison a scan exists to make possible. */
+      'by-player-skill-at': [string, string, string];
+    };
   };
   reviews: {
     key: string;

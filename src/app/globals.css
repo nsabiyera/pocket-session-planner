@@ -1366,3 +1366,23 @@ summary {
   border-left: 4px solid var(--corner, var(--line));
   padding-left: var(--sp-3);
 }
+
+/* ------------------------------------------ the microscope: six capabilities */
+
+/*
+ * Six scores rather than four. Three columns and two rows fits a 360px screen; the
+ * four-column corner grid would leave two orphans on a second row.
+ */
+.capability-scores {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/*
+ * The same rail as a corner rating, but flat: a capability has no hue of its own, and
+ * borrowing a corner's would imply a mapping between the two models that the FA does not
+ * publish.
+ */
+.capability-rating {
+  border-left: 4px solid var(--line);
+  padding-left: var(--sp-3);
+}

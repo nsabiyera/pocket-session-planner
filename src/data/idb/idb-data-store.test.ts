@@ -4,8 +4,10 @@ import { IdbDataStore } from './idb-data-store';
 import { deleteDatabase, openDatabase } from './open-database';
 import { DB_VERSION } from './schema';
 import {
+  anAssessment,
   anObservation,
   aReview,
+  aScan,
   aSession,
   aSquad,
   playerId,
@@ -41,6 +43,7 @@ describe('IdbDataStore — IndexedDB specifics', () => {
     const db = await openDatabase({ name: 'psp-schema-check' });
     expect([...db.objectStoreNames].sort()).toEqual([
       'app_meta',
+      'capability_scans',
       'carry_forward_actions',
       'methodologies',
       'methodology_prefs',
@@ -54,7 +57,7 @@ describe('IdbDataStore — IndexedDB specifics', () => {
     expect(db.version).toBe(DB_VERSION);
 
     const tx = db.transaction(
-      ['observations', 'carry_forward_actions', 'player_assessments'],
+      ['observations', 'carry_forward_actions', 'player_assessments', 'capability_scans'],
       'readonly',
     );
     expect([...tx.objectStore('observations').indexNames].sort()).toEqual([
@@ -72,6 +75,11 @@ describe('IdbDataStore — IndexedDB specifics', () => {
       'by-origin-session',
       'by-player',
       'by-squad-status',
+    ]);
+    expect([...tx.objectStore('capability_scans').indexNames].sort()).toEqual([
+      'by-player-at',
+      'by-player-skill-at',
+      'by-squad-at',
     ]);
     await tx.done;
     db.close();
@@ -179,6 +187,44 @@ describe('IdbDataStore — IndexedDB specifics', () => {
     expect(await store.observations.listByPlayerCorner(playerId('kai'), 'social')).toHaveLength(1);
     // The legacy row has no corner, so it is absent from the index rather than miscounted.
     expect(await store.observations.listByPlayer(playerId('kai'))).toHaveLength(2);
+    store.close();
+  });
+
+  it('upgrades a v2 database in place, adding the scan store and keeping every row', async () => {
+    // The path a coach who already has the 4 Corner release actually takes.
+    const name = 'psp-v2-upgrade';
+    await deleteDatabase(name);
+
+    const v2 = await openDatabase({ name, version: 2 });
+    expect(v2.objectStoreNames.contains('capability_scans')).toBe(false);
+    await v2.put('player_assessments', anAssessment('legacy'));
+    await v2.put('squads', aSquad());
+    v2.close();
+
+    const v3 = await openDatabase({ name });
+    expect(v3.version).toBe(DB_VERSION);
+    expect(v3.objectStoreNames.contains('capability_scans')).toBe(true);
+
+    const tx = v3.transaction('capability_scans', 'readonly');
+    expect([...tx.objectStore('capability_scans').indexNames].sort()).toEqual([
+      'by-player-at',
+      'by-player-skill-at',
+      'by-squad-at',
+    ]);
+    await tx.done;
+
+    // The assessment written before the upgrade is still there.
+    expect(await v3.count('player_assessments')).toBe(1);
+    expect(await v3.count('squads')).toBe(1);
+    v3.close();
+
+    // And the store the migration added answers the question it exists for.
+    const store = new IdbDataStore(await openDatabase({ name }));
+    await store.scans.put(aScan('turning1', { skill: 'turning' }));
+    await store.scans.put(aScan('pressing1', { skill: 'pressing' }));
+
+    expect(await store.scans.listByPlayerSkill(playerId('kai'), 'turning')).toHaveLength(1);
+    expect(await store.scans.listByPlayer(playerId('kai'))).toHaveLength(2);
     store.close();
   });
 

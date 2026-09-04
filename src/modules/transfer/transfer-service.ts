@@ -75,6 +75,10 @@ async function collect(store: PocketDataStore, squadId?: SquadId): Promise<Trans
     await Promise.all(squads.map((squad) => store.reviews.listBySquad(squad.id, { limit: 5000 })))
   ).flat();
 
+  const scans = (
+    await Promise.all(squads.map((squad) => store.scans.listBySquad(squad.id, { limit: 5000 })))
+  ).flat();
+
   const assessments = (
     await Promise.all(
       squads.map((squad) => store.assessments.listBySquad(squad.id, { limit: 5000 })),
@@ -101,6 +105,7 @@ async function collect(store: PocketDataStore, squadId?: SquadId): Promise<Trans
     reviews,
     actions,
     assessments,
+    scans,
   });
 }
 
@@ -169,6 +174,7 @@ export async function planImport(
     reviews: migrateAll(rawData.reviews ?? []),
     actions: migrateAll(rawData.actions ?? []),
     assessments: migrateAll(rawData.assessments ?? []),
+    scans: migrateAll(rawData.scans ?? []),
   };
 
   // **Parse first.** A malformed file never touches IndexedDB.
@@ -202,6 +208,7 @@ export async function planImport(
     reviews: await diff(ctx.store, 'reviews', envelope.data.reviews, droppedIds, mode),
     actions: await diff(ctx.store, 'actions', envelope.data.actions, droppedIds, mode),
     assessments: await diff(ctx.store, 'assessments', envelope.data.assessments, droppedIds, mode),
+    scans: await diff(ctx.store, 'scans', envelope.data.scans, droppedIds, mode),
   };
 
   return ok({ mode, envelope, counts: envelope.counts, entries, dropped });
@@ -257,6 +264,7 @@ function repositoryFor(store: PocketDataStore, name: keyof TransferData): AnyRep
     reviews: store.reviews,
     actions: store.actions,
     assessments: store.assessments,
+    scans: store.scans,
   };
   return map[name] as AnyRepository;
 }
@@ -354,6 +362,12 @@ async function checkReferences(
     }
   }
 
+  for (const scan of data.scans) {
+    if (!playerExists(scan.playerId)) {
+      dropped.push({ store: 'scans', id: scan.id, reason: 'Its player is missing.' });
+    }
+  }
+
   for (const assessment of data.assessments) {
     if (!playerExists(assessment.playerId)) {
       dropped.push({
@@ -416,6 +430,7 @@ export async function commitImport(
     reviews: keep('reviews', data.reviews),
     actions: keep('actions', data.actions),
     assessments: keep('assessments', data.assessments),
+    scans: keep('scans', data.scans),
   };
 
   // In merge mode, resolve every conflict *before* opening the transaction.
@@ -431,6 +446,7 @@ export async function commitImport(
           reviews: await newerOnly(ctx.store, 'reviews', payload.reviews),
           actions: await newerOnly(ctx.store, 'actions', payload.actions),
           assessments: await newerOnly(ctx.store, 'assessments', payload.assessments),
+          scans: await newerOnly(ctx.store, 'scans', payload.scans),
         };
 
   if (plan.mode === 'replace') await ctx.store.clear();
@@ -444,6 +460,12 @@ export async function commitImport(
       'observations',
       'reviews',
       'carry_forward_actions',
+      // Both of these were written inside this transaction without being declared. The real
+      // adapter scopes an IndexedDB transaction to exactly this list, so the assessment write
+      // threw NotFoundError on any import carrying one; the fake used to ignore the list, so
+      // the suite never saw it.
+      'player_assessments',
+      'capability_scans',
     ],
     'readwrite',
     async (tx) => {
@@ -455,6 +477,7 @@ export async function commitImport(
       await tx.reviews.putMany(toWrite.reviews);
       await tx.actions.putMany(toWrite.actions);
       await tx.assessments.putMany(toWrite.assessments);
+      await tx.scans.putMany(toWrite.scans);
     },
   );
 
@@ -468,6 +491,7 @@ export async function commitImport(
       reviews: toWrite.reviews.length,
       actions: toWrite.actions.length,
       assessments: toWrite.assessments.length,
+      scans: toWrite.scans.length,
     },
     dropped: plan.dropped,
   });

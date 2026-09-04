@@ -1,4 +1,5 @@
 import type {
+  CapabilityScanId,
   CarryForwardActionId,
   MethodologyId,
   ObservationId,
@@ -9,6 +10,7 @@ import type {
   SessionId,
   SquadId,
 } from '@/domain/ids';
+import type { CapabilityScan, ObservedSkill } from '@/domain/capabilities/scan';
 import type { CarryForwardAction, CarryForwardStatus } from '@/domain/carry-forward';
 import type { Methodology } from '@/domain/methodology';
 import type { Observation } from '@/domain/observation';
@@ -22,6 +24,7 @@ import type { Squad } from '@/domain/squad';
 import { buildCatalog, resolveMethodology } from '../methodology-catalog';
 import type {
   AppMeta,
+  CapabilityScanRepository,
   CarryForwardActionRepository,
   CatalogEntry,
   ListOptions,
@@ -62,6 +65,7 @@ interface Tables {
   reviews: Map<string, SessionReview>;
   carry_forward_actions: Map<string, CarryForwardAction>;
   player_assessments: Map<string, PlayerAssessment>;
+  capability_scans: Map<string, CapabilityScan>;
   app_meta: Map<string, AppMeta>;
 }
 
@@ -76,6 +80,7 @@ function emptyTables(): Tables {
     reviews: new Map(),
     carry_forward_actions: new Map(),
     player_assessments: new Map(),
+    capability_scans: new Map(),
     app_meta: new Map(),
   };
 }
@@ -341,6 +346,40 @@ class FakeCarryForwardActionRepository
   }
 }
 
+class FakeCapabilityScanRepository
+  extends FakeRepository<CapabilityScanId, CapabilityScan>
+  implements CapabilityScanRepository
+{
+  async listByPlayer(playerId: PlayerId, options?: ListOptions): Promise<CapabilityScan[]> {
+    const sorted = this.all()
+      .filter((scan) => scan.playerId === playerId)
+      .sort((a, b) => b.scannedAt.localeCompare(a.scannedAt));
+    return applyListOptions(sorted, options, (scan) => scan.scannedAt);
+  }
+
+  async listBySquad(squadId: SquadId, options?: ListOptions): Promise<CapabilityScan[]> {
+    const sorted = this.all()
+      .filter((scan) => scan.squadId === squadId)
+      .sort((a, b) => b.scannedAt.localeCompare(a.scannedAt));
+    return applyListOptions(sorted, options, (scan) => scan.scannedAt);
+  }
+
+  async listByPlayerSkill(
+    playerId: PlayerId,
+    skill: ObservedSkill,
+    options?: ListOptions,
+  ): Promise<CapabilityScan[]> {
+    const sorted = this.all()
+      .filter((scan) => scan.playerId === playerId && scan.skill === skill)
+      .sort((a, b) => b.scannedAt.localeCompare(a.scannedAt));
+    return applyListOptions(sorted, options, (scan) => scan.scannedAt);
+  }
+
+  async findLatest(playerId: PlayerId): Promise<CapabilityScan | undefined> {
+    return (await this.listByPlayer(playerId, { limit: 1 }))[0];
+  }
+}
+
 class FakePlayerAssessmentRepository
   extends FakeRepository<PlayerAssessmentId, PlayerAssessment>
   implements PlayerAssessmentRepository
@@ -412,6 +451,7 @@ export class FakeDataStore implements PocketDataStore {
   readonly reviews: ReviewRepository;
   readonly actions: CarryForwardActionRepository;
   readonly assessments: PlayerAssessmentRepository;
+  readonly scans: CapabilityScanRepository;
   readonly meta: MetaRepository;
 
   constructor() {
@@ -436,6 +476,7 @@ export class FakeDataStore implements PocketDataStore {
       () => this.tables.player_assessments,
       touch,
     );
+    this.scans = new FakeCapabilityScanRepository(() => this.tables.capability_scans, touch);
     this.meta = new FakeMetaRepository(() => this.tables.app_meta);
   }
 
@@ -445,13 +486,38 @@ export class FakeDataStore implements PocketDataStore {
    * which is what a half-applied import test needs to be able to assert.
    */
   async transact<T>(
-    _stores: readonly StoreName[],
+    stores: readonly StoreName[],
     _mode: 'readonly' | 'readwrite',
     fn: (store: PocketDataStore) => Promise<T>,
   ): Promise<T> {
     const snapshot = this.snapshot();
+    const real = this.tables;
+
+    /*
+     * **The declared store list is enforced**, because IndexedDB enforces it.
+     *
+     * `IdbDataStore.transact` opens a real transaction scoped to exactly these stores, and
+     * writing to one it did not declare throws `NotFoundError`. A fake that ignored the list
+     * made that a test which passes and a coach who cannot import — the store names are
+     * exactly the table keys, so a Proxy is the whole enforcement.
+     */
+    const declared = new Set<string>(stores);
+    this.tables = new Proxy(real, {
+      get(target, key) {
+        if (typeof key === 'string' && !declared.has(key)) {
+          throw new Error(
+            `Store "${key}" was written inside a transaction that did not declare it. ` +
+              `Declared: ${[...declared].join(', ') || '(none)'}.`,
+          );
+        }
+        return target[key as keyof Tables];
+      },
+    }) as Tables;
+
     try {
-      return await fn(this);
+      const result = await fn(this);
+      this.tables = real;
+      return result;
     } catch (error) {
       this.tables = snapshot;
       throw error;

@@ -3,6 +3,7 @@ import { CarryForwardActionSchema } from '@/domain/carry-forward';
 import { MethodologySchema } from '@/domain/methodology';
 import { ObservationSchema } from '@/domain/observation';
 import { PlayerSchema } from '@/domain/player';
+import { CapabilityScanSchema } from '@/domain/capabilities/scan';
 import { PlayerAssessmentSchema } from '@/domain/player-assessment';
 import { CURRENT_SCHEMA_VERSION, IsoDateTimeSchema } from '@/domain/primitives';
 import { SessionReviewSchema } from '@/domain/review';
@@ -35,6 +36,8 @@ export const TransferDataSchema = z.object({
   actions: z.array(CarryForwardActionSchema).default([]),
   /** FA 4 Corner profiles. Added alongside the v2 store. */
   assessments: z.array(PlayerAssessmentSchema).default([]),
+  /** Six-capability scans — one player under the microscope. Added with the v3 store. */
+  scans: z.array(CapabilityScanSchema).default([]),
 });
 export type TransferData = z.infer<typeof TransferDataSchema>;
 
@@ -52,6 +55,8 @@ export const TransferCountsSchema = z.object({
    * migration ladder exists to prevent.
    */
   assessments: z.number().int().min(0).default(0),
+  /** Optional for the same reason: a file written before the microscope must still parse. */
+  scans: z.number().int().min(0).default(0),
 });
 export type TransferCounts = z.infer<typeof TransferCountsSchema>;
 
@@ -77,6 +82,7 @@ export function countData(data: TransferData): TransferCounts {
     reviews: data.reviews.length,
     actions: data.actions.length,
     assessments: data.assessments.length,
+    scans: data.scans.length,
   };
 }
 
