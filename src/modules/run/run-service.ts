@@ -10,6 +10,7 @@ import {
   type SessionId,
 } from '@/domain/ids';
 import type { ChallengeStatus } from '@/domain/challenge';
+import { CAPABILITY_TAG_CORNER, CAPABILITY_TAGS, capabilityForTag } from '@/domain/capabilities';
 import {
   challengeSummary,
   sessionChallengeProgress,
@@ -197,7 +198,15 @@ export async function logObservation(
     ? phase.coachingPoints.find((candidate) => candidate.id === input.coachingPointId)
     : undefined;
 
-  const corner = input.corner ?? tagged?.corner ?? point?.corner ?? undefined;
+  // A capability tag carries no attribute, so it needs its own corner. Last in the chain:
+  // an attribute that maps to the same word (`Positioning`) still decides for itself.
+  const capabilityTagged = (input.tags ?? []).some((tag) => capabilityForTag(tag) !== undefined);
+
+  const corner =
+    input.corner ??
+    tagged?.corner ??
+    point?.corner ??
+    (capabilityTagged ? CAPABILITY_TAG_CORNER : undefined);
   const attribute = input.attribute ?? tagged?.id;
 
   const observation = ObservationSchema.parse({
@@ -370,6 +379,27 @@ export function observationTagGroups(session: Session, phaseId?: PhaseId): Obser
   }
 
   const used = new Set(pointTexts.map((tag) => tag.toLowerCase()));
+
+  /*
+   * The FA's six core capabilities, above the corners.
+   *
+   * `corner: null` like this phase's points, because the group is not a corner — the corner
+   * these file under is decided when the observation is written, by `CAPABILITY_TAG_CORNER`.
+   *
+   * They sit second because they describe the *action* the coach is watching, which is the
+   * finer-grained question, and because four of the six were previously only reachable by
+   * inference from an attribute that happened to mean the same thing. Deception was not
+   * reachable at all.
+   */
+  const capabilityTags = CAPABILITY_TAGS.filter((tag) => !used.has(tag.toLowerCase()));
+  if (capabilityTags.length > 0) {
+    groups.push({ corner: null, label: 'Core capabilities', tags: capabilityTags });
+    // Claim these names so the corner groups below drop their duplicates. `Positioning` is
+    // both a capability and a technical attribute; offering the same word twice in one sheet
+    // is a worse problem than losing it from the corner list, and both resolve identically.
+    for (const tag of capabilityTags) used.add(tag.toLowerCase());
+  }
+
   for (const corner of FOUR_CORNERS) {
     const tags = CORNER_ATTRIBUTES[corner]
       .map((attribute) => attribute.label)

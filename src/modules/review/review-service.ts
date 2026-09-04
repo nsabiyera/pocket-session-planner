@@ -13,6 +13,7 @@ import {
   type SquadId,
 } from '@/domain/ids';
 import { cornerBalance, type CornerBalance } from '@/domain/four-corners/balance';
+import { capabilityCoverage, type CapabilityCoverage } from '@/domain/capabilities/coverage';
 import {
   challengeSummary,
   sessionChallengeProgress,
@@ -67,6 +68,13 @@ export interface ReviewDraftData {
   /** Which corners this session actually touched — the FA 4 Corner coverage line. */
   cornerCoverage: CornerBalance;
   /**
+   * Which of the FA's six core capabilities the coach looked at.
+   *
+   * The other half of the same question as `cornerCoverage`, one level down: not *what kind
+   * of player am I developing* but *which part of the action was I even watching*.
+   */
+  capabilityCoverage: CapabilityCoverage;
+  /**
    * Every challenge with its final tally, still-open first.
    *
    * Read the **session-wide** fields only — `count`, `label`, `status`. The phases are over,
@@ -103,6 +111,7 @@ export async function loadReviewData(
       .filter((playerId) => !seen.has(playerId)),
     seededActions,
     cornerCoverage: cornerBalance(observations),
+    capabilityCoverage: capabilityCoverage(observations),
     challenges: sessionChallengeProgress(session),
     challengeSummary: challengeSummary(session),
   });

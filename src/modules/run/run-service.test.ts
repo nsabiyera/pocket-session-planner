@@ -20,6 +20,7 @@ import { FakeClock } from '@/lib/fake-clock';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { isErr, unwrap } from '@/lib/result';
 import { asSessionId, type PlayerId, type SquadId } from '@/domain/ids';
+import { capabilityOfObservation } from '@/domain/capabilities/coverage';
 import { interventionSummary } from '@/domain/session/selectors';
 import { phaseElapsedMs } from '@/domain/session/timer';
 import { readResumeMirror, mirrorRemainingMs } from '@/lib/resume-mirror';
@@ -389,12 +390,13 @@ describe('challenges in Do mode', () => {
 });
 
 describe('the corner-grouped tag bank', () => {
-  it('leads with this phase own coaching points, then the four corners', () => {
+  it('leads with this phase own coaching points, then capabilities, then the corners', () => {
     const withPoints = session.phases.find((p) => p.coachingPoints.length > 0)!;
     const groups = observationTagGroups(session, withPoints.id);
 
     expect(groups[0]).toMatchObject({ corner: null, label: 'This phase' });
-    expect(groups.slice(1).map((group) => group.corner)).toEqual([
+    expect(groups[1]).toMatchObject({ corner: null, label: 'Core capabilities' });
+    expect(groups.slice(2).map((group) => group.corner)).toEqual([
       'technical_tactical',
       'physical',
       'psychological',
@@ -406,11 +408,34 @@ describe('the corner-grouped tag bank', () => {
     const bare = { ...session, phases: session.phases.map((p) => ({ ...p, coachingPoints: [] })) };
     const groups = observationTagGroups(bare);
 
-    // No "This phase" group, but every corner is still one tap away — which is the point:
-    // the empty corner is visible at the moment of logging, not just in the report.
-    expect(groups).toHaveLength(4);
+    // No "This phase" group, but the capabilities and every corner are still one tap away —
+    // which is the point: the empty corner is visible at the moment of logging, not just in
+    // the report.
+    expect(groups).toHaveLength(5);
+    expect(groups.map((g) => g.label)).toContain('Core capabilities');
     expect(groups.flatMap((g) => g.tags)).toContain('Communication');
     expect(groups.flatMap((g) => g.tags)).toContain('Balance');
+  });
+
+  it('puts all six capabilities one tap away, deception included', () => {
+    const tags = observationTagsFor(session);
+
+    for (const capability of [
+      'Scanning',
+      'Timing',
+      'Movement',
+      'Positioning',
+      'Deception',
+      'Techniques',
+    ]) {
+      expect(tags, `${capability} should be tappable`).toContain(capability);
+    }
+  });
+
+  it('never offers the same word twice, even when a capability shares an attribute label', () => {
+    // `Positioning` is both a capability and a technical attribute. One button, not two.
+    const tags = observationTagsFor(session);
+    expect(tags.filter((tag) => tag === 'Positioning')).toHaveLength(1);
   });
 
   it('does not repeat a coaching point that is already an attribute label', () => {
@@ -455,6 +480,40 @@ describe('corner inference — the reason logging stays at two taps', () => {
       }),
     );
     expect(observation.corner).toBe('physical');
+  });
+
+  it('files a capability tag under technical / tactical, with no attribute to claim', async () => {
+    const observation = unwrap(
+      await logObservation(ctx, {
+        sessionId: session.id,
+        playerId: kai,
+        ratingKind: 'good',
+        tags: ['Deception'],
+      }),
+    );
+
+    // A capability is not an attribute, so there is nothing to put in that field — but the
+    // observation must still land in a corner, or logging in the FA's words would quietly
+    // cost the coach their corner coverage.
+    expect(observation.corner).toBe('technical_tactical');
+    expect('attribute' in observation).toBe(false);
+    expect(capabilityOfObservation(observation)).toBe('deception');
+  });
+
+  it('lets an attribute of the same name decide for itself', async () => {
+    // `Positioning` is both. The attribute route wins, so the id is still recorded.
+    const observation = unwrap(
+      await logObservation(ctx, {
+        sessionId: session.id,
+        playerId: kai,
+        ratingKind: 'good',
+        tags: ['Positioning'],
+      }),
+    );
+
+    expect(observation.corner).toBe('technical_tactical');
+    expect(observation.attribute).toBe('positioning');
+    expect(capabilityOfObservation(observation)).toBe('positioning');
   });
 
   it('leaves an untagged note unclassified rather than guessing', async () => {

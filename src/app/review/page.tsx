@@ -22,6 +22,10 @@ import {
   type ObjectiveOutcome,
 } from '@/domain/review';
 import { describeCornerBalance } from '@/domain/four-corners/balance';
+import {
+  describeCapabilityCoverage,
+  hasEnoughForCapabilityView,
+} from '@/domain/capabilities/coverage';
 import { describeInterventionSummary } from '@/domain/session/selectors';
 import { formatClock } from '@/domain/session/timer';
 import { shortPlayerName } from '@/domain/player';
@@ -332,6 +336,18 @@ export default function ReviewPage() {
           <p className="banner banner--signal">
             {describeCornerBalance(data.cornerCoverage, 'this session')}
           </p>
+
+          {/*
+            The six core capabilities — the same question one level down: which part of the
+            action was the coach watching? Gated on having enough to say, unlike the corner
+            line, because "you never look at scanning" after three observations is how a
+            coach learns to ignore the app.
+          */}
+          {hasEnoughForCapabilityView(data.capabilityCoverage) ? (
+            <p className="banner banner--signal">
+              {describeCapabilityCoverage(data.capabilityCoverage, 'this session')}
+            </p>
+          ) : null}
         </section>
       ) : null}
 
