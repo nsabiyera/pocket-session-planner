@@ -10,7 +10,7 @@ import {
   type SessionId,
   type SquadId,
 } from '@/domain/ids';
-import { CoachingPointSchema } from '@/domain/coaching-point';
+import { CoachingPointSchema, normaliseCoachingPointText } from '@/domain/coaching-point';
 import { findObjectiveTemplate } from '@/domain/objectives';
 import type { InterventionPlan } from '@/domain/intervention';
 import { CURRENT_SCHEMA_VERSION, type IsoDateTime } from '@/domain/primitives';
@@ -118,13 +118,35 @@ function addObjectivePoints(
   const target = mainPracticePhase(session);
   if (!target || texts.length === 0) return session;
 
-  const points = texts.slice(0, 6).map((text) =>
-    CoachingPointSchema.parse({
-      id: asCoachingPointId(ctx.ids.uuid()),
-      text,
-      source: 'coach',
-    }),
+  /*
+   * **Skip anything the phase already says.**
+   *
+   * The methodology preset and the objective library overlap — both offer "Head up before
+   * you receive" for playing out from the back — so appending blindly put the same
+   * instruction in front of the coach twice in Do mode, and made the observation tag bank
+   * offer the same button twice. Normalised, so punctuation and case do not smuggle a
+   * duplicate through.
+   */
+  const seen = new Set(
+    target.coachingPoints.map((point) => normaliseCoachingPointText(point.text)),
   );
+
+  const points = texts
+    .filter((text) => {
+      const key = normaliseCoachingPointText(text);
+      if (seen.has(key)) return false;
+      // Also guards a library entry that repeats itself.
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 6)
+    .map((text) =>
+      CoachingPointSchema.parse({
+        id: asCoachingPointId(ctx.ids.uuid()),
+        text,
+        source: 'coach',
+      }),
+    );
 
   return {
     ...session,

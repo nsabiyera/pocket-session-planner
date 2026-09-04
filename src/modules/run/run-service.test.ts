@@ -24,7 +24,7 @@ import { capabilityOfObservation } from '@/domain/capabilities/coverage';
 import { interventionSummary } from '@/domain/session/selectors';
 import { phaseElapsedMs } from '@/domain/session/timer';
 import { readResumeMirror, mirrorRemainingMs } from '@/lib/resume-mirror';
-import { challengeId, T0, testId } from '@/test/builders';
+import { aCoachingPoint, challengeId, T0, testId } from '@/test/builders';
 import type { Session } from '@/domain/session';
 import type { ServiceContext } from '../context';
 
@@ -430,6 +430,51 @@ describe('the corner-grouped tag bank', () => {
     ]) {
       expect(tags, `${capability} should be tappable`).toContain(capability);
     }
+  });
+
+  it('offers a repeated coaching point once, whatever the session holds', () => {
+    // Two identical tags are one button — and were a React duplicate-key error, since a tag
+    // is keyed by its own string. Sessions planned before the source fix, and any imported
+    // file, can still carry the same point twice.
+    const withDuplicate = {
+      ...session,
+      phases: session.phases.map((phase, index) =>
+        index === 0
+          ? {
+              ...phase,
+              coachingPoints: [
+                aCoachingPoint('p1', { text: 'Head up before you receive' }),
+                aCoachingPoint('p2', { text: 'Head up before you receive' }),
+                aCoachingPoint('p3', { text: 'Open your body' }),
+              ],
+            }
+          : phase,
+      ),
+    };
+
+    const groups = observationTagGroups(withDuplicate, session.phases[0]!.id);
+    expect(groups[0]?.tags).toEqual(['Head up before you receive', 'Open your body']);
+  });
+
+  it('treats punctuation and case as the same coaching point', () => {
+    const withNearDuplicate = {
+      ...session,
+      phases: session.phases.map((phase, index) =>
+        index === 0
+          ? {
+              ...phase,
+              coachingPoints: [
+                aCoachingPoint('p1', { text: 'Head up before you receive' }),
+                aCoachingPoint('p2', { text: 'Head up, before you receive!' }),
+              ],
+            }
+          : phase,
+      ),
+    };
+
+    const groups = observationTagGroups(withNearDuplicate, session.phases[0]!.id);
+    // The first wording wins: it is the one the coach wrote first.
+    expect(groups[0]?.tags).toEqual(['Head up before you receive']);
   });
 
   it('never offers the same word twice, even when a capability shares an attribute label', () => {

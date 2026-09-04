@@ -118,6 +118,30 @@ describe('startDraft', () => {
   });
 });
 
+describe('the objective library and the methodology preset overlap', () => {
+  it('does not put the same coaching point in a phase twice', async () => {
+    // Both offer "Head up before you receive" for playing out from the back. Appending
+    // blindly showed the coach the same instruction twice in Do mode, and made the
+    // observation tag bank render two identical buttons.
+    const draft = await draftFor();
+    const practice = mainPracticePhase(draft);
+    const texts = (practice?.coachingPoints ?? []).map((point) => point.text);
+
+    expect(texts.length).toBeGreaterThan(0);
+    expect(new Set(texts).size).toBe(texts.length);
+  });
+
+  it('still carries the objective points the phase did not already have', async () => {
+    const draft = await draftFor();
+    const texts = (mainPracticePhase(draft)?.coachingPoints ?? []).map((point) => point.text);
+
+    // From the objective library, not the methodology preset.
+    expect(texts).toContain('Split the centre-backs wide of the box');
+    // And the methodology's own points are still there.
+    expect(texts).toContain('Head up before you receive');
+  });
+});
+
 describe('lastUsedMethodologyId', () => {
   it('is the grassroots default until a session exists', async () => {
     expect(await lastUsedMethodologyId(ctx, squadId)).toBe('play-practice-play');

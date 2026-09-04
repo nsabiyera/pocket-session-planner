@@ -10,6 +10,7 @@ import {
   type SessionId,
 } from '@/domain/ids';
 import type { ChallengeStatus } from '@/domain/challenge';
+import { normaliseCoachingPointText } from '@/domain/coaching-point';
 import {
   CAPABILITY_TAG_CORNER,
   CAPABILITY_TAGS,
@@ -384,7 +385,23 @@ export interface ObservationTagGroup {
 
 export function observationTagGroups(session: Session, phaseId?: PhaseId): ObservationTagGroup[] {
   const phase = phaseId ? session.phases.find((p) => p.id === phaseId) : currentPhase(session);
-  const pointTexts = (phase?.coachingPoints ?? []).map((point) => point.text);
+
+  /*
+   * **Deduped**, because a tag is a string and two identical strings are one button.
+   *
+   * The overlap that produced them is fixed at the source now, but sessions planned before
+   * that — and any imported file — can still carry the same coaching point twice. Two
+   * buttons reading "Head up before you receive" is a worse bug than the React duplicate-key
+   * warning it also caused.
+   */
+  const pointTexts: string[] = [];
+  const pointKeys = new Set<string>();
+  for (const point of phase?.coachingPoints ?? []) {
+    const key = normaliseCoachingPointText(point.text);
+    if (pointKeys.has(key)) continue;
+    pointKeys.add(key);
+    pointTexts.push(point.text);
+  }
 
   const groups: ObservationTagGroup[] = [];
   if (pointTexts.length > 0) {
