@@ -6,6 +6,10 @@ next session.
 
 No account, no server, no signal required. Every byte lives on the device.
 
+**Using it as a coach?** [`docs/user-manual.md`](docs/user-manual.md) is the manual: the
+Plan → Do → Review loop screen by screen, player challenges, the two FA models, and what to do
+when something looks wrong. The rest of this file is for whoever builds it.
+
 ## Why it exists
 
 Existing session planners are desktop-shaped: they treat the plan as a document you write
