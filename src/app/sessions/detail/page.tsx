@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { Empty, Loading, Screen, ScreenHead, formatLongDate } from '../../_components/ui';
+import { Why } from '../../_components/why';
 import { getServiceContext, useAppState } from '@/modules/app/app-store';
 import { asSessionId } from '@/domain/ids';
 import { describeInterventionPlan, resolvePhaseIntervention } from '@/domain/intervention';
@@ -97,7 +98,10 @@ function SessionDetail() {
       </div>
 
       {session.run ? (
-        <p className="banner banner--signal">{describeInterventionSummary(summary)}</p>
+        <div className="banner banner--signal">
+          {describeInterventionSummary(summary)}
+          <Why id="report:intervention" />
+        </div>
       ) : null}
 
       <section className="stack">

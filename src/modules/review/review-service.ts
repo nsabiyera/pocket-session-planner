@@ -19,6 +19,8 @@ import {
   type CapabilityCoverage,
   type MomentCoverage,
 } from '@/domain/capabilities/coverage';
+import { effectiveChallengeStatus } from '@/domain/challenge';
+import type { SettledChallenge } from '@/domain/challenge/point';
 import {
   challengeSummary,
   sessionChallengeProgress,
@@ -35,11 +37,18 @@ import {
   type PhaseReview,
   type SeededActionOutcome,
 } from '@/domain/review';
+import type { ChoiceSummary } from '@/domain/engagement';
+import { describeRepresentativeness } from '@/domain/practice/match';
 import {
+  adjustmentSummary,
+  choiceSummary,
+  representativeness,
   interventionSummary,
   phaseOverruns,
   type InterventionSummary,
+  describeSessionPractice,
 } from '@/domain/session/selectors';
+import { stepCoverage, type AdjustmentSummary, type StepCoverage } from '@/domain/practice';
 import { SessionSchema, type Session } from '@/domain/session';
 import { applyCarryForwardActions } from '../planning/apply-carry-forward';
 import { deriveCarryForwardProposals } from './derive-carry-forward';
@@ -94,6 +103,45 @@ export interface ReviewDraftData {
   challenges: ChallengeProgress[];
   /** *"2 of 3 challenges met."* — the headline, and the prompt to rule on the rest. */
   challengeSummary: ChallengeSummary;
+  /**
+   * *"Overloaded → matched-up. The practice got more game-like as it went."*
+   *
+   * Null for a session where fewer than two phases carry a practice spectrum — which is
+   * every session planned before the field existed, and any session whose coach cleared it.
+   * The screen shows nothing rather than explaining its own absence.
+   */
+  practiceShape: string | null;
+  /**
+   * *"You made the practice harder twice and easier once, across 2 of 3 practices."*
+   *
+   * Counts only. There is no target number of adjustments and the app never suggests one — a
+   * coach optimising for this would be fiddling with a practice that was working.
+   */
+  adjustments: AdjustmentSummary;
+  /**
+   * *"You changed a constraint 4 times: 3 Task, 1 Space — nothing on equipment or people."*
+   *
+   * Held back below `MIN_ADJUSTMENTS_FOR_STEP_VIEW` classified changes, the same restraint
+   * the corner and capability lines use: naming a habit off two taps teaches a coach to
+   * ignore the app.
+   */
+  stepCoverage: StepCoverage;
+  /**
+   * *"Players chose something in 1 phase of 5."*
+   *
+   * The FA's fourth area. A count of what the coach recorded, never a claim about how the
+   * session felt to the players - see `domain/engagement.ts`.
+   */
+  choice: ChoiceSummary;
+  /**
+   * *"You finished on an overloaded practice at 38 m² a player. A U12 match is 9v9 on a
+   * recommended 73 × 46 m - about 187 m² a player."*
+   *
+   * Null when there is nothing honest to compare: no final practice, or a squad whose age
+   * group is free text the app cannot read. Two facts side by side and no verdict - see
+   * `domain/practice/match.ts`.
+   */
+  representativeness: string | null;
 }
 
 export async function loadReviewData(
@@ -111,6 +159,10 @@ export async function loadReviewData(
 
   const seededActions = await ctx.store.actions.getMany(session.seededFromActionIds);
 
+  // Only for the age group, and only to compare against a match. A squad whose `ageGroup` is
+  // free text the parser cannot read simply gets no comparison.
+  const squad = await ctx.store.squads.get(session.squadId);
+
   return ok({
     session,
     observations,
@@ -125,6 +177,11 @@ export async function loadReviewData(
     momentCoverage: momentCoverage(observations),
     challenges: sessionChallengeProgress(session),
     challengeSummary: challengeSummary(session),
+    practiceShape: describeSessionPractice(session),
+    adjustments: adjustmentSummary(session),
+    stepCoverage: stepCoverage(session.run?.practiceAdjustments ?? []),
+    choice: choiceSummary(session),
+    representativeness: describeRepresentativeness(representativeness(session, squad?.ageGroup)),
   });
 }
 
@@ -161,7 +218,41 @@ export async function proposeCarryForward(
       openActions,
       players,
       playerHistory,
+      challengeHistory: await settledChallengeHistory(ctx, data.value.session),
     }),
+  );
+}
+
+/**
+ * Every challenge this squad has settled, across the term, oldest first.
+ *
+ * A `by-squad` range scan over a term of sessions — roughly forty documents — which is why
+ * this needs no new store and no new index. It reads the **effective** status, so a counted
+ * challenge that reached its target is met whether or not the coach got round to tapping it.
+ *
+ * The session under review is included: its verdicts are the most recent evidence there is,
+ * and excluding them would make the nudge always one week out of date.
+ */
+async function settledChallengeHistory(
+  ctx: ServiceContext,
+  session: Session,
+): Promise<SettledChallenge[]> {
+  const sessions = await ctx.store.sessions.listBySquad(session.squadId, { limit: 60 });
+  const withCurrent = sessions.some((candidate) => candidate.id === session.id)
+    ? sessions
+    : [...sessions, session];
+
+  return (
+    withCurrent
+      // Oldest first, so a "three in a row" streak counts back from the right end.
+      .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor))
+      .flatMap((candidate) =>
+        sessionChallengeProgress(candidate).map(({ challenge, count }) => ({
+          playerId: challenge.playerId,
+          text: challenge.text,
+          status: effectiveChallengeStatus(challenge, count),
+        })),
+      )
   );
 }
 

@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   CarriedPill,
+  Chip,
   Empty,
   Loading,
   Screen,
@@ -13,6 +14,16 @@ import {
   Stepper,
   formatShortDate,
 } from '../../_components/ui';
+import { Why } from '../../_components/why';
+import { PhaseImageEditor, PhaseImageStrip } from '../../_components/phase-images';
+import {
+  attachPhaseImage,
+  describePhaseImageError,
+  detachPhaseImage,
+  loadPhaseImages,
+} from '@/modules/planning/phase-image-service';
+import { MAX_IMAGES_PER_PHASE, type PhaseImage } from '@/domain/phase-image';
+import type { SessionId } from '@/domain/ids';
 import { showToast } from '../../_components/toast-host';
 import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
 import {
@@ -24,6 +35,24 @@ import {
 } from '@/modules/planning/planning-service';
 import { describeInterventionPlan, resolvePhaseIntervention } from '@/domain/intervention';
 import { phaseKindLabel } from '@/domain/methodology';
+import {
+  type AdjustmentDirection,
+  adjustmentPlanLabel,
+  MAX_CONSTRAINTS_PER_PHASE,
+  type PhaseConstraint,
+  STEP_LETTERS,
+  stepDescription,
+  stepLabel,
+  type StepLetter,
+  describePracticeArea,
+  MAX_ADJUSTMENT_TEXT,
+  MAX_ADJUSTMENTS_PER_PHASE,
+  MAX_GROUP_SIZE,
+  MIN_GROUP_SIZE,
+  PRACTICE_SPECTRUM,
+  spectrumDescription,
+  spectrumShortLabel,
+} from '@/domain/practice';
 import {
   phasesInOrder,
   totalPlannedPhaseMin,
@@ -43,6 +72,35 @@ export default function PhaseEditorPage() {
   const router = useRouter();
   const [editing, setEditing] = useState<SessionPhase | null>(null);
   const [busy, setBusy] = useState(false);
+  const [imagesById, setImagesById] = useState<ReadonlyMap<string, PhaseImage>>(new Map());
+
+  /*
+   * Every drawing in the plan, in one read.
+   *
+   * One `getMany` across all the phases rather than a read per card: a nine-phase session
+   * would otherwise open nine transactions on a screen the coach scrolls through. The key is
+   * the joined id list, so this re-runs when a photo is attached or removed and at no other
+   * time.
+   */
+  // `state.activeSession`, not the `session` alias below: hooks run before the guards
+  // that narrow it, and a conditional hook is worse than a slightly longer name.
+  const allImageIds = (state.activeSession?.phases ?? []).flatMap((phase) => phase.imageIds);
+  const imageKey = allImageIds.join(',');
+
+  useEffect(() => {
+    if (allImageIds.length === 0) {
+      setImagesById(new Map());
+      return;
+    }
+    let cancelled = false;
+    void loadPhaseImages(getServiceContext(), allImageIds).then((rows) => {
+      if (!cancelled) setImagesById(new Map(rows.map((row) => [row.id, row])));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Depends on `imageKey` (the id list) alone — see the note above.
+  }, [imageKey]);
 
   if (state.status !== 'ready') {
     return (
@@ -203,6 +261,18 @@ export default function PhaseEditorPage() {
                 </span>
               ) : null}
 
+              {/*
+                The drawing, on the card rather than only behind Edit. A coach checking the
+                plan wants to see the practice, not read a summary of it — and tapping opens
+                the same full-screen view Do mode uses, so the gesture is learned once.
+              */}
+              <PhaseImageStrip
+                heading={null}
+                images={phase.imageIds
+                  .map((id) => imagesById.get(id))
+                  .filter((image): image is PhaseImage => image !== undefined)}
+              />
+
               <div className="row">
                 <button type="button" className="btn btn--quiet" onClick={() => setEditing(phase)}>
                   Edit
@@ -258,6 +328,8 @@ export default function PhaseEditorPage() {
 
       <PhaseSheet
         phase={editing}
+        sessionId={session.id}
+        rosterSize={state.players.length}
         onClose={() => setEditing(null)}
         onSave={async (next) => {
           await updatePhase(getServiceContext(), session.id, next);
@@ -289,14 +361,68 @@ function describeChallengePlan(session: Session, roster: readonly Player[]): str
 
 function PhaseSheet({
   phase,
+  sessionId,
+  rosterSize,
   onClose,
   onSave,
 }: {
   phase: SessionPhase | null;
+  sessionId: SessionId;
+  /** Seeds the group-size stepper. See the note on the stepper itself. */
+  rosterSize: number;
   onClose: () => void;
   onSave: (phase: SessionPhase) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<SessionPhase | null>(phase);
+  const [images, setImages] = useState<PhaseImage[]>([]);
+  const [imageBusy, setImageBusy] = useState(false);
+
+  /**
+   * Images are written straight through, not held in `draft`.
+   *
+   * Everything else in this sheet is saved on `Save phase`, but a photograph is not a form
+   * field: the coach has already taken it, holding megabytes in React state until they
+   * remember to save would be a good way to lose one, and the attach is a two-store
+   * transaction that has to own its own consistency anyway.
+   */
+  useEffect(() => {
+    if (!phase) return;
+    let cancelled = false;
+    void loadPhaseImages(getServiceContext(), phase.imageIds).then((rows) => {
+      if (!cancelled) setImages(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [phase?.id, phase?.imageIds, phase]);
+
+  const addImage = async (file: File) => {
+    if (!phase) return;
+    setImageBusy(true);
+    try {
+      const result = await attachPhaseImage(getServiceContext(), sessionId, phase.id, file);
+      if (isErr(result)) {
+        showToast(describePhaseImageError(result.error), { tone: 'stop' });
+        return;
+      }
+      setImages((current) => [...current, result.value]);
+      await refresh();
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const removeImage = async (image: PhaseImage) => {
+    if (!phase) return;
+    setImageBusy(true);
+    try {
+      await detachPhaseImage(getServiceContext(), sessionId, phase.id, image.id);
+      setImages((current) => current.filter((candidate) => candidate.id !== image.id));
+      await refresh();
+    } finally {
+      setImageBusy(false);
+    }
+  };
 
   // Re-seed when a different phase is opened.
   if (phase && draft?.id !== phase.id) setDraft(phase);
@@ -329,12 +455,189 @@ function PhaseSheet({
         onChange={(value) => setDraft({ ...draft, plannedDurationMin: value })}
       />
 
+      {/*
+        **The practice spectrum.** One tap, already answered by the methodology, and tapping
+        the pressed chip again clears it back to "not said" — the same take-it-back gesture
+        the challenge verdicts use. A wrapping chip row rather than `Segmented`, because
+        "Unopposed with interference" will not fit four-across on a 375px screen.
+      */}
+      <div className="field">
+        <label id="phase-spectrum">How game-like is this?</label>
+        <div className="row row--wrap" role="group" aria-labelledby="phase-spectrum">
+          {PRACTICE_SPECTRUM.map((spectrum) => (
+            <Chip
+              key={spectrum}
+              label={spectrumShortLabel(spectrum)}
+              pressed={draft.spectrum === spectrum}
+              onClick={() =>
+                setDraft({ ...draft, spectrum: draft.spectrum === spectrum ? null : spectrum })
+              }
+            />
+          ))}
+        </div>
+        <p className="card-meta">
+          {draft.spectrum ? spectrumDescription(draft.spectrum) : 'Not set.'}
+          <Why id="report:practice-spectrum" />
+        </p>
+      </div>
+
+      {/*
+        **Everything the methodology already answered, behind one disclosure.**
+
+        The default path stays exactly as long as it was — a coach who never opens this plans
+        a session in the same taps as before and gets the preset values. That matters more
+        than it sounds: by phase 6 this sheet had grown to 2.7 screens of scrolling before
+        `Save phase` came into reach, and the four blocks in here are the ones a coach edits
+        least and the presets fill best.
+
+        Space and numbers stay `null` when untouched, which every report reads as *"the coach
+        did not say"* rather than as zero.
+      */}
+      <details className="card card--sunk">
+        <summary>Practice detail</summary>
+
+        {draft.area ? (
+          <>
+            <Stepper
+              label="Grid length"
+              value={draft.area.lengthM}
+              step={5}
+              min={3}
+              max={120}
+              suffix="m"
+              onChange={(lengthM) => setDraft({ ...draft, area: { ...draft.area!, lengthM } })}
+            />
+            <Stepper
+              label="Grid width"
+              value={draft.area.widthM}
+              step={5}
+              min={3}
+              max={90}
+              suffix="m"
+              onChange={(widthM) => setDraft({ ...draft, area: { ...draft.area!, widthM } })}
+            />
+          </>
+        ) : (
+          <button
+            type="button"
+            className="btn btn--block"
+            onClick={() => setDraft({ ...draft, area: { lengthM: 20, widthM: 20 } })}
+          >
+            Set the area
+          </button>
+        )}
+
+        {draft.groupSize === null ? (
+          <button
+            type="button"
+            className="btn btn--block"
+            /*
+             * Seeded from the roster, not derived from it. `focusPlayerIds` is the watch
+             * list — a subset of the session's focus players, enforced in `session.ts` — so
+             * it can never answer "how many are in this practice". The roster is merely the
+             * closest number the app already knows, and the coach steps down from it.
+             */
+            onClick={() =>
+              setDraft({
+                ...draft,
+                groupSize: Math.min(MAX_GROUP_SIZE, Math.max(MIN_GROUP_SIZE, rosterSize || 10)),
+              })
+            }
+          >
+            Set the group size
+          </button>
+        ) : (
+          <Stepper
+            label="Players in this practice"
+            value={draft.groupSize}
+            step={1}
+            min={MIN_GROUP_SIZE}
+            max={MAX_GROUP_SIZE}
+            suffix={draft.groupSize === 1 ? 'player' : 'players'}
+            onChange={(groupSize) => setDraft({ ...draft, groupSize })}
+          />
+        )}
+
+        {/* The derived line. Bare m² per player, no adjective — see `relativePlayingArea`. */}
+        <p className="card-meta">
+          {describePracticeArea(draft.area, draft.groupSize) ?? 'Not set.'}
+          {draft.area ? <Why id="report:relative-playing-area" /> : null}
+        </p>
+
+        {draft.area || draft.groupSize !== null ? (
+          <button
+            type="button"
+            className="btn btn--quiet btn--block"
+            onClick={() => setDraft({ ...draft, area: null, groupSize: null })}
+          >
+            Clear space and numbers
+          </button>
+        ) : null}
+
+        {/*
+        **Progressions and regressions.** The Challenge Point Framework, already answered by
+        the methodology — Play-Practice-Play arrives with three of each — so this is a list
+        the coach edits rather than a form they fill in. Do mode puts these under their thumb.
+      */}
+        {/*
+        The FA's fourth area, as one optional tap. Records that a choice was *offered*, which
+        is a fact; it does not claim anything about how the session felt to play in. See the
+        note in `domain/engagement.ts` on why the word "autonomy" never reaches the screen.
+      */}
+        <div className="field">
+          <label id="phase-choice">Did the players choose something?</label>
+          <div className="row" role="group" aria-labelledby="phase-choice">
+            <Chip
+              label={draft.playerChoice ? 'Yes, they chose' : 'No'}
+              pressed={draft.playerChoice}
+              onClick={() => setDraft({ ...draft, playerChoice: !draft.playerChoice })}
+            />
+          </div>
+          <p className="card-meta">
+            Which practice, which constraint, which target - anything they picked themselves.
+          </p>
+        </div>
+
+        {/*
+        **STEP.** The letter is a tap and the text is theirs — the only split that survives
+        a phone in the rain. Placed above the progressions because a constraint is the state of
+        the practice and a progression is a change to it.
+      */}
+        <ConstraintList
+          items={draft.constraints}
+          onChange={(constraints) => setDraft({ ...draft, constraints })}
+        />
+
+        <AdjustmentList
+          direction="progressed"
+          items={draft.progressions}
+          onChange={(progressions) => setDraft({ ...draft, progressions })}
+        />
+        <AdjustmentList
+          direction="regressed"
+          items={draft.regressions}
+          onChange={(regressions) => setDraft({ ...draft, regressions })}
+        />
+      </details>
+
+      {/*
+        Directly under `organisation`, because the picture and the prose are the same thought:
+        the box is the summary a schema can read, and this is the plan the coach actually drew.
+      */}
+      <PhaseImageEditor
+        images={images}
+        busy={imageBusy}
+        full={images.length >= MAX_IMAGES_PER_PHASE}
+        onAdd={(file) => void addImage(file)}
+        onRemove={(image) => void removeImage(image)}
+      />
+
       <div className="field">
         <label htmlFor="phase-organisation">Organisation</label>
         <textarea
           id="phase-organisation"
           value={draft.organisation}
-          placeholder="4v2 rondo, 15x15, two neutrals"
+          placeholder="4v2 rondo, two neutrals, keeper joins in"
           onChange={(event) => setDraft({ ...draft, organisation: event.target.value })}
         />
       </div>
@@ -347,5 +650,127 @@ function PhaseSheet({
         Save phase
       </button>
     </Sheet>
+  );
+}
+
+/**
+ * A capped list of one-line texts, for progressions and regressions.
+ *
+ * Rows rather than a textarea: each one is read aloud on the pitch as a single instruction,
+ * and a blob of newline-separated prose would have to be re-split every time Do mode wanted
+ * to put one under a thumb. Blank rows are dropped on the way out, so clearing the text *is*
+ * the delete gesture and there is no separate destructive button to mis-tap.
+ */
+function AdjustmentList({
+  direction,
+  items,
+  onChange,
+}: {
+  direction: AdjustmentDirection;
+  items: readonly string[];
+  onChange: (items: string[]) => void;
+}) {
+  const label = adjustmentPlanLabel(direction);
+
+  const setAt = (index: number, text: string) =>
+    onChange(
+      items
+        .map((item, i) => (i === index ? text : item))
+        .filter((item, i) => i === index || item.trim().length > 0),
+    );
+
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <ul className="stack stack--tight">
+        {items.map((item, index) => (
+          // Index keys are correct here: the rows have no identity of their own, and the
+          // list is only ever edited in place or appended to.
+          <li key={index}>
+            <input
+              type="text"
+              value={item}
+              maxLength={MAX_ADJUSTMENT_TEXT}
+              aria-label={`${label} ${index + 1}`}
+              placeholder={direction === 'progressed' ? 'Add a defender' : 'Take a defender out'}
+              onChange={(event) => setAt(index, event.target.value)}
+            />
+          </li>
+        ))}
+      </ul>
+      {items.length < MAX_ADJUSTMENTS_PER_PHASE ? (
+        <button type="button" className="btn btn--quiet" onClick={() => onChange([...items, ''])}>
+          Add {label.toLowerCase().slice(0, -1)}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The STEP list: four letter chips and a line of the coach's own words per row.
+ *
+ * The letter is never inferred from the text. Keyword-matching free prose is exactly what
+ * ADR 0004 refused to do to `organisation`, and a silently wrong letter in a season report is
+ * worse than no letter — so the coach taps it, once, and the app keeps quiet otherwise.
+ *
+ * Clearing the text deletes the row on save, matching `AdjustmentList`: one gesture, no
+ * separate destructive button to mis-tap with gloves on.
+ */
+function ConstraintList({
+  items,
+  onChange,
+}: {
+  items: readonly PhaseConstraint[];
+  onChange: (items: PhaseConstraint[]) => void;
+}) {
+  const setAt = (index: number, patch: Partial<PhaseConstraint>) =>
+    onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+
+  return (
+    <div className="field">
+      <label>Constraints</label>
+      <ul className="stack stack--tight">
+        {items.map((constraint, index) => (
+          // Index keys: rows have no identity of their own and are only edited in place.
+          <li key={index} className="stack stack--tight">
+            <div
+              className="row row--wrap"
+              role="group"
+              aria-label={`Constraint ${index + 1} letter`}
+            >
+              {STEP_LETTERS.map((letter) => (
+                <Chip
+                  key={letter}
+                  label={stepLabel(letter)}
+                  pressed={constraint.letter === letter}
+                  onClick={() => setAt(index, { letter })}
+                />
+              ))}
+            </div>
+            <input
+              type="text"
+              value={constraint.text}
+              maxLength={120}
+              aria-label={`Constraint ${index + 1}`}
+              placeholder="Two touches maximum"
+              onChange={(event) => setAt(index, { text: event.target.value })}
+            />
+            <p className="card-meta">{stepDescription(constraint.letter)}</p>
+          </li>
+        ))}
+      </ul>
+      {items.length < MAX_CONSTRAINTS_PER_PHASE ? (
+        <button
+          type="button"
+          className="btn btn--quiet"
+          // Task is the letter coaches reach for most, so it is the cheapest default to be
+          // wrong about - and the chips are right there.
+          onClick={() => onChange([...items, { letter: 'task' as StepLetter, text: '' }])}
+        >
+          Add constraint
+        </button>
+      ) : null}
+    </div>
   );
 }

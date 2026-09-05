@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { CHAIN_DEPTH_WARNING, type CarryForwardAction } from '@/domain/carry-forward';
+import { Why } from './why';
 
 /**
  * Open carry-forward actions, shown in three places: as a pre-ticked checklist above the
@@ -36,12 +37,13 @@ export function CarryForwardChips({
       </div>
 
       {stuck.length > 0 ? (
-        <p className="banner banner--warn">
+        <div className="banner banner--warn">
           {stuck.length === 1
             ? `You've chased "${stuck[0]?.title}" for ${(stuck[0]?.chainDepth ?? 0) + 1} sessions`
             : `${stuck.length} points have run for three sessions or more`}{' '}
           — change the practice, not the point.
-        </p>
+          <Why id="carry-forward:chain-stuck" />
+        </div>
       ) : null}
 
       <ul className="stack stack--tight">

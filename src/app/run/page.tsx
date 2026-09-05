@@ -20,10 +20,12 @@ import {
   logChallengeProgress,
   logIntervention,
   logObservation,
+  logPracticeAdjustment,
   observationTagGroups,
   setChallengeStatus,
   undoChallengeProgress,
   undoObservation,
+  undoPracticeAdjustment,
   type ObservationTagGroup,
 } from '@/modules/run/run-service';
 import { CHALLENGE_STATUSES, challengeStatusLabel, type ChallengeStatus } from '@/domain/challenge';
@@ -46,6 +48,18 @@ import {
   resolvePhaseIntervention,
 } from '@/domain/intervention';
 import { cornerSlug } from '@/domain/four-corners';
+import {
+  adjustmentLabel,
+  adjustmentPlanLabel,
+  stepInitial,
+  stepLabel,
+  type AdjustmentDirection,
+  type StepLetter,
+} from '@/domain/practice';
+import type { SessionPhase } from '@/domain/session';
+import { PhaseImageStrip } from '../_components/phase-images';
+import { loadPhaseImages } from '@/modules/planning/phase-image-service';
+import type { PhaseImage } from '@/domain/phase-image';
 import { shortPlayerName, type Player } from '@/domain/player';
 import { haptic } from '@/lib/haptics';
 import { isErr } from '@/lib/result';
@@ -211,6 +225,45 @@ export default function RunPage() {
             getServiceContext(),
             session.id,
             progress.challenge.id,
+          );
+          if (!isErr(undone)) patchActiveSession(undone.value);
+        },
+      },
+    });
+  };
+
+  /**
+   * *"Made it harder"* / *"Made it easier"* — one tap on a progression the coach already
+   * wrote down, or on the bare direction when they changed something off-plan.
+   *
+   * Does **not** close the sheet. A coach who takes a defender out and immediately shrinks
+   * the grid has made two adjustments, and re-opening the sheet between them would lose the
+   * second one.
+   */
+  const adjust = async (direction: AdjustmentDirection, text: string, step?: StepLetter) => {
+    const result = await logPracticeAdjustment(
+      getServiceContext(),
+      session.id,
+      direction,
+      text,
+      step,
+    );
+    if (isErr(result)) return;
+
+    patchActiveSession(result.value.session);
+    haptic('confirm');
+
+    const label = adjustmentLabel(direction);
+    setAnnouncement(text ? `${label}: ${text}` : label);
+
+    showToast(text ? `${label} — ${text}` : label, {
+      action: {
+        label: 'Undo',
+        run: async () => {
+          const undone = await undoPracticeAdjustment(
+            getServiceContext(),
+            session.id,
+            result.value.id,
           );
           if (!isErr(undone)) patchActiveSession(undone.value);
         },
@@ -545,6 +598,7 @@ export default function RunPage() {
       <PhaseSheet
         open={phaseSheetOpen}
         session={session}
+        onAdjust={adjust}
         onClose={() => setPhaseSheetOpen(false)}
         onJump={async (phaseId) => {
           setPhaseSheetOpen(false);
@@ -896,6 +950,7 @@ function ObservationSheet({
 function PhaseSheet({
   open,
   session,
+  onAdjust,
   onClose,
   onJump,
   onExtend,
@@ -903,15 +958,49 @@ function PhaseSheet({
 }: {
   open: boolean;
   session: Session;
+  onAdjust: (direction: AdjustmentDirection, text: string, step?: StepLetter) => Promise<void>;
   onClose: () => void;
   onJump: (phaseId: PhaseId) => Promise<void>;
   onExtend: (minutes: number) => Promise<void>;
   onAbandon: (reason: string) => Promise<void>;
 }) {
   const [reason, setReason] = useState('');
+  const [phaseImages, setPhaseImages] = useState<PhaseImage[]>([]);
+
+  const phase = currentPhase(session);
+  const imageIds = phase?.imageIds;
+
+  /**
+   * Loaded when the sheet opens, not with the run.
+   *
+   * Do mode rewrites the session document on every timer command, and dragging a few hundred
+   * kilobytes of blob through that path would be the exact mistake the separate store exists
+   * to avoid. The sheet is a deliberate tap, so a read there is free.
+   */
+  useEffect(() => {
+    if (!open || !imageIds || imageIds.length === 0) {
+      setPhaseImages([]);
+      return;
+    }
+    let cancelled = false;
+    void loadPhaseImages(getServiceContext(), imageIds).then((rows) => {
+      if (!cancelled) setPhaseImages(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, imageIds]);
 
   return (
     <Sheet open={open} title="Phase options" onClose={onClose}>
+      {/*
+        First, above even the time control. A coach opens this sheet mid-practice because
+        something is not working, and the drawing they made at the kitchen table is the
+        fastest answer to "which way round were the gates?". It costs nothing when the phase
+        has no picture: the strip renders null.
+      */}
+      <PhaseImageStrip images={phaseImages} />
+
       <div className="row">
         <button type="button" className="btn" onClick={() => void onExtend(-5)}>
           −5 min
@@ -920,6 +1009,15 @@ function PhaseSheet({
           +5 min
         </button>
       </div>
+
+      {/*
+        Second, under the one-row time control and **above** jump-to-phase and Abandon.
+        This is the other thing a coach opens this sheet for mid-practice — the rondo is
+        falling apart, or it is far too easy — and the fix they already wrote down is here.
+        Not first, because a phase with five progressions and five regressions would push
+        the ±5 min row a screen and a half down from where it has always been.
+      */}
+      <AdjustPractice phase={currentPhase(session)} onAdjust={onAdjust} />
 
       <div className="stack stack--tight">
         <h3>Jump to</h3>
@@ -963,5 +1061,114 @@ function PhaseSheet({
         </button>
       </details>
     </Sheet>
+  );
+}
+
+/**
+ * The Challenge Point Framework at 7:40 on a wet Tuesday.
+ *
+ * Each planned progression is its own full-width button, because reading a list and then
+ * choosing a direction is two decisions and the coach has time for none. Tapping the
+ * *practice* records the direction with it.
+ *
+ * The two bare buttons at the bottom cover the off-plan case, which the app must not treat
+ * as a lesser one: a coach who takes a defender out without having written it down has still
+ * changed the challenge, and refusing to record that would be the app preferring its own plan
+ * to what actually happened.
+ */
+function AdjustPractice({
+  phase,
+  onAdjust,
+}: {
+  phase: SessionPhase | undefined;
+  onAdjust: (direction: AdjustmentDirection, text: string, step?: StepLetter) => Promise<void>;
+}) {
+  if (!phase) return null;
+
+  const rows: Array<{ direction: AdjustmentDirection; items: readonly string[] }> = [
+    { direction: 'progressed', items: phase.progressions },
+    { direction: 'regressed', items: phase.regressions },
+  ];
+
+  return (
+    <section className="stack stack--tight">
+      <h3>Change the practice</h3>
+
+      {/*
+        The written constraints, each with its letter and both directions on the row. One tap
+        records the letter, the direction and the words together — which is the only reason
+        the STEP report can exist without costing the coach a second decision mid-practice.
+      */}
+      {phase.constraints.length > 0 ? (
+        <div className="stack stack--tight">
+          <p className="eyebrow">Constraints</p>
+          {phase.constraints.map((constraint, index) => (
+            <div
+              key={`${constraint.letter}-${index}`}
+              className="card card--sunk stack stack--tight"
+            >
+              <span className="row row--top">
+                <span className="pill" aria-label={stepLabel(constraint.letter)}>
+                  {stepInitial(constraint.letter)}
+                </span>
+                <span className="card-title">{constraint.text}</span>
+              </span>
+              <div className="row">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void onAdjust('progressed', constraint.text, constraint.letter)}
+                >
+                  Harder
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void onAdjust('regressed', constraint.text, constraint.letter)}
+                >
+                  Easier
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {rows.map(({ direction, items }) =>
+        items.length === 0 ? null : (
+          <div key={direction} className="stack stack--tight">
+            <p className="eyebrow">{adjustmentPlanLabel(direction)}</p>
+            {items.map((text, index) => (
+              <button
+                key={`${direction}-${index}`}
+                type="button"
+                className="btn btn--lg btn--block"
+                onClick={() => void onAdjust(direction, text)}
+              >
+                {text}
+              </button>
+            ))}
+          </div>
+        ),
+      )}
+
+      <p className="card-meta">Or record a change you did not plan:</p>
+      <div className="row">
+        <button
+          type="button"
+          className="btn btn--quiet"
+          onClick={() => void onAdjust('progressed', '')}
+        >
+          {adjustmentLabel('progressed')}
+        </button>
+        <button
+          type="button"
+          className="btn btn--quiet"
+          onClick={() => void onAdjust('regressed', '')}
+        >
+          {adjustmentLabel('regressed')}
+        </button>
+      </div>
+    </section>
   );
 }

@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { MAX_CHALLENGES_PER_SESSION, PlayerChallengeSchema } from './challenge';
+import { MAX_IMAGES_PER_PHASE } from './phase-image';
 import { CoachingPointSchema } from './coaching-point';
 import {
   CarryForwardActionIdSchema,
   PhaseIdSchema,
+  PhaseImageIdSchema,
   PhaseTemplateIdSchema,
   PlayerIdSchema,
   ReviewIdSchema,
@@ -11,6 +13,14 @@ import {
   SquadIdSchema,
 } from './ids';
 import { InterventionPlanSchema } from './intervention';
+import {
+  MAX_CONSTRAINTS_PER_PHASE,
+  MAX_GROUP_SIZE,
+  MIN_GROUP_SIZE,
+  PhaseConstraintSchema,
+  PracticeAreaSchema,
+  PracticeSpectrumSchema,
+} from './practice';
 import { MethodologySnapshotSchema, PhaseKindSchema } from './methodology';
 import {
   DurationMinSchema,
@@ -71,6 +81,42 @@ export const SessionPhaseSchema = z.object({
   focusPlayerIds: z.array(PlayerIdSchema).max(30).default([]),
   progressions: z.array(nonEmptyText(160)).max(5).default([]),
   regressions: z.array(nonEmptyText(160)).max(5).default([]),
+  /**
+   * **The practice design.** All three are nullable-with-default, which is what makes this a
+   * free change: not indexed, so ADR 0001's optional-omitted rule does not apply, and a
+   * session written before this shipped parses unchanged with three nulls. Null means *the
+   * coach did not say*, never *zero*.
+   */
+  spectrum: PracticeSpectrumSchema.nullable().default(null),
+  /** The grid, in metres. See the note on `PracticeAreaSchema` about metres vs yards. */
+  area: PracticeAreaSchema.nullable().default(null),
+  /** Players in *this practice* — not the squad, and not `focusPlayerIds`. */
+  groupSize: z.number().int().min(MIN_GROUP_SIZE).max(MAX_GROUP_SIZE).nullable().default(null),
+  /**
+   * The STEP conditions on this practice: the letter is a tap, the text is the coach's own.
+   * See `PhaseConstraintSchema` for why only the letter is structured.
+   */
+  constraints: z.array(PhaseConstraintSchema).max(MAX_CONSTRAINTS_PER_PHASE).default([]),
+  /**
+   * **Did the players choose something here?** The FA's fourth area, as one optional tap.
+   *
+   * A fact about the phase, not a rating of the coach - which is what keeps a read-only
+   * player-facing summary additive later rather than a rewrite. `false` means *not recorded*
+   * as much as it means *no*, which is exactly why `describeChoice` counts and stops.
+   */
+  playerChoice: z.boolean().default(false),
+  /**
+   * Photographs of this practice drawn out. **Ids only** - the bytes live in their own store,
+   * so the session document stays small enough for Do mode to rewrite on every tap.
+   *
+   * A phase carried forward keeps these, which is the point: re-running last week's rondo
+   * should bring last week's drawing with it.
+   */
+  imageIds: z.array(PhaseImageIdSchema).max(MAX_IMAGES_PER_PHASE).default([]),
+  /**
+   * Stays. The three fields above take the part a schema can compare across sessions; this
+   * takes the part it should never try to — "two neutrals, keeper joins in when we score".
+   */
   organisation: optionalText(500).default(''),
   /** Copied from the methodology template, shown in Do mode. */
   coachPrompts: z.array(nonEmptyText(200)).max(6).default([]),

@@ -1,5 +1,6 @@
 import type {
   CapabilityScanId,
+  PhaseImageId,
   CarryForwardActionId,
   MethodologyId,
   ObservationId,
@@ -10,6 +11,7 @@ import type {
   SessionId,
   SquadId,
 } from '@/domain/ids';
+import type { PhaseImage } from '@/domain/phase-image';
 import type { CapabilityScan, ObservedSkill } from '@/domain/capabilities/scan';
 import type { CarryForwardAction, CarryForwardStatus } from '@/domain/carry-forward';
 import type { Methodology } from '@/domain/methodology';
@@ -25,6 +27,7 @@ import { buildCatalog, resolveMethodology } from '../methodology-catalog';
 import type {
   AppMeta,
   CapabilityScanRepository,
+  PhaseImageRepository,
   CarryForwardActionRepository,
   CatalogEntry,
   ListOptions,
@@ -66,6 +69,7 @@ interface Tables {
   carry_forward_actions: Map<string, CarryForwardAction>;
   player_assessments: Map<string, PlayerAssessment>;
   capability_scans: Map<string, CapabilityScan>;
+  phase_images: Map<string, PhaseImage>;
   app_meta: Map<string, AppMeta>;
 }
 
@@ -81,6 +85,7 @@ function emptyTables(): Tables {
     carry_forward_actions: new Map(),
     player_assessments: new Map(),
     capability_scans: new Map(),
+    phase_images: new Map(),
     app_meta: new Map(),
   };
 }
@@ -346,6 +351,52 @@ class FakeCarryForwardActionRepository
   }
 }
 
+class FakePhaseImageRepository
+  extends FakeRepository<PhaseImageId, PhaseImage>
+  implements PhaseImageRepository
+{
+  /**
+   * **Blobs are handed back by reference, not cloned.**
+   *
+   * `clone` exists so a caller cannot mutate what is stored. A `Blob` is immutable, so it
+   * needs no such protection — and structured-cloning one under jsdom produces an object
+   * that is no longer a `Blob` at all, which real IndexedDB never does. Copying the metadata
+   * and keeping the bytes is both faithful and cheaper.
+   */
+  private read(image: PhaseImage): PhaseImage {
+    const { blob, ...meta } = image;
+    return { ...clone(meta), blob };
+  }
+
+  override async put(image: PhaseImage): Promise<void> {
+    this.table().set(image.id, this.read(image));
+  }
+
+  override async putMany(images: readonly PhaseImage[]): Promise<void> {
+    for (const image of images) await this.put(image);
+  }
+
+  override async get(id: PhaseImageId): Promise<PhaseImage | undefined> {
+    const found = this.table().get(id);
+    return found ? this.read(found) : undefined;
+  }
+
+  override async getMany(ids: readonly PhaseImageId[]): Promise<PhaseImage[]> {
+    return ids
+      .map((id) => this.table().get(id))
+      .filter((image): image is PhaseImage => image !== undefined)
+      .map((image) => this.read(image));
+  }
+
+  async listBySession(sessionId: SessionId): Promise<PhaseImage[]> {
+    return (await this.listAll()).filter((image) => image.sessionId === sessionId);
+  }
+
+  async listAll(): Promise<PhaseImage[]> {
+    return [...this.table().values()].map((image) => this.read(image));
+  }
+}
+
 class FakeCapabilityScanRepository
   extends FakeRepository<CapabilityScanId, CapabilityScan>
   implements CapabilityScanRepository
@@ -452,6 +503,7 @@ export class FakeDataStore implements PocketDataStore {
   readonly actions: CarryForwardActionRepository;
   readonly assessments: PlayerAssessmentRepository;
   readonly scans: CapabilityScanRepository;
+  readonly phaseImages: PhaseImageRepository;
   readonly meta: MetaRepository;
 
   constructor() {
@@ -477,6 +529,7 @@ export class FakeDataStore implements PocketDataStore {
       touch,
     );
     this.scans = new FakeCapabilityScanRepository(() => this.tables.capability_scans, touch);
+    this.phaseImages = new FakePhaseImageRepository(() => this.tables.phase_images, touch);
     this.meta = new FakeMetaRepository(() => this.tables.app_meta);
   }
 

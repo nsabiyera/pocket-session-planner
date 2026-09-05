@@ -4,7 +4,7 @@ import { SessionSchema, type Session, type SessionStatus } from '../session';
 import { isErr, unwrap } from '@/lib/result';
 import { FakeClock } from '@/lib/fake-clock';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
-import { asChallengeEventId, asInterventionEventId } from '../ids';
+import { asChallengeEventId, asInterventionEventId, asPracticeAdjustmentId } from '../ids';
 import type { ChallengeStatus, PlayerChallenge } from '../challenge';
 import { isoDateTime } from '../primitives';
 import { buildSessionFromMethodology } from './build-from-methodology';
@@ -639,5 +639,134 @@ describe('bookkeeping', () => {
     const snapshot = JSON.parse(JSON.stringify(session));
     applyOk(session, { kind: 'nextPhase' });
     expect(JSON.parse(JSON.stringify(session))).toEqual(snapshot);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Practice adjustments
+// ---------------------------------------------------------------------------
+
+const adjustmentId = (label: string) => asPracticeAdjustmentId(testId(label));
+
+const logAdjustment = (
+  label: string,
+  direction: 'progressed' | 'regressed' = 'progressed',
+  text = 'Add a second defender',
+): SessionCommand => ({
+  kind: 'logPracticeAdjustment',
+  id: adjustmentId(label),
+  direction,
+  text,
+});
+
+describe('logPracticeAdjustment', () => {
+  it('stamps the phase, the wall clock and the phase clock', () => {
+    const clock = clockOf();
+    const session = runningSession();
+    clock.advanceMinutes(6);
+    const logged = applyOk(session, logAdjustment('a1'), nowIso(clock));
+
+    expect(logged.run?.practiceAdjustments).toEqual([
+      {
+        id: adjustmentId('a1'),
+        phaseId: currentPhaseIdOf(session),
+        direction: 'progressed',
+        text: 'Add a second defender',
+        // No letter: this tap came from a progression, not from a written constraint.
+        step: null,
+        at: nowIso(clock),
+        phaseElapsedMs: 6 * 60_000,
+      },
+    ]);
+    expect(SessionSchema.safeParse(logged).success).toBe(true);
+  });
+
+  it('records an off-plan change with empty text rather than refusing it', () => {
+    // A coach who changes something they never wrote down has done the most interesting
+    // thing in the session. An app that only accepted the plan would record the plan.
+    const logged = applyOk(runningSession(), logAdjustment('a1', 'regressed', ''));
+    expect(logged.run?.practiceAdjustments[0]?.text).toBe('');
+    expect(logged.run?.practiceAdjustments[0]?.direction).toBe('regressed');
+  });
+
+  it('does not accept text that was never in the plan as a problem', () => {
+    const logged = applyOk(runningSession(), logAdjustment('a1', 'progressed', 'Something else'));
+    expect(logged.run?.practiceAdjustments[0]?.text).toBe('Something else');
+  });
+
+  it('never stops the clock, opens a pause, or logs an intervention', () => {
+    // The load-bearing property. A coach who takes a defender out mid-rondo has coached
+    // without saying a word, and every number on the review screen must keep saying so.
+    const before = runningSession();
+    const after = applyOk(before, logAdjustment('a1'));
+
+    expect(after.run?.pauseReason).toBeNull();
+    expect(after.run?.openInterventionId).toBeNull();
+    expect(after.run?.interventionEvents).toEqual([]);
+    expect(after.run?.phaseRuns[0]?.runningSince).toBe(before.run?.phaseRuns[0]?.runningSince);
+  });
+
+  it('refuses when there is no run', () => {
+    expect(isErr(apply(plannedSession(), logAdjustment('a1')))).toBe(true);
+    expect(isErr(apply(draftSession(), logAdjustment('a1')))).toBe(true);
+  });
+
+  it('keeps every adjustment, including repeats of the same text', () => {
+    let session = applyOk(runningSession(), logAdjustment('a1'));
+    session = applyOk(session, logAdjustment('a2'));
+    expect(session.run?.practiceAdjustments).toHaveLength(2);
+  });
+});
+
+describe('undoPracticeAdjustment', () => {
+  it('removes the one named, not the most recent', () => {
+    // The two directions sit side by side in Do mode. Popping "the last one" would remove
+    // the *easier* the coach meant to keep when they mis-tapped *harder*.
+    let session = applyOk(runningSession(), logAdjustment('a1', 'progressed'));
+    session = applyOk(session, logAdjustment('a2', 'regressed'));
+
+    const undone = applyOk(session, {
+      kind: 'undoPracticeAdjustment',
+      id: adjustmentId('a1'),
+    });
+
+    expect(undone.run?.practiceAdjustments.map((a) => a.id)).toEqual([adjustmentId('a2')]);
+    expect(undone.run?.practiceAdjustments[0]?.direction).toBe('regressed');
+  });
+
+  it('fails rather than silently doing nothing when there is nothing to undo', () => {
+    const session = runningSession();
+    expect(
+      isErr(apply(session, { kind: 'undoPracticeAdjustment', id: adjustmentId('nope') })),
+    ).toBe(true);
+  });
+});
+
+describe('the STEP letter on an adjustment', () => {
+  it('carries the letter when the tap came off a written constraint', () => {
+    const logged = applyOk(runningSession(), {
+      kind: 'logPracticeAdjustment',
+      id: adjustmentId('a1'),
+      direction: 'progressed',
+      text: 'Two touches maximum',
+      step: 'task',
+    });
+    expect(logged.run?.practiceAdjustments[0]?.step).toBe('task');
+  });
+
+  it('stays null for an off-plan change rather than guessing a letter', () => {
+    // The coach was busy. Asking them to classify it mid-rondo would cost the recording.
+    const logged = applyOk(runningSession(), logAdjustment('a1', 'regressed', ''));
+    expect(logged.run?.practiceAdjustments[0]?.step).toBeNull();
+  });
+
+  it('never infers the letter from the words', () => {
+    // ADR 0004 refused to parse prose for exactly this reason: a silently wrong letter in a
+    // season report is worse than no letter.
+    const logged = applyOk(
+      runningSession(),
+      logAdjustment('a1', 'progressed', 'Shrink the pitch to 15x15'),
+    );
+    expect(logged.run?.practiceAdjustments[0]?.step).toBeNull();
   });
 });

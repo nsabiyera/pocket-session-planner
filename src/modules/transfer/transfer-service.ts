@@ -1,6 +1,7 @@
 import { err, ok, type Result } from '@/lib/result';
 import type { SquadId } from '@/domain/ids';
 import type { PocketDataStore } from '@/data/ports/data-store';
+import { blobToDataUrl, dataUrlToBlob } from '@/lib/downscale-image';
 import { now, type ServiceContext } from '../context';
 import {
   countData,
@@ -95,9 +96,23 @@ async function collect(store: PocketDataStore, squadId?: SquadId): Promise<Trans
     )
   ).flat();
 
+  /**
+   * Drawings, base64'd on the way out.
+   *
+   * Scoped to the sessions being exported rather than the whole store, so a drawing whose
+   * session was deleted does not resurrect itself on the next device.
+   */
+  const sessionIds = new Set(sessions.map((session) => session.id));
+  const images = await Promise.all(
+    (await store.phaseImages.listAll())
+      .filter((image) => sessionIds.has(image.sessionId))
+      .map(async ({ blob, ...meta }) => ({ ...meta, dataUrl: await blobToDataUrl(blob) })),
+  );
+
   return TransferDataSchema.parse({
     squads,
     players,
+    images,
     // **Custom only.** Built-in presets are code-resident and never travel.
     methodologies: await store.methodologies.listCustom(),
     sessions,
@@ -175,6 +190,12 @@ export async function planImport(
     actions: migrateAll(rawData.actions ?? []),
     assessments: migrateAll(rawData.assessments ?? []),
     scans: migrateAll(rawData.scans ?? []),
+    /**
+     * Easy to forget, and silent when forgotten: every array omitted here is defaulted to
+     * `[]` by the schema, so the drawings would vanish on import with no error anywhere.
+     * `transfer-service.test.ts` pins the round trip for exactly this reason.
+     */
+    images: migrateAll(rawData.images ?? []),
   };
 
   // **Parse first.** A malformed file never touches IndexedDB.
@@ -209,6 +230,7 @@ export async function planImport(
     actions: await diff(ctx.store, 'actions', envelope.data.actions, droppedIds, mode),
     assessments: await diff(ctx.store, 'assessments', envelope.data.assessments, droppedIds, mode),
     scans: await diff(ctx.store, 'scans', envelope.data.scans, droppedIds, mode),
+    images: await diff(ctx.store, 'images', envelope.data.images, droppedIds, mode),
   };
 
   return ok({ mode, envelope, counts: envelope.counts, entries, dropped });
@@ -265,6 +287,7 @@ function repositoryFor(store: PocketDataStore, name: keyof TransferData): AnyRep
     actions: store.actions,
     assessments: store.assessments,
     scans: store.scans,
+    images: store.phaseImages,
   };
   return map[name] as AnyRepository;
 }
@@ -431,6 +454,7 @@ export async function commitImport(
     actions: keep('actions', data.actions),
     assessments: keep('assessments', data.assessments),
     scans: keep('scans', data.scans),
+    images: keep('images', data.images),
   };
 
   // In merge mode, resolve every conflict *before* opening the transaction.
@@ -447,6 +471,7 @@ export async function commitImport(
           actions: await newerOnly(ctx.store, 'actions', payload.actions),
           assessments: await newerOnly(ctx.store, 'assessments', payload.assessments),
           scans: await newerOnly(ctx.store, 'scans', payload.scans),
+          images: await newerOnly(ctx.store, 'images', payload.images),
         };
 
   if (plan.mode === 'replace') await ctx.store.clear();
@@ -466,6 +491,7 @@ export async function commitImport(
       // the suite never saw it.
       'player_assessments',
       'capability_scans',
+      'phase_images',
     ],
     'readwrite',
     async (tx) => {
@@ -478,6 +504,10 @@ export async function commitImport(
       await tx.actions.putMany(toWrite.actions);
       await tx.assessments.putMany(toWrite.assessments);
       await tx.scans.putMany(toWrite.scans);
+      // Base64 back to bytes at the boundary, so nothing downstream ever sees a data URL.
+      await tx.phaseImages.putMany(
+        toWrite.images.map(({ dataUrl, ...meta }) => ({ ...meta, blob: dataUrlToBlob(dataUrl) })),
+      );
     },
   );
 
@@ -492,6 +522,7 @@ export async function commitImport(
       actions: toWrite.actions.length,
       assessments: toWrite.assessments.length,
       scans: toWrite.scans.length,
+      images: toWrite.images.length,
     },
     dropped: plan.dropped,
   });

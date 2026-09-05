@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Empty, Loading, Rating, Screen, ScreenHead, formatShortDate } from '../_components/ui';
 import { showToast } from '../_components/toast-host';
+import { Why, WhyTrigger } from '../_components/why';
 import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
 import {
   loadReviewData,
@@ -22,6 +23,9 @@ import {
   type ObjectiveOutcome,
 } from '@/domain/review';
 import { describeCornerBalance } from '@/domain/four-corners/balance';
+import { describeChoice, hasEnoughForChoice } from '@/domain/engagement';
+import { REFLECTION_PROMPTS } from '@/domain/practice/match';
+import { describeAdjustments, describeStepCoverage, hasEnoughForStepView } from '@/domain/practice';
 import {
   describeCapabilityCoverage,
   describeMomentCoverage,
@@ -319,25 +323,89 @@ export default function ReviewPage() {
             on at all.
           */}
           {data.challengeSummary.total > 0 ? (
-            <p className="banner banner--signal">
+            <div className="banner banner--signal">
               {describeChallengeSummary(data.challengeSummary)}
-            </p>
+              <Why id="report:challenge-summary" />
+            </div>
+          ) : null}
+
+          {/*
+            The shape of the practice itself — the FA's practice-design area, which this app
+            modelled as nothing at all until phases carried a spectrum. Absent, rather than
+            explained away, for a session planned before the field existed.
+          */}
+          {data.practiceShape ? (
+            <div className="banner banner--signal">
+              {data.practiceShape}
+              <Why id="report:session-shape" />
+            </div>
+          ) : null}
+
+          {/*
+            How the coach changed the difficulty. Sits next to the practice shape because it
+            is the same question moving: not "what did you plan" but "what did you do to it
+            once it was running". Silent for a session with neither a plan nor an adjustment.
+          */}
+          {data.adjustments.total > 0 || data.adjustments.phasesWithAPlan > 0 ? (
+            <div className="banner banner--signal">
+              {describeAdjustments(data.adjustments)}
+              <Why id="report:practice-adjustments" />
+            </div>
+          ) : null}
+
+          {/*
+            *Did the practice look like the game?* - the FA's practice-design question, which
+            this app could not ask until the spectrum, the area and the group size existed.
+            Two facts side by side; the verdict is the coach's.
+          */}
+          {data.representativeness ? (
+            <div className="banner banner--signal">
+              {data.representativeness}
+              <Why id="report:representativeness" />
+            </div>
+          ) : null}
+
+          {/*
+            The FA's fourth area. Last of the derived lines because it is the newest and the
+            least evidenced - the app is counting a toggle, and the `Why?` says so.
+          */}
+          {hasEnoughForChoice(data.choice) ? (
+            <div className="banner banner--signal">
+              {describeChoice(data.choice)}
+              <Why id="report:player-choice" />
+            </div>
+          ) : null}
+
+          {/*
+            Which STEP lever the coach pulled. Gated on having enough to say, like the
+            capability line and unlike the corner one: "you never touch Space" off two
+            constraint changes is how a coach learns to ignore the app.
+          */}
+          {hasEnoughForStepView(data.stepCoverage) ? (
+            <div className="banner banner--signal">
+              {describeStepCoverage(data.stepCoverage)}
+              <Why id="report:step-coverage" />
+            </div>
           ) : null}
 
           {/*
             The intervention report. Placed *before* the carry-forward chips on purpose —
             seeing the number is what makes the proposed fix land.
           */}
-          <p className="banner banner--signal">{describeInterventionSummary(data.interventions)}</p>
+          <div className="banner banner--signal">
+            {describeInterventionSummary(data.interventions)}
+            <Why id="report:intervention" />
+          </div>
 
           {/*
             The FA 4 Corner coverage for this session. Sits with the intervention report
             because they answer the same kind of question: not "how did the players do" but
             "what did *you* actually look at".
           */}
-          <p className="banner banner--signal">
+          <div className="banner banner--signal">
             {describeCornerBalance(data.cornerCoverage, 'this session')}
-          </p>
+            <Why id="report:corner-coverage" />
+          </div>
 
           {/*
             The six core capabilities — the same question one level down: which part of the
@@ -346,9 +414,10 @@ export default function ReviewPage() {
             coach learns to ignore the app.
           */}
           {hasEnoughForCapabilityView(data.capabilityCoverage) ? (
-            <p className="banner banner--signal">
+            <div className="banner banner--signal">
               {describeCapabilityCoverage(data.capabilityCoverage, 'this session')}
-            </p>
+              <Why id="report:capability-coverage" />
+            </div>
           ) : null}
 
           {/*
@@ -357,9 +426,10 @@ export default function ReviewPage() {
             reporting.
           */}
           {hasEnoughForMomentView(data.momentCoverage) ? (
-            <p className="banner banner--signal">
+            <div className="banner banner--signal">
               {describeMomentCoverage(data.momentCoverage, 'this session')}
-            </p>
+              <Why id="report:moment-coverage" />
+            </div>
           ) : null}
         </section>
       ) : null}
@@ -513,7 +583,10 @@ export default function ReviewPage() {
               const key = proposalKeyOf(proposal);
               const on = accepted.has(key);
               return (
-                <li key={key}>
+                // The `?` is a sibling of the card, not a child: the card's whole face is
+                // the tick target, and a disclosure inside a button is neither valid nor
+                // tappable. `why--corner` pins it without costing the list any height.
+                <li key={key} className="why-anchor">
                   <button
                     type="button"
                     className="card card--link"
@@ -542,12 +615,35 @@ export default function ReviewPage() {
                       </span>
                     </span>
                   </button>
+                  <WhyTrigger trigger={proposal.trigger} variant="corner" />
                 </li>
               );
             })}
           </ul>
         </section>
       ) : null}
+
+      {/*
+        **Realism, relevance, repetition.** Three questions the app cannot answer for the
+        coach, behind a disclosure so they cost nothing to ignore - the same pull-not-push
+        rule the `Why?` layer follows. Nothing here is recorded; it is a prompt for the notes
+        underneath, which is the honest scope for a question about how a session felt.
+      */}
+      <details className="card card--sunk">
+        <summary>Look back at the practice</summary>
+        <p className="card-meta">
+          The FA&apos;s three questions. Nothing to fill in.
+          <Why id="report:reflection" />
+        </p>
+        <ul className="stack stack--tight">
+          {REFLECTION_PROMPTS.map((prompt) => (
+            <li key={prompt.word} className="card">
+              <span className="card-title">{prompt.word}</span>
+              <span className="card-meta">{prompt.question}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
 
       {/* Free text last, keyboard only if wanted. */}
       <details className="card card--sunk">

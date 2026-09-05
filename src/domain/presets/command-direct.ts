@@ -28,6 +28,10 @@ export const COMMAND_DIRECT: MethodologyPreset = MethodologyPresetSchema.parse({
     {
       id: 'cmd-warmup',
       order: 0,
+      defaultConstraints: [{ letter: 'equipment', text: 'One ball each' }],
+      defaultSpectrum: 'unopposed',
+      defaultProgressions: ['Weaker foot only', 'Add a move before each turn'],
+      defaultRegressions: ['More space between players', 'Walk it through first'],
       kind: 'warm_up',
       title: 'Warm-up — ball mastery',
       durationWeight: 0.15,
@@ -38,6 +42,10 @@ export const COMMAND_DIRECT: MethodologyPreset = MethodologyPresetSchema.parse({
     {
       id: 'cmd-demo',
       order: 1,
+      defaultConstraints: [],
+      defaultSpectrum: null,
+      defaultProgressions: [],
+      defaultRegressions: [],
       kind: 'technical',
       title: 'Demonstration',
       durationWeight: 0.06,
@@ -56,6 +64,10 @@ export const COMMAND_DIRECT: MethodologyPreset = MethodologyPresetSchema.parse({
     {
       id: 'cmd-unopposed',
       order: 2,
+      defaultConstraints: [],
+      defaultSpectrum: 'unopposed',
+      defaultProgressions: ['Add speed once it is accurate', 'Cut the space down'],
+      defaultRegressions: ['Slow it right down', 'Shorter distance, bigger target'],
       kind: 'technical',
       title: 'Unopposed — groove it',
       durationWeight: 0.22,
@@ -66,6 +78,10 @@ export const COMMAND_DIRECT: MethodologyPreset = MethodologyPresetSchema.parse({
     {
       id: 'cmd-opposed',
       order: 3,
+      defaultConstraints: [{ letter: 'people', text: 'One defender, passive to start' }],
+      defaultSpectrum: 'overloaded',
+      defaultProgressions: ['Passive defender goes live', 'Add a second defender'],
+      defaultRegressions: ['Defender back to passive', 'Give the attacker an extra touch'],
       kind: 'skill_practice',
       title: 'Opposed progression',
       durationWeight: 0.22,
@@ -76,6 +92,18 @@ export const COMMAND_DIRECT: MethodologyPreset = MethodologyPresetSchema.parse({
     {
       id: 'cmd-game',
       order: 4,
+      defaultConstraints: [
+        { letter: 'task', text: 'The technique has to appear before you can score' },
+      ],
+      defaultSpectrum: 'matched_up',
+      defaultProgressions: [
+        'Tighten the condition — two touches',
+        'Take a player off the attacking side',
+      ],
+      defaultRegressions: [
+        'Add a neutral to the team in possession',
+        'Drop the condition for two minutes',
+      ],
       kind: 'conditioned_game',
       title: 'Conditioned game',
       durationWeight: 0.3,
@@ -93,6 +121,10 @@ export const COMMAND_DIRECT: MethodologyPreset = MethodologyPresetSchema.parse({
     {
       id: 'cmd-debrief',
       order: 5,
+      defaultConstraints: [],
+      defaultSpectrum: null,
+      defaultProgressions: [],
+      defaultRegressions: [],
       kind: 'huddle',
       title: 'Debrief',
       durationWeight: 0.05,

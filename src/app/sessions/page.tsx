@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Empty, Loading, Screen, ScreenHead, formatShortDate } from '../_components/ui';
 import { getServiceContext, useAppState } from '@/modules/app/app-store';
-import { sessionStage } from '@/domain/session/selectors';
+import { coachingStyleInput, sessionStage } from '@/domain/session/selectors';
+import { coachingStyle } from '@/domain/coaching-style';
+import { CoachingStylePanel } from '../_components/coaching-style';
 import type { Session } from '@/domain/session';
 
 /** History. A cold screen — no timer, no urgency, so it can afford to be a plain list. */
@@ -36,6 +38,13 @@ export default function SessionsPage() {
   return (
     <Screen>
       <ScreenHead eyebrow="History" title={state.squad?.name ?? 'Sessions'} />
+
+      {/*
+        The coach's own style across the term, above the list of the sessions it came from.
+        History is the right home: this is a summary *of* these sessions, and the screen has
+        already loaded them. Renders nothing below twelve interventions.
+      */}
+      <CoachingStylePanel style={coachingStyle(coachingStyleInput(sessions))} />
 
       {sessions.length === 0 ? (
         <Empty>No sessions yet.</Empty>

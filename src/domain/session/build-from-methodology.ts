@@ -130,8 +130,20 @@ function phaseFromTemplate(
       methodologyCoachingPoint(text, ids),
     ),
     focusPlayerIds: [],
-    progressions: [],
-    regressions: [],
+    // The Challenge Point Framework, pre-loaded. These cost the coach nothing at plan time
+    // and are exactly what they need in Do mode when the rondo is falling apart.
+    progressions: [...template.defaultProgressions],
+    regressions: [...template.defaultRegressions],
+    constraints: template.defaultConstraints.map((constraint) => ({ ...constraint })),
+    playerChoice: template.defaultPlayerChoice,
+    // A methodology cannot ship a photograph of your pitch.
+    imageIds: [],
+    // The practice spectrum comes from the template; the space and the numbers cannot. A
+    // preset has no idea how many turned up or how big the pitch is, and guessing an area
+    // would put a number the coach never chose into a season report.
+    spectrum: template.defaultSpectrum,
+    area: null,
+    groupSize: null,
     organisation: '',
     // Carried through so Do mode can show the coach their own reminder of what this is for.
     coachPrompts: [...template.coachPrompts],
@@ -194,6 +206,13 @@ export function rescaleSessionPhases(
     coachPrompts: [],
     defaultCoachingPoints: [],
     defaultIntervention: null,
+    // Only the durations are read back out of these, so the practice design is irrelevant
+    // here — but carrying the phase's own spectrum keeps the pseudo-template honest.
+    defaultSpectrum: phase.spectrum,
+    defaultProgressions: [...phase.progressions],
+    defaultRegressions: [...phase.regressions],
+    defaultConstraints: phase.constraints.map((constraint) => ({ ...constraint })),
+    defaultPlayerChoice: phase.playerChoice,
     isOptional: false,
   }));
 

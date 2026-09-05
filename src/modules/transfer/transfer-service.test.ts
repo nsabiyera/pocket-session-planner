@@ -14,7 +14,7 @@ import { FakeClock } from '@/lib/fake-clock';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { isErr, unwrap } from '@/lib/result';
 import { CURRENT_SCHEMA_VERSION } from '@/domain/primitives';
-import { T0 } from '@/test/builders';
+import { T0, testId } from '@/test/builders';
 import type { ServiceContext } from '../context';
 import type { SquadId } from '@/domain/ids';
 
@@ -546,3 +546,79 @@ describe('exportFilename', () => {
 function byId(a: { id: string }, b: { id: string }): number {
   return a.id.localeCompare(b.id);
 }
+
+/**
+ * Drawings across the wire.
+ *
+ * The export is the only backup a coach has, so a drawing that does not travel is a drawing
+ * lost the day they change phone. This caught a real one: `planImport` rebuilds the data
+ * object array by array before parsing, and an array omitted there is silently defaulted to
+ * `[]` — the pictures vanished on import with no error anywhere.
+ */
+describe('practice drawings survive the round trip', () => {
+  const anImage = (id: string, sessionId: string, bytes: number[]) => ({
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    createdAt: T0,
+    updatedAt: T0,
+    id,
+    sessionId,
+    contentType: 'image/webp' as const,
+    bytes: bytes.length,
+    width: 1600,
+    height: 1200,
+    caption: '',
+    capturedAt: T0,
+    blob: new Blob([new Uint8Array(bytes)], { type: 'image/webp' }),
+  });
+
+  it('exports the bytes and reads them back on another device', async () => {
+    const squadId = await seed(ctx);
+    const [session] = await ctx.store.sessions.listBySquad(squadId);
+    const pixels = [1, 2, 3, 250, 251, 252];
+
+    await ctx.store.phaseImages.put(anImage(testId('img-1'), session!.id, pixels) as never);
+
+    const envelope = await exportAll(ctx);
+    expect(envelope.counts.images).toBe(1);
+    expect(envelope.data.images[0]?.dataUrl.startsWith('data:image/webp;base64,')).toBe(true);
+
+    // A different device: a brand new store, importing only that file.
+    const other = freshContext('bbbb');
+    const plan = unwrap(await planImport(other, envelope, 'merge'));
+    expect(plan.entries.images).toEqual({ create: 1, update: 0, skip: 0 });
+
+    const written = unwrap(await commitImport(other, plan));
+    expect(written.written.images).toBe(1);
+
+    const restored = await other.store.phaseImages.get(testId('img-1') as never);
+    expect(restored?.bytes).toBe(pixels.length);
+    expect(restored?.width).toBe(1600);
+    expect(restored?.blob.size).toBe(pixels.length);
+    expect(restored?.blob.type).toBe('image/webp');
+  });
+
+  it('does not resurrect a drawing whose session is gone', async () => {
+    const squadId = await seed(ctx);
+    const [session] = await ctx.store.sessions.listBySquad(squadId);
+    await ctx.store.phaseImages.put(anImage(testId('img-1'), session!.id, [9, 9, 9]) as never);
+    await ctx.store.phaseImages.put(
+      anImage(testId('img-orphan'), testId('gone-session'), [7]) as never,
+    );
+
+    // Scoped to the sessions being exported, so the orphan stays behind.
+    const envelope = await exportAll(ctx);
+    expect(envelope.data.images.map((image) => image.id)).toEqual([testId('img-1')]);
+  });
+
+  it('re-importing the same file is a clean no-op', async () => {
+    const squadId = await seed(ctx);
+    const [session] = await ctx.store.sessions.listBySquad(squadId);
+    await ctx.store.phaseImages.put(anImage(testId('img-1'), session!.id, [4, 5]) as never);
+
+    const envelope = await exportAll(ctx);
+    const plan = unwrap(await planImport(ctx, envelope, 'merge'));
+
+    // Same id, same timestamp: nothing to do.
+    expect(plan.entries.images).toEqual({ create: 0, update: 0, skip: 1 });
+  });
+});

@@ -6,6 +6,7 @@ import type { Observation } from '@/domain/observation';
 import type { Player } from '@/domain/player';
 import type { PlayerAssessment } from '@/domain/player-assessment';
 import type { SessionReview } from '@/domain/review';
+import type { PhaseImage } from '@/domain/phase-image';
 import type { Session } from '@/domain/session';
 import type { Squad } from '@/domain/squad';
 import type { AppMeta, MethodologyPrefs } from '../ports/data-store';
@@ -20,7 +21,7 @@ export const DB_NAME = 'pocket-session-planner';
  * Document *shape* changes use `RecordMeta.schemaVersion` instead and are applied lazily on
  * read, so a coach with three seasons of observations does not stare at a spinner on launch.
  */
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 
 /**
  * `idb`'s generic schema type. This is most of the reason the library is worth its 1.2 kB:
@@ -48,6 +49,15 @@ export interface PocketDBSchema extends DBSchema {
   methodology_prefs: {
     key: string;
     value: MethodologyPrefs;
+  };
+  /**
+   * Photographed practice drawings. Their own store because they are binary and large: a
+   * 250 KB blob inside the session document would be re-serialised on every timer tick.
+   */
+  phase_images: {
+    key: string;
+    value: PhaseImage;
+    indexes: { 'by-session': string };
   };
   sessions: {
     key: string;

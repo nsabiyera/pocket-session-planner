@@ -12,6 +12,7 @@ import {
   hasEnoughForBalance,
   type CornerBalance,
 } from '@/domain/four-corners/balance';
+import { Why } from './why';
 
 /**
  * The FA 4 Corner balance panel.
@@ -62,7 +63,14 @@ export function CornerBalancePanel({
         })}
       </ul>
 
-      <p className="card-meta">{describeCornerBalance(balance, subject)}</p>
+      {/*
+        A `<div>` rather than a `<p>`: `<details>` is flow content and a paragraph takes only
+        phrasing, so the browser would close the `<p>` early and hydration would mismatch.
+      */}
+      <div className="card-meta">
+        {describeCornerBalance(balance, subject)}
+        <Why id="report:corner-balance" />
+      </div>
 
       {balance.unclassified > 0 ? (
         <p className="card-meta">
@@ -72,9 +80,10 @@ export function CornerBalancePanel({
       ) : null}
 
       {suggestion && hasEnoughForBalance(balance) ? (
-        <p className="banner banner--signal">
+        <div className="banner banner--signal">
           Try looking at the {cornerLabel(suggestion).toLowerCase()} corner next session.
-        </p>
+          <Why id="report:neglected-corner" />
+        </div>
       ) : null}
     </section>
   );

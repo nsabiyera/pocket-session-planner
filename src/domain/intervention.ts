@@ -27,6 +27,15 @@ export const InterventionMethodSchema = z.enum([
 ]);
 export type InterventionMethod = z.infer<typeof InterventionMethodSchema>;
 
+/** The FA's order, from most directive to least. Also the order every report lists them in. */
+export const INTERVENTION_METHODS: readonly InterventionMethod[] = [
+  'command',
+  'question_and_answer',
+  'observation_feedback',
+  'guided_discovery',
+  'trial_and_error',
+];
+
 /** HOW play is interrupted — the mechanic. */
 export const InterventionMechanicSchema = z.enum([
   'in_flow', // coach on the run, play never stops. The default to aim for.
@@ -95,6 +104,18 @@ export const InterventionEventSchema = z.object({
   note: optionalText(500).optional(),
   /** True when it exceeded the plan's budget — the honest self-audit. */
   overBudget: z.boolean().default(false),
+  /**
+   * **Did the coach choose this style, or inherit it from the plan?**
+   *
+   * `✋ Intervene` is one tap and fills `method`, `mechanic` and `audience` from the phase's
+   * plan, which is right for logging and wrong for reporting: without this flag, "you are a
+   * Command coach" would be the app reading the coach's own plan back to them and calling it
+   * evidence. Only the long-press override sheet sets this true.
+   *
+   * Defaults false, which is also what every event logged before this existed reads as — and
+   * that is the honest value for them: nobody can now say whether those were chosen.
+   */
+  styleChosen: z.boolean().default(false),
 });
 export type InterventionEvent = z.infer<typeof InterventionEventSchema>;
 export type InterventionEventInput = z.input<typeof InterventionEventSchema>;

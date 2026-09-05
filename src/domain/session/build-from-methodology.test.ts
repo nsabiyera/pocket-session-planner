@@ -7,7 +7,7 @@ import {
 import { CONSTRAINTS_LED, PLAY_PRACTICE_PLAY, WHOLE_PART_WHOLE } from '../presets';
 import { cloneMethodology } from '../methodology-clone';
 import { resolvePhaseIntervention } from '../intervention';
-import { totalPlannedPhaseMin } from '../session';
+import { phasesInOrder, totalPlannedPhaseMin } from '../session';
 import { isoDateTime } from '../primitives';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { aSquad, T0 } from '@/test/builders';
@@ -193,5 +193,32 @@ describe('rescaleSessionPhases', () => {
   it('leaves a session with no phases alone rather than dividing by zero', () => {
     const session = { ...build(), phases: [] };
     expect(rescaleSessionPhases(session, 60)).toEqual([]);
+  });
+});
+
+describe('practice design', () => {
+  it('carries the template spectrum onto the phase, so it costs no taps', () => {
+    const session = build(PLAY_PRACTICE_PLAY);
+    const spectrums = phasesInOrder(session).map((phase) => phase.spectrum);
+
+    // Play-Practice-Play: game, overload, game — plus a null for the water break.
+    expect(spectrums.filter((s) => s !== null)).toEqual(['matched_up', 'overloaded', 'matched_up']);
+  });
+
+  it('leaves a huddle or a water break off the spectrum entirely', () => {
+    const session = build(PLAY_PRACTICE_PLAY);
+    for (const phase of phasesInOrder(session)) {
+      if (phase.kind !== 'water_break') continue;
+      expect(phase.spectrum).toBeNull();
+    }
+  });
+
+  it('never guesses the space or the numbers', () => {
+    // A preset has no idea how many turned up or how big the pitch is. Inventing a 20×20
+    // here would put a number the coach never chose into a season report.
+    for (const phase of phasesInOrder(build(PLAY_PRACTICE_PLAY))) {
+      expect(phase.area).toBeNull();
+      expect(phase.groupSize).toBeNull();
+    }
   });
 });

@@ -44,6 +44,7 @@ const runWith = (challengeEvents: ChallengeEvent[], currentPhaseIndex = 0): Sess
   openInterventionId: null,
   lastHeartbeatAt: T0,
   interventionEvents: [],
+  practiceAdjustments: [],
   challengeEvents,
 });
 

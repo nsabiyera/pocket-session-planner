@@ -9,6 +9,20 @@ import { CURRENT_SCHEMA_VERSION, IsoDateTimeSchema } from '@/domain/primitives';
 import { SessionReviewSchema } from '@/domain/review';
 import { SessionSchema } from '@/domain/session';
 import { SquadSchema } from '@/domain/squad';
+import { PhaseImageSchema } from '@/domain/phase-image';
+
+/**
+ * A drawing, on its way between devices.
+ *
+ * The stored record keeps its bytes as a `Blob`; JSON cannot, so the blob becomes a base64
+ * data URL exactly here and nowhere else. That costs about a third in size, which is the
+ * price of the export being **the only backup a coach has** - a drawing that did not travel
+ * would be a drawing silently lost the day they changed phone.
+ */
+export const PhaseImageTransferSchema = PhaseImageSchema.extend({
+  dataUrl: z.string().min(1).startsWith('data:'),
+});
+export type PhaseImageTransfer = z.infer<typeof PhaseImageTransferSchema>;
 
 /**
  * The export envelope.
@@ -38,6 +52,8 @@ export const TransferDataSchema = z.object({
   assessments: z.array(PlayerAssessmentSchema).default([]),
   /** Six-capability scans — one player under the microscope. Added with the v3 store. */
   scans: z.array(CapabilityScanSchema).default([]),
+  /** Photographed practice drawings, base64'd. Added with the v4 store. */
+  images: z.array(PhaseImageTransferSchema).default([]),
 });
 export type TransferData = z.infer<typeof TransferDataSchema>;
 
@@ -57,6 +73,8 @@ export const TransferCountsSchema = z.object({
   assessments: z.number().int().min(0).default(0),
   /** Optional for the same reason: a file written before the microscope must still parse. */
   scans: z.number().int().min(0).default(0),
+  /** Optional for the same reason: a file written before drawings must still parse. */
+  images: z.number().int().min(0).default(0),
 });
 export type TransferCounts = z.infer<typeof TransferCountsSchema>;
 
@@ -83,6 +101,7 @@ export function countData(data: TransferData): TransferCounts {
     actions: data.actions.length,
     assessments: data.assessments.length,
     scans: data.scans.length,
+    images: data.images.length,
   };
 }
 

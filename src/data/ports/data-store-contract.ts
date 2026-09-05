@@ -301,6 +301,7 @@ export function describeDataStoreContract(
             lastHeartbeatAt: T0,
             interventionEvents: [],
             challengeEvents: [],
+            practiceAdjustments: [],
           },
         });
         await store.sessions.putMany([

@@ -6,6 +6,11 @@ import {
   type CarryForwardProposal,
 } from '@/domain/carry-forward';
 import { normaliseCoachingPointText } from '@/domain/coaching-point';
+import {
+  challengePointSignals,
+  describeChallengePoint,
+  type SettledChallenge,
+} from '@/domain/challenge/point';
 import type { PlayerId } from '@/domain/ids';
 import { cornerLabel, cornerShortLabel } from '@/domain/four-corners';
 import {
@@ -50,6 +55,12 @@ export interface DeriveCarryForwardInput {
    * had one session. Keyed by player, and optional so the derivation still works without it.
    */
   playerHistory?: ReadonlyMap<PlayerId, readonly Observation[]>;
+  /**
+   * Every challenge this squad's players were set and settled, across the term, oldest
+   * first. Optional for the same reason `playerHistory` is: the derivation is correct
+   * without it, it just cannot make this one judgement.
+   */
+  challengeHistory?: readonly SettledChallenge[];
 }
 
 /** First name where we have one, so a chip reads "Keep focusing on Kai". */
@@ -60,10 +71,36 @@ function playerLabel(input: DeriveCarryForwardInput, playerId: PlayerId): string
 }
 
 /**
+ * Every rule that can produce a proposal, as a closed set.
+ *
+ * These strings are also `RationaleId`s: the "why am I seeing this" disclosure on a chip
+ * looks the trigger straight up in `src/domain/rationale.ts`, which is what
+ * `CarryForwardProposal.trigger`'s docstring always intended. Adding a rule here without
+ * adding its explanation there is a chip with an empty `?`, and `rationale.test.ts` fails on
+ * it. The compiler covers the other direction: `proposal()` below only accepts one of these.
+ */
+export const CARRY_FORWARD_TRIGGERS = [
+  'objective:unmet',
+  'objective:met',
+  'focus-player:no-progress',
+  'focus-player:next-step',
+  'observation:struggled',
+  'intervention:ball-rolling',
+  'intervention:unused-plan',
+  'four-corners:neglected',
+  'phase:run-again',
+  'coaching-point:undelivered',
+  'review:what-didnt',
+  'challenge:pitched-wrong',
+] as const;
+
+export type CarryForwardTrigger = (typeof CARRY_FORWARD_TRIGGERS)[number];
+
+/**
  * Trigger specificity, used as the secondary sort. A proposal about one named player beats a
  * generic reminder at the same priority, because it is the one the coach can act on.
  */
-const TRIGGER_RANK: Record<string, number> = {
+const TRIGGER_RANK: Record<CarryForwardTrigger, number> = {
   'objective:unmet': 0,
   'focus-player:no-progress': 1,
   'focus-player:next-step': 2,
@@ -75,6 +112,9 @@ const TRIGGER_RANK: Record<string, number> = {
   'four-corners:neglected': 8,
   'intervention:unused-plan': 9,
   'review:what-didnt': 10,
+  // Below the named-player proposals but above the generic ones: it names a player *and*
+  // a specific ask, but it fires on a term of evidence rather than on tonight.
+  'challenge:pitched-wrong': 3.5,
 };
 
 export function deriveCarryForwardProposals(
@@ -88,6 +128,7 @@ export function deriveCarryForwardProposals(
     ...fourCornerProposals(input),
     ...phaseProposals(input),
     ...undeliveredPointProposals(input),
+    ...challengePointProposals(input),
     ...whatDidntProposals(input),
   ];
 
@@ -100,19 +141,26 @@ export function deriveCarryForwardProposals(
     .sort((a, b) => {
       const priority = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
       if (priority !== 0) return priority;
-      return (TRIGGER_RANK[a.trigger] ?? 99) - (TRIGGER_RANK[b.trigger] ?? 99);
+      return rankOf(a.trigger) - rankOf(b.trigger);
     })
     .slice(0, MAX_PROPOSALS);
 }
 
 // ---------------------------------------------------------------------------
 
+/** A proposal read back off a stored action can carry a trigger this build never had. */
+function rankOf(trigger: string): number {
+  return Object.hasOwn(TRIGGER_RANK, trigger) ? TRIGGER_RANK[trigger as CarryForwardTrigger] : 99;
+}
+
 function proposal(
   fields: Omit<
     CarryForwardProposal,
-    'detail' | 'priority' | 'playerIds' | 'defaultSelected' | 'supersedesActionId'
-  > &
-    Partial<Pick<CarryForwardProposal, 'detail' | 'priority' | 'playerIds' | 'defaultSelected'>>,
+    'detail' | 'priority' | 'playerIds' | 'defaultSelected' | 'supersedesActionId' | 'trigger'
+  > & {
+    /** Narrowed from the schema's `string`, so a new rule cannot skip the registry. */
+    trigger: CarryForwardTrigger;
+  } & Partial<Pick<CarryForwardProposal, 'detail' | 'priority' | 'playerIds' | 'defaultSelected'>>,
 ): CarryForwardProposal {
   return CarryForwardProposalSchema.parse(fields);
 }
@@ -431,6 +479,35 @@ function undeliveredPointProposals(input: DeriveCarryForwardInput): CarryForward
         trigger: 'coaching-point:undelivered',
       }),
     );
+}
+
+/**
+ * The Challenge Point nudge: an ask missed three sessions running.
+ *
+ * Offered **unticked**, like the 4 Corner one, and for the same reason — it is a nudge, not
+ * homework, and the coach may have excellent reasons for holding the ask where it is. What
+ * the app can say is that the evidence has stopped being about the player.
+ */
+function challengePointProposals(input: DeriveCarryForwardInput): CarryForwardProposal[] {
+  if (!input.challengeHistory) return [];
+
+  return challengePointSignals(input.challengeHistory).map((signal) => {
+    const name = playerLabel(input, signal.playerId);
+    return proposal({
+      kind: 'focus_player',
+      title: `Change the ask for ${name}`,
+      detail: describeChallengePoint(signal, name),
+      priority: 'normal',
+      payload: {
+        kind: 'focus_player',
+        playerId: signal.playerId,
+        targetBehaviour: signal.text,
+      },
+      playerIds: [signal.playerId],
+      defaultSelected: false,
+      trigger: 'challenge:pitched-wrong',
+    });
+  });
 }
 
 function whatDidntProposals(input: DeriveCarryForwardInput): CarryForwardProposal[] {

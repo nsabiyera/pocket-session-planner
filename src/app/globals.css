@@ -319,6 +319,11 @@ summary {
   justify-content: space-between;
 }
 
+/* A badge beside wrapping text belongs on the first line, not floating at half height. */
+.row--top {
+  align-items: flex-start;
+}
+
 .row--wrap {
   flex-wrap: wrap;
 }
@@ -606,6 +611,129 @@ summary {
   line-height: 1;
 }
 
+/*
+ * A foldable section whose heading *is* the toggle.
+ *
+ * Distinct from the `.card--sunk` disclosures used for optional detail: this one wraps
+ * content that is already on the default path, so it ships `open` and folding is the
+ * coach's choice rather than the app's. The chosen value rides in the summary, so a folded
+ * section still answers the question it asks.
+ */
+.fold > summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  /*
+   * `display: flex` drops the default `list-item` marker, so the chevron is drawn back by
+   * hand. Without it the heading is a tap target with nothing saying so — and a fold nobody
+   * can see is worse than no fold.
+   */
+  list-style: none;
+}
+
+.fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold > summary::before {
+  content: '▸';
+  color: var(--muted);
+  font-size: var(--fs-md);
+  line-height: 1;
+  transition: transform 120ms ease;
+}
+
+.fold[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold > summary::before {
+    transition: none;
+  }
+}
+
+.fold > summary h2 {
+  display: inline;
+}
+
+/* Redundant while the picker is open — the selection is already visible in it. */
+.fold[open] > summary .fold-value {
+  display: none;
+}
+
+.fold-value {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+/* `.stack`'s gap does not reach through the disclosure, so the body carries its own. */
+.fold-body {
+  margin-top: var(--sp-3);
+}
+
+/* ------------------------------------------------------ practice drawings */
+
+/*
+ * Thumbnails of the photographed practice. A horizontal strip rather than a grid: there are
+ * at most three, and a row keeps the phase sheet short enough that Save stays in reach.
+ */
+.image-strip {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  list-style: none;
+}
+
+.image-strip-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  align-items: center;
+}
+
+.image-strip img,
+.image-thumb img {
+  width: 104px;
+  height: 104px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: var(--border-strong);
+  display: block;
+}
+
+/* The tap target is the picture, so it needs no minimum of its own. */
+.image-thumb {
+  padding: 0;
+  border: 0;
+  background: none;
+  min-height: 0;
+  min-width: 0;
+}
+
+/*
+ * Full screen, and scrollable. A practice drawn on A4 and photographed in portrait is taller
+ * than the sheet, and a coach who cannot scroll to the bottom half of their own drawing has
+ * been given a worse version of the paper they started with.
+ */
+.image-full {
+  margin: 0;
+}
+
+.image-full img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  border: var(--border);
+}
+
+.image-full figcaption {
+  margin-top: var(--sp-2);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
 /* ----------------------------------------------------------------- misc */
 
 .banner {
@@ -631,6 +759,135 @@ summary {
   background: var(--stop-wash);
   border-color: var(--stop);
   color: var(--ink);
+}
+
+/*
+ * The "why am I seeing this" disclosure.
+ *
+ * `display: inline` is the whole trick. Collapsed, the `?` sits at the end of the sentence it
+ * explains and adds **no vertical space at all**: a review screen with six explanations is
+ * exactly as tall as one with none, which is the only way a 667px phone keeps Save review
+ * above the fold. Open, the body is a block and flows underneath.
+ */
+.why {
+  display: inline;
+}
+
+/*
+ * 22px so the circle fits inside the 1.45 line box it is sitting in — a 56px control here
+ * would *be* the banner. This is the one place the tap floor is overridden, and the hit area
+ * comes straight back on the pseudo-element below.
+ */
+.why > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-left: var(--sp-1);
+  border: var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  list-style: none;
+}
+
+/* Safari paints its own disclosure triangle without this. */
+.why > summary::-webkit-details-marker {
+  display: none;
+}
+
+/*
+ * The thumb target, restored invisibly. 44px rather than the house 56px on purpose: this is
+ * a secondary control living inside a line of text, and a 56px box would reach past the
+ * banner into whatever is stacked under it and start stealing taps from real buttons.
+ */
+.why > summary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.why[open] > summary {
+  background: var(--sunk);
+}
+
+/*
+ * The card-corner variant. A `<details>` cannot be nested inside a `<button>`, and the
+ * carry-forward chips are buttons all the way to their edges — so the `?` is lifted out of
+ * flow and pinned to the corner of the card instead, and the explanation opens underneath it.
+ * Closed, the `<details>` holds nothing in flow at all, so the list is exactly as long as it
+ * was before any of this existed.
+ */
+.why-anchor {
+  position: relative;
+}
+
+.why--corner {
+  display: block;
+}
+
+.why--corner > summary {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+  margin-left: 0;
+}
+
+/* Keep the card's own text out from under the `?`. */
+.why-anchor > .card {
+  padding-right: calc(var(--sp-4) + 1.375rem + var(--sp-2));
+}
+
+/*
+ * Prose weight, not banner weight. These sit inside a bold 600 banner and an explanation
+ * rendered in the same shout would read as more assertion rather than less.
+ */
+.why-body {
+  display: block;
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+}
+
+.why-body > p {
+  margin: 0;
+}
+
+.why-body > p + p,
+.why-body > a {
+  margin-top: var(--sp-2);
+}
+
+/*
+ * The source link has to *look* like one. The global `a` rule sets `color: inherit`, which is
+ * right everywhere else in the app — every other link here is already a `.btn` — and wrong
+ * inside a paragraph of prose, where an unstyled link is indistinguishable from the sentence
+ * around it. Full tap height without the button chrome.
+ */
+.why-body > a {
+  display: inline-block;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: var(--tap);
+  line-height: var(--tap);
 }
 
 .empty {
@@ -1296,6 +1553,24 @@ summary {
   grid-template-columns: 5.5rem 1fr 3rem;
   align-items: center;
   gap: var(--sp-3);
+}
+
+/*
+ * The same bars with a wider label column. The 4 Corner names fit 5.5rem; the practice
+ * spectrum's do not — "Interference" collides with its track and "Matched-up" wraps, which
+ * makes one row taller than the rest and the whole chart look broken.
+ */
+.corner-bars--wide .corner-bar {
+  grid-template-columns: 7.5rem 1fr 2.5rem;
+}
+
+/*
+ * Wider still, for the Five Pillars — "Observe & feed back" and "Guided discovery" are
+ * longer than any corner or spectrum name, and at 7.5rem both wrap, leaving a five-row chart
+ * with three different row heights.
+ */
+.corner-bars--labels-lg .corner-bar {
+  grid-template-columns: 9.5rem 1fr 2.5rem;
 }
 
 .corner-bar-label {

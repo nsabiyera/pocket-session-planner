@@ -1,6 +1,7 @@
 import type { IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 import type {
   CapabilityScanId,
+  PhaseImageId,
   CarryForwardActionId,
   MethodologyId,
   ObservationId,
@@ -20,6 +21,7 @@ import type { Player } from '@/domain/player';
 import type { PlayerAssessment } from '@/domain/player-assessment';
 import { CURRENT_SCHEMA_VERSION, type IsoDateTime } from '@/domain/primitives';
 import { PRESET_CATALOG_VERSION } from '@/domain/presets';
+import type { PhaseImage } from '@/domain/phase-image';
 import type { SessionReview } from '@/domain/review';
 import type { Session, SessionStatus } from '@/domain/session';
 import type { Squad } from '@/domain/squad';
@@ -27,6 +29,7 @@ import { buildCatalog, resolveMethodology } from '../methodology-catalog';
 import type {
   AppMeta,
   CapabilityScanRepository,
+  PhaseImageRepository,
   CarryForwardActionRepository,
   CatalogEntry,
   ListOptions,
@@ -404,6 +407,23 @@ class IdbPlayerAssessmentRepository
   }
 }
 
+class IdbPhaseImageRepository
+  extends IdbRepository<PhaseImageId, PhaseImage>
+  implements PhaseImageRepository
+{
+  async listBySession(sessionId: SessionId): Promise<PhaseImage[]> {
+    return this.fromIndex('by-session', sessionId);
+  }
+
+  /**
+   * Every image, for the export. No paging and no index: this walks the whole store, which is
+   * fine because it runs once when a coach taps Export and never anywhere near the timer.
+   */
+  async listAll(): Promise<PhaseImage[]> {
+    return this.all();
+  }
+}
+
 class IdbCapabilityScanRepository
   extends IdbRepository<CapabilityScanId, CapabilityScan>
   implements CapabilityScanRepository
@@ -487,6 +507,7 @@ export class IdbDataStore implements PocketDataStore {
   readonly actions: CarryForwardActionRepository;
   readonly assessments: PlayerAssessmentRepository;
   readonly scans: CapabilityScanRepository;
+  readonly phaseImages: PhaseImageRepository;
   readonly meta: MetaRepository;
 
   constructor(private readonly database: IDBPDatabase<PocketDBSchema>) {
@@ -501,6 +522,7 @@ export class IdbDataStore implements PocketDataStore {
     this.actions = new IdbCarryForwardActionRepository(ctx, 'carry_forward_actions');
     this.assessments = new IdbPlayerAssessmentRepository(ctx, 'player_assessments');
     this.scans = new IdbCapabilityScanRepository(ctx, 'capability_scans');
+    this.phaseImages = new IdbPhaseImageRepository(ctx, 'phase_images');
     this.meta = new IdbMetaRepository(ctx);
   }
 

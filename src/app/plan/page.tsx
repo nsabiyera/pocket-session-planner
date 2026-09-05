@@ -133,30 +133,48 @@ export default function PlanPage() {
         }
       />
 
+      {/*
+        **Open by default, and it has to stay that way.** Picking the objective is what this
+        screen is *for*, so a closed grid would put a tap in front of the twenty-second
+        planning path. Collapsing earns its place afterwards: fourteen chips is most of a
+        375px screen, and folding them away brings the methodology and the phases up to where
+        a thumb can reach them without a scroll.
+
+        The summary carries the chosen objective, so collapsing hides the picker and never
+        the answer.
+      */}
       <section className="stack">
-        <h2>What are you working on?</h2>
-        <ObjectiveGrid
-          objectives={objectives}
-          selectedId={objectiveId}
-          onSelect={(id) => {
-            setObjectiveId(id);
-            setCustomObjective('');
-          }}
-        />
-        <details className="card card--sunk">
-          <summary>Something else</summary>
-          <div className="field">
-            <label htmlFor="custom-objective">Objective</label>
-            <input
-              id="custom-objective"
-              type="text"
-              value={customObjective}
-              placeholder="Defending corners"
-              onChange={(event) => {
-                setCustomObjective(event.target.value);
-                setObjectiveId(null);
+        <details className="fold" open>
+          <summary>
+            <h2>What are you working on?</h2>
+            {objectiveText ? <span className="fold-value">{objectiveText}</span> : null}
+          </summary>
+
+          <div className="stack fold-body">
+            <ObjectiveGrid
+              objectives={objectives}
+              selectedId={objectiveId}
+              onSelect={(id) => {
+                setObjectiveId(id);
+                setCustomObjective('');
               }}
             />
+            <details className="card card--sunk">
+              <summary>Something else</summary>
+              <div className="field">
+                <label htmlFor="custom-objective">Objective</label>
+                <input
+                  id="custom-objective"
+                  type="text"
+                  value={customObjective}
+                  placeholder="Defending corners"
+                  onChange={(event) => {
+                    setCustomObjective(event.target.value);
+                    setObjectiveId(null);
+                  }}
+                />
+              </div>
+            </details>
           </div>
         </details>
       </section>

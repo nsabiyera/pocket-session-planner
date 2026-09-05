@@ -1,15 +1,18 @@
-import { err, ok, type Result } from '@/lib/result';
+import { err, isErr, ok, type Result } from '@/lib/result';
 import {
   asChallengeEventId,
   asInterventionEventId,
   asObservationId,
+  asPracticeAdjustmentId,
   type ChallengeId,
   type ObservationId,
   type PhaseId,
   type PlayerId,
+  type PracticeAdjustmentId,
   type SessionId,
 } from '@/domain/ids';
 import type { ChallengeStatus } from '@/domain/challenge';
+import type { AdjustmentDirection, StepLetter } from '@/domain/practice';
 import { normaliseCoachingPointText } from '@/domain/coaching-point';
 import {
   CAPABILITY_TAG_CORNER,
@@ -291,6 +294,45 @@ export async function undoChallengeProgress(
   challengeId: ChallengeId,
 ): Promise<Result<Session, RunError>> {
   return dispatch(ctx, sessionId, { kind: 'undoChallengeProgress', challengeId });
+}
+
+/**
+ * *"Made it harder"* / *"Made it easier"* — one tap, mid-practice.
+ *
+ * `text` is the planned progression as written, frozen into the event, or empty when the
+ * coach changed something they had never written down. Both are worth recording and the
+ * second one is the more interesting.
+ *
+ * **Returns the id it minted**, unlike `logChallengeProgress`, because the Undo on the toast
+ * has to name the exact adjustment: the two directions sit side by side in Do mode, and
+ * popping "the last one" would remove the *easier* when the coach mis-tapped *harder*.
+ */
+export async function logPracticeAdjustment(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  direction: AdjustmentDirection,
+  text = '',
+  /** The STEP letter, when the tap came off a constraint the coach had written down. */
+  step?: StepLetter,
+): Promise<Result<{ session: Session; id: PracticeAdjustmentId }, RunError>> {
+  const id = asPracticeAdjustmentId(ctx.ids.uuid());
+  const result = await dispatch(ctx, sessionId, {
+    kind: 'logPracticeAdjustment',
+    id,
+    direction,
+    text,
+    ...(step === undefined ? {} : { step }),
+  });
+  return isErr(result) ? result : ok({ session: result.value, id });
+}
+
+/** The `Undo` on the adjustment toast. By id — see the note above. */
+export async function undoPracticeAdjustment(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  id: PracticeAdjustmentId,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, { kind: 'undoPracticeAdjustment', id });
 }
 
 /**

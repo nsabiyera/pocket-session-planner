@@ -15,7 +15,27 @@ import {
   T0,
   testId,
 } from '@/test/builders';
-import { asObservationId, asReviewId, asSessionId } from '@/domain/ids';
+import { asObservationId, asPhaseImageId, asReviewId, asSessionId } from '@/domain/ids';
+import type { PhaseImage } from '@/domain/phase-image';
+
+const sessionId = (label: string) => asSessionId(testId(label));
+const phaseImageId = (label: string) => asPhaseImageId(testId(label));
+
+/** A stored drawing. The bytes are nonsense on purpose — only their blob-ness is tested. */
+const anImage = (label: string, session: ReturnType<typeof sessionId>): PhaseImage => ({
+  schemaVersion: 1,
+  createdAt: T0,
+  updatedAt: T0,
+  id: phaseImageId(label),
+  sessionId: session,
+  contentType: 'image/jpeg',
+  bytes: 15,
+  width: 1600,
+  height: 1200,
+  caption: '',
+  capturedAt: T0,
+  blob: new Blob(['fake-jpeg-bytes'], { type: 'image/jpeg' }),
+});
 
 /**
  * The real adapter, held to the **same contract** as the fake, under `fake-indexeddb`.
@@ -48,6 +68,7 @@ describe('IdbDataStore — IndexedDB specifics', () => {
       'methodologies',
       'methodology_prefs',
       'observations',
+      'phase_images',
       'player_assessments',
       'players',
       'reviews',
@@ -225,6 +246,68 @@ describe('IdbDataStore — IndexedDB specifics', () => {
 
     expect(await store.scans.listByPlayerSkill(playerId('kai'), 'turning')).toHaveLength(1);
     expect(await store.scans.listByPlayer(playerId('kai'))).toHaveLength(2);
+    store.close();
+  });
+
+  it('upgrades a version-3 database to version 4 without losing anything', async () => {
+    const name = 'psp-v3-upgrade';
+    await deleteDatabase(name);
+
+    const v3 = await openDatabase({ name, version: 3 });
+    expect(v3.objectStoreNames.contains('phase_images')).toBe(false);
+    await v3.put('squads', aSquad());
+    await v3.put('player_assessments', anAssessment('legacy'));
+    v3.close();
+
+    const v4 = await openDatabase({ name });
+    expect(v4.version).toBe(DB_VERSION);
+    expect(v4.objectStoreNames.contains('phase_images')).toBe(true);
+
+    const tx = v4.transaction('phase_images', 'readonly');
+    expect([...tx.objectStore('phase_images').indexNames].sort()).toEqual(['by-session']);
+    await tx.done;
+
+    // Everything written before the upgrade survives it.
+    expect(await v4.count('squads')).toBe(1);
+    expect(await v4.count('player_assessments')).toBe(1);
+    v4.close();
+
+    // And the new store answers the one bulk question it exists for.
+    const store = new IdbDataStore(await openDatabase({ name }));
+    await store.phaseImages.put(anImage('drawing1', sessionId('tuesday')));
+    await store.phaseImages.put(anImage('drawing2', sessionId('tuesday')));
+    await store.phaseImages.put(anImage('drawing3', sessionId('thursday')));
+
+    expect(await store.phaseImages.listBySession(sessionId('tuesday'))).toHaveLength(2);
+    expect(await store.phaseImages.listAll()).toHaveLength(3);
+    store.close();
+  });
+
+  /**
+   * **Blob fidelity is not covered here, and cannot be.**
+   *
+   * `fake-indexeddb` clones values with its own structured-clone implementation, which does
+   * not understand jsdom's `Blob` — a stored blob reads back as `{}`. Real IndexedDB stores
+   * blobs natively, so this is a limitation of the harness rather than of the app, but it
+   * means the one property images depend on most is **verified in a browser, not in CI**.
+   *
+   * What this does cover is the metadata: the record round-trips, keeps its byte count and
+   * dimensions, and comes back off the index. Do not add a blob assertion below and assume
+   * it proves anything.
+   */
+  it('round-trips an image record, metadata and all', async () => {
+    const name = 'psp-image-roundtrip';
+    await deleteDatabase(name);
+    const store = new IdbDataStore(await openDatabase({ name }));
+
+    await store.phaseImages.put(anImage('drawing1', sessionId('tuesday')));
+    const read = await store.phaseImages.get(phaseImageId('drawing1'));
+
+    expect(read?.contentType).toBe('image/jpeg');
+    expect(read?.bytes).toBe(15);
+    expect(read?.width).toBe(1600);
+    expect(read?.height).toBe(1200);
+    expect(read?.sessionId).toBe(sessionId('tuesday'));
     store.close();
   });
 

@@ -57,6 +57,14 @@ export type ChallengeId = z.infer<typeof ChallengeIdSchema>;
 export const ChallengeEventIdSchema = z.string().uuid().brand<'ChallengeEventId'>();
 export type ChallengeEventId = z.infer<typeof ChallengeEventIdSchema>;
 
+/** One recorded change to how hard a practice was, during the run. */
+export const PracticeAdjustmentIdSchema = z.string().uuid().brand<'PracticeAdjustmentId'>();
+export type PracticeAdjustmentId = z.infer<typeof PracticeAdjustmentIdSchema>;
+
+/** A photographed drawing of a practice, referenced by the phase it belongs to. */
+export const PhaseImageIdSchema = z.string().uuid().brand<'PhaseImageId'>();
+export type PhaseImageId = z.infer<typeof PhaseImageIdSchema>;
+
 /** One player put under the microscope on one skill, across the six core capabilities. */
 export const CapabilityScanIdSchema = z.string().uuid().brand<'CapabilityScanId'>();
 export type CapabilityScanId = z.infer<typeof CapabilityScanIdSchema>;
@@ -85,6 +93,9 @@ export const asPlayerAssessmentId = (v: string): PlayerAssessmentId =>
   PlayerAssessmentIdSchema.parse(v);
 export const asChallengeId = (v: string): ChallengeId => ChallengeIdSchema.parse(v);
 export const asChallengeEventId = (v: string): ChallengeEventId => ChallengeEventIdSchema.parse(v);
+export const asPracticeAdjustmentId = (v: string): PracticeAdjustmentId =>
+  PracticeAdjustmentIdSchema.parse(v);
+export const asPhaseImageId = (v: string): PhaseImageId => PhaseImageIdSchema.parse(v);
 export const asCapabilityScanId = (v: string): CapabilityScanId => CapabilityScanIdSchema.parse(v);
 export const asReviewId = (v: string): ReviewId => ReviewIdSchema.parse(v);
 export const asCarryForwardActionId = (v: string): CarryForwardActionId =>

@@ -2,12 +2,14 @@ import { err, ok, type Result } from '@/lib/result';
 import type {
   ChallengeEventId,
   ChallengeId,
+  PracticeAdjustmentId,
   CoachingPointId,
   InterventionEventId,
   PhaseId,
   PlayerId,
 } from '../ids';
 import type { ChallengeEvent, ChallengeStatus } from '../challenge';
+import type { AdjustmentDirection, PracticeAdjustment, StepLetter } from '../practice';
 import {
   mechanicStopsPlay,
   resolvePhaseIntervention,
@@ -95,6 +97,16 @@ export type SessionCommand =
       readonly status: ChallengeStatus;
       readonly note?: string;
     }
+  | {
+      readonly kind: 'logPracticeAdjustment';
+      readonly id: PracticeAdjustmentId;
+      readonly direction: AdjustmentDirection;
+      /** The planned progression as written, or empty for an off-plan change. */
+      readonly text?: string;
+      /** The STEP letter, when the change came off a constraint the coach had written. */
+      readonly step?: StepLetter;
+    }
+  | { readonly kind: 'undoPracticeAdjustment'; readonly id: PracticeAdjustmentId }
   | { readonly kind: 'heartbeat' }
   | { readonly kind: 'reconcileToLastActivity' }
   | { readonly kind: 'finish' }
@@ -155,6 +167,10 @@ function reduce(
       return undoChallengeProgress(session, command.challengeId);
     case 'setChallengeStatus':
       return setChallengeStatus(session, command, now);
+    case 'logPracticeAdjustment':
+      return logPracticeAdjustment(session, command, now);
+    case 'undoPracticeAdjustment':
+      return undoPracticeAdjustment(session, command.id);
     case 'heartbeat':
       return heartbeat(session, now);
     case 'reconcileToLastActivity':
@@ -225,6 +241,7 @@ function start(session: Session, now: IsoDateTime): Result<Session, TransitionEr
     lastHeartbeatAt: now,
     interventionEvents: [],
     challengeEvents: [],
+    practiceAdjustments: [],
   };
 
   return ok({ ...session, status: 'in_progress', run });
@@ -420,6 +437,13 @@ function logIntervention(
 
   const plan = resolvePhaseIntervention(session, phase);
   const mechanic = command.mechanic ?? plan.mechanic;
+
+  // The long-press sheet passes at least one axis; the one-tap button passes none. That is
+  // the only signal that separates a style the coach chose from one they merely planned.
+  const styleChosen =
+    command.method !== undefined ||
+    command.mechanic !== undefined ||
+    command.audience !== undefined;
   const usedBefore = run.interventionEvents.filter((e) => e.phaseId === phase.id).length;
 
   const event: InterventionEvent = {
@@ -433,6 +457,7 @@ function logIntervention(
     // Instantaneous unless it stops play, in which case it stays open until the coach
     // resumes and we can stamp a real duration.
     durationMs: mechanicStopsPlay(mechanic) ? null : 0,
+    styleChosen,
     playerIds: [...(command.playerIds ?? [])],
     coachingPointId: command.coachingPointId ?? null,
     ...(command.note !== undefined ? { note: command.note } : {}),
@@ -578,6 +603,70 @@ function undoChallengeProgress(
       ],
     }),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Practice adjustments
+// ---------------------------------------------------------------------------
+
+/**
+ * *"Made it harder"* / *"Made it easier"* — the Challenge Point Framework as one tap.
+ *
+ * Deliberately **does not check the text against `phase.progressions`**. A coach who changes
+ * something they never wrote down has done the most interesting thing in the session, and an
+ * app that only accepted the plan would be recording the plan rather than the practice. An
+ * empty `text` is exactly that case, and Review reports it as its own fact.
+ *
+ * Records **without stopping the clock**. This is not an intervention: it does not open a
+ * pause, does not count against `maxPerPhase`, and does not touch ball-rolling time. A coach
+ * who takes a defender out mid-rondo has coached without saying a word, and every number on
+ * the review screen must keep saying so.
+ */
+function logPracticeAdjustment(
+  session: Session,
+  command: Extract<SessionCommand, { kind: 'logPracticeAdjustment' }>,
+  now: IsoDateTime,
+): Result<Session, TransitionError> {
+  const running = requireRun(session);
+  if (!running.ok) return running;
+  const { run, phaseRun } = running.value;
+
+  const adjustment: PracticeAdjustment = {
+    id: command.id,
+    phaseId: phaseRun.phaseId,
+    direction: command.direction,
+    text: command.text?.trim() ?? '',
+    // Null rather than a guess. An off-plan change is genuinely unclassified, and
+    // `stepCoverage` reports it as such rather than filing it under a letter.
+    step: command.step ?? null,
+    at: now,
+    phaseElapsedMs: phaseElapsedMs(phaseRun, msOf(now)),
+  };
+
+  return ok(
+    withRun(session, { ...run, practiceAdjustments: [...run.practiceAdjustments, adjustment] }),
+  );
+}
+
+/**
+ * The `Undo` on the adjustment toast. By id rather than by popping the last one, because the
+ * two directions sit side by side in Do mode and a mis-tapped *harder* must not remove the
+ * *easier* the coach meant to keep.
+ */
+function undoPracticeAdjustment(
+  session: Session,
+  id: PracticeAdjustmentId,
+): Result<Session, TransitionError> {
+  const running = requireRun(session);
+  if (!running.ok) return running;
+  const { run } = running.value;
+
+  const remaining = run.practiceAdjustments.filter((adjustment) => adjustment.id !== id);
+  if (remaining.length === run.practiceAdjustments.length) {
+    return fail('not_found', 'There is no adjustment to undo.');
+  }
+
+  return ok(withRun(session, { ...run, practiceAdjustments: remaining }));
 }
 
 /**

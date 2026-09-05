@@ -25,6 +25,10 @@ export const GUIDED_DISCOVERY: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'gd-arrival',
       order: 0,
+      defaultConstraints: [],
+      defaultSpectrum: 'unopposed',
+      defaultProgressions: ['Make the question a rule, not just a prompt'],
+      defaultRegressions: ['Just warm up — save the question for the practice'],
       kind: 'arrival',
       title: 'Arrival — pose the problem',
       durationWeight: 0.13,
@@ -36,6 +40,13 @@ export const GUIDED_DISCOVERY: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'gd-problem',
       order: 1,
+      defaultConstraints: [{ letter: 'space', text: 'A space too tight to solve the old way' }],
+      defaultSpectrum: 'overloaded',
+      defaultProgressions: [
+        'Take away the solution they just found',
+        'Add a defender to the problem',
+      ],
+      defaultRegressions: ['Give them more time on the ball', 'Make the target bigger'],
       kind: 'skill_practice',
       title: 'Problem-setting practice',
       durationWeight: 0.23,
@@ -50,6 +61,11 @@ export const GUIDED_DISCOVERY: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'gd-huddle',
       order: 2,
+      defaultPlayerChoice: true,
+      defaultConstraints: [],
+      defaultSpectrum: null,
+      defaultProgressions: [],
+      defaultRegressions: [],
       kind: 'huddle',
       title: 'Huddle — open questions only',
       durationWeight: 0.09,
@@ -70,6 +86,14 @@ export const GUIDED_DISCOVERY: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'gd-apply',
       order: 3,
+      defaultPlayerChoice: true,
+      defaultConstraints: [{ letter: 'task', text: 'Play the rule change they chose' }],
+      defaultSpectrum: 'overloaded',
+      defaultProgressions: ['Let them add a second change', 'Run it against live opposition'],
+      defaultRegressions: [
+        'Go back to the version before their change',
+        'More space while it beds in',
+      ],
       kind: 'skill_practice',
       title: 'Practice with their adjustment',
       durationWeight: 0.28,
@@ -81,6 +105,10 @@ export const GUIDED_DISCOVERY: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'gd-test',
       order: 4,
+      defaultConstraints: [],
+      defaultSpectrum: 'matched_up',
+      defaultProgressions: ['Condition the game to demand it', 'Fewer touches in your own half'],
+      defaultRegressions: ['Open the pitch up', 'Add a neutral'],
       kind: 'game',
       title: 'Game — test the discovery',
       durationWeight: 0.27,

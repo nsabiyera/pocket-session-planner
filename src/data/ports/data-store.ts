@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type {
   CapabilityScanId,
+  PhaseImageId,
   CarryForwardActionId,
   MethodologyId,
   ObservationId,
@@ -11,6 +12,7 @@ import type {
   SessionId,
   SquadId,
 } from '@/domain/ids';
+import type { PhaseImage } from '@/domain/phase-image';
 import type { CapabilityScan, ObservedSkill } from '@/domain/capabilities/scan';
 import type { CarryForwardAction, CarryForwardStatus } from '@/domain/carry-forward';
 import type { Methodology, MethodologyPreset } from '@/domain/methodology';
@@ -40,6 +42,7 @@ export const STORE_NAMES = [
   'carry_forward_actions',
   'player_assessments',
   'capability_scans',
+  'phase_images',
   'app_meta',
 ] as const;
 export type StoreName = (typeof STORE_NAMES)[number];
@@ -124,6 +127,18 @@ export interface PlayerAssessmentRepository extends Repository<
   findLatest(playerId: PlayerId): Promise<PlayerAssessment | undefined>;
 }
 
+/**
+ * Photographed practice drawings.
+ *
+ * Deliberately thin. Do mode looks one up by id, which `Repository` already answers; the only
+ * bulk question anything asks is *"every drawing in this session"*, for export and cleanup.
+ */
+export interface PhaseImageRepository extends Repository<PhaseImageId, PhaseImage> {
+  listBySession(sessionId: SessionId): Promise<PhaseImage[]>;
+  /** Every image in the database, for the export. Rare, and never on the pitch-side path. */
+  listAll(): Promise<PhaseImage[]>;
+}
+
 export interface CapabilityScanRepository extends Repository<CapabilityScanId, CapabilityScan> {
   /** Newest first — the profile leads with the most recent look. */
   listByPlayer(playerId: PlayerId, options?: ListOptions): Promise<CapabilityScan[]>;
@@ -199,6 +214,7 @@ export interface PocketDataStore {
   readonly actions: CarryForwardActionRepository;
   readonly assessments: PlayerAssessmentRepository;
   readonly scans: CapabilityScanRepository;
+  readonly phaseImages: PhaseImageRepository;
   readonly meta: MetaRepository;
 
   /**

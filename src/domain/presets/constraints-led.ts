@@ -27,6 +27,10 @@ export const CONSTRAINTS_LED: MethodologyPreset = MethodologyPresetSchema.parse(
     {
       id: 'cla-arrival',
       order: 0,
+      defaultConstraints: [{ letter: 'task', text: 'Head up between touches' }],
+      defaultSpectrum: 'overloaded',
+      defaultProgressions: ['Into the rondo sooner', 'Two touches in the rondo'],
+      defaultRegressions: ['Add a neutral', 'Make the rondo bigger'],
       kind: 'arrival',
       title: 'Arrival — ball each, then rondo',
       durationWeight: 0.13,
@@ -38,6 +42,10 @@ export const CONSTRAINTS_LED: MethodologyPreset = MethodologyPresetSchema.parse(
     {
       id: 'cla-game-a',
       order: 1,
+      defaultConstraints: [{ letter: 'task', text: 'Two touches maximum' }],
+      defaultSpectrum: 'matched_up',
+      defaultProgressions: ['Take another touch away', 'Shrink the pitch'],
+      defaultRegressions: ['Give a touch back', 'Widen it out'],
       kind: 'conditioned_game',
       title: 'Constrained game A — restrict',
       durationWeight: 0.27,
@@ -49,6 +57,10 @@ export const CONSTRAINTS_LED: MethodologyPreset = MethodologyPresetSchema.parse(
     {
       id: 'cla-freeze',
       order: 2,
+      defaultConstraints: [],
+      defaultSpectrum: null,
+      defaultProgressions: [],
+      defaultRegressions: [],
       kind: 'huddle',
       title: 'Freeze — ask, then change one thing',
       durationWeight: 0.07,
@@ -66,6 +78,13 @@ export const CONSTRAINTS_LED: MethodologyPreset = MethodologyPresetSchema.parse(
     {
       id: 'cla-game-b',
       order: 3,
+      defaultConstraints: [{ letter: 'task', text: 'A first-time finish counts double' }],
+      defaultSpectrum: 'matched_up',
+      defaultProgressions: [
+        'Raise what the reward costs them',
+        'Reward only if everyone is over halfway',
+      ],
+      defaultRegressions: ['Make the reward bigger', 'Count it even when it is half-done'],
       kind: 'conditioned_game',
       title: 'Same game — reward and relate',
       durationWeight: 0.27,
@@ -80,6 +99,10 @@ export const CONSTRAINTS_LED: MethodologyPreset = MethodologyPresetSchema.parse(
     {
       id: 'cla-free-game',
       order: 4,
+      defaultConstraints: [],
+      defaultSpectrum: 'matched_up',
+      defaultProgressions: [],
+      defaultRegressions: [],
       kind: 'game',
       title: 'Free game — does it transfer?',
       durationWeight: 0.26,

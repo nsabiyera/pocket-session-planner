@@ -5,6 +5,9 @@ import { useState } from 'react';
 import { Empty, Loading, Screen, ScreenHead, Sheet, Stepper } from '../_components/ui';
 import { showToast } from '../_components/toast-host';
 import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
+import { PracticeMixPanel } from '../_components/practice-mix';
+import { practiceMix } from '@/domain/practice/mix';
+import { mainPracticeSpectrums } from '@/domain/session/selectors';
 import {
   addPlayer,
   addPlayersFromList,
@@ -102,6 +105,13 @@ export default function SquadPage() {
       <button type="button" className="btn btn--quiet btn--block" onClick={() => setBulkOpen(true)}>
         Paste a whole team list
       </button>
+
+      {/*
+        The coach's own pattern, from the sessions already in state - `recentSessions` is the
+        last ten completed, so this costs no read at all. Sits above the roster because it is
+        about the coach, not about any one player, and renders nothing until there is enough.
+      */}
+      <PracticeMixPanel mix={practiceMix(mainPracticeSpectrums(state.recentSessions))} />
 
       <section className="stack">
         <h2>

@@ -2,6 +2,13 @@ import { z } from 'zod';
 import { MethodologyIdSchema, PhaseTemplateIdSchema } from './ids';
 import { InterventionPlanSchema } from './intervention';
 import {
+  MAX_ADJUSTMENT_TEXT,
+  MAX_ADJUSTMENTS_PER_PHASE,
+  MAX_CONSTRAINTS_PER_PHASE,
+  PhaseConstraintSchema,
+  PracticeSpectrumSchema,
+} from './practice';
+import {
   DurationMinSchema,
   IsoDateTimeSchema,
   nonEmptyText,
@@ -67,6 +74,55 @@ export const MethodologyPhaseTemplateSchema = z.object({
   defaultCoachingPoints: z.array(nonEmptyText(160)).max(8).default([]),
   /** Overrides the methodology's session-level plan for this phase. Null = inherit. */
   defaultIntervention: InterventionPlanSchema.nullable().default(null),
+  /**
+   * Seeds `SessionPhase.spectrum`, so the practice spectrum costs zero taps on the default
+   * path. **Null means this template is not a practice** — a huddle, a water break, a
+   * debrief — rather than "a practice we have no opinion about".
+   *
+   * Per template rather than a global `PhaseKind` map on purpose. `technical → unopposed`
+   * and `game → matched_up` are obvious, but `skill_practice` and `phase_of_play` are not:
+   * Play-Practice-Play's PRACTICE is an overload, Whole-Part-Whole's PART is unopposed with
+   * interference, and only the methodology that wrote them knows which.
+   */
+  defaultSpectrum: PracticeSpectrumSchema.nullable().default(null),
+  /**
+   * Ways to make this practice harder or easier, seeding `SessionPhase.progressions` and
+   * `.regressions`.
+   *
+   * The prose was **already written** — it just lived where nothing could act on it. *"Add
+   * pressure once it is clean"* was a coaching point, *"Progress it as soon as it looks
+   * easy"* was a coach prompt, *"passive, then live"* was buried in an `intent` string. This
+   * moves it somewhere Do mode can put it under the coach's thumb at 7:40 on a wet Tuesday.
+   *
+   * **Empty is a statement, not an omission.** Whole-Part-Whole's two WHOLE games and the
+   * Constraints-Led free game ship with none on purpose: changing those destroys the very
+   * comparison the methodology exists to make. `presets.test.ts` pins that.
+   */
+  defaultProgressions: z
+    .array(nonEmptyText(MAX_ADJUSTMENT_TEXT))
+    .max(MAX_ADJUSTMENTS_PER_PHASE)
+    .default([]),
+  defaultRegressions: z
+    .array(nonEmptyText(MAX_ADJUSTMENT_TEXT))
+    .max(MAX_ADJUSTMENTS_PER_PHASE)
+    .default([]),
+  /**
+   * The STEP conditions this practice starts with.
+   *
+   * Constraints-Led is the reason this exists: its restrict / reward-and-relate phases put
+   * their whole method in a *title* — "Constrained game A — restrict" — and left the actual
+   * condition for the coach to remember. Now the condition is data, and Review can say which
+   * letter it was.
+   */
+  defaultConstraints: z.array(PhaseConstraintSchema).max(MAX_CONSTRAINTS_PER_PHASE).default([]),
+  /**
+   * Whether this phase is one where the players decide something.
+   *
+   * Guided Discovery is the reason this can be preset at all: *"Run the practice again with
+   * the change they chose - even if you would have chosen a different one"* is a phase whose
+   * entire method is the players' decision. Most phases are not, and default to `false`.
+   */
+  defaultPlayerChoice: z.boolean().default(false),
   isOptional: z.boolean().default(false),
 });
 export type MethodologyPhaseTemplate = z.infer<typeof MethodologyPhaseTemplateSchema>;

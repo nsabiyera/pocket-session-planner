@@ -27,6 +27,10 @@ export const PLAY_PRACTICE_PLAY: MethodologyPreset = MethodologyPresetSchema.par
     {
       id: 'ppp-play-1',
       order: 0,
+      defaultConstraints: [],
+      defaultSpectrum: 'matched_up',
+      defaultProgressions: ['Smaller pitch, more touches', 'Two touches maximum'],
+      defaultRegressions: ['Open the pitch out', 'Add a neutral to whoever has the ball'],
       kind: 'small_sided_game',
       title: 'PLAY — small-sided, as they arrive',
       durationWeight: 0.33,
@@ -47,6 +51,10 @@ export const PLAY_PRACTICE_PLAY: MethodologyPreset = MethodologyPresetSchema.par
     {
       id: 'ppp-water',
       order: 1,
+      defaultConstraints: [],
+      defaultSpectrum: null,
+      defaultProgressions: [],
+      defaultRegressions: [],
       kind: 'water_break',
       title: 'Water break',
       durationWeight: 0,
@@ -59,6 +67,14 @@ export const PLAY_PRACTICE_PLAY: MethodologyPreset = MethodologyPresetSchema.par
     {
       id: 'ppp-practice',
       order: 2,
+      defaultConstraints: [{ letter: 'people', text: 'Overload the side in possession' }],
+      defaultSpectrum: 'overloaded',
+      defaultProgressions: [
+        'Add pressure once it is clean',
+        'Take a touch away',
+        'Shrink the space',
+      ],
+      defaultRegressions: ['Take the defender out', 'Give them an extra touch', 'Bigger area'],
       kind: 'skill_practice',
       title: 'PRACTICE — the one thing, then progress it',
       durationWeight: 0.34,
@@ -79,6 +95,10 @@ export const PLAY_PRACTICE_PLAY: MethodologyPreset = MethodologyPresetSchema.par
     {
       id: 'ppp-play-2',
       order: 3,
+      defaultConstraints: [],
+      defaultSpectrum: 'matched_up',
+      defaultProgressions: ['Smaller pitch', 'Two touches'],
+      defaultRegressions: ['Bigger pitch', 'Even the teams up'],
       kind: 'game',
       title: 'PLAY — game, minimal coaching',
       durationWeight: 0.33,

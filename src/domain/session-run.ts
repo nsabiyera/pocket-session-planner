@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ChallengeEventSchema } from './challenge';
 import { InterventionEventSchema } from './intervention';
+import { PracticeAdjustmentSchema } from './practice';
 import { PhaseIdSchema } from './ids';
 import { IsoDateTimeSchema } from './primitives';
 
@@ -63,6 +64,17 @@ export const SessionRunStateSchema = z.object({
    * across sessions. The **tally is the length of this array**, never a stored counter.
    */
   challengeEvents: z.array(ChallengeEventSchema).max(400).default([]),
+  /**
+   * Every time the coach made the practice harder or easier.
+   *
+   * A **separate array from `interventionEvents` on purpose**, and this is the load-bearing
+   * decision. `constraint_change` already exists as an intervention mechanic, so folding
+   * adjustments in there would make a Constraints-Led coach — doing exactly what their
+   * methodology tells them to — look like they were over-coaching, and would dent the ball
+   * rolling time of a coach who changed the practice without saying a word. Adjustments
+   * never stop the clock and never count against a budget.
+   */
+  practiceAdjustments: z.array(PracticeAdjustmentSchema).max(100).default([]),
 });
 export type SessionRunState = z.infer<typeof SessionRunStateSchema>;
 export type SessionRunStateInput = z.input<typeof SessionRunStateSchema>;

@@ -244,3 +244,60 @@ describe('Session selectors', () => {
     expect(session.plannedDurationMin).toBe(60);
   });
 });
+
+/**
+ * The claim in ADR 0004: structuring practice design needed **no migration**.
+ *
+ * This is the test that keeps that true. If any of the three ever stops being
+ * nullable-with-default, a session written before September 2026 stops parsing and every
+ * coach who has been using the app loses their history — a failure that would otherwise show
+ * up on a device, months later, with no stack trace worth having.
+ */
+describe('practice design on a legacy session', () => {
+  const legacyPhase = () => {
+    const phase = aPhase('practice', { order: 0, kind: 'skill_practice' }) as Record<
+      string,
+      unknown
+    >;
+    // A phase document exactly as it was written before the fields existed.
+    delete phase.spectrum;
+    delete phase.area;
+    delete phase.groupSize;
+    delete phase.constraints;
+    delete phase.playerChoice;
+    return phase;
+  };
+
+  it('parses with no practice design at all', () => {
+    const parsed = SessionSchema.safeParse({
+      ...aSession(),
+      phases: [legacyPhase()],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('reads back as "the coach did not say", never as zero', () => {
+    const session = SessionSchema.parse({ ...aSession(), phases: [legacyPhase()] });
+    const [phase] = session.phases;
+
+    expect(phase!.spectrum).toBeNull();
+    expect(phase!.area).toBeNull();
+    expect(phase!.groupSize).toBeNull();
+    // The distinction that matters: a group size of 0 would be a claim about the practice.
+    expect(phase!.groupSize).not.toBe(0);
+    // Phases 4 and 6 rode the same route: an empty list and a `false` that both mean
+    // "nobody said", and neither needed a migration to arrive.
+    expect(phase!.constraints).toEqual([]);
+    expect(phase!.playerChoice).toBe(false);
+  });
+
+  it('keeps the free text the coach already typed', () => {
+    const session = SessionSchema.parse({
+      ...aSession(),
+      phases: [{ ...legacyPhase(), organisation: '4v2 rondo, 15x15, two neutrals' }],
+    });
+    // `organisation` is not migrated into the typed fields — see ADR 0004, decision 2.
+    expect(session.phases[0]!.organisation).toBe('4v2 rondo, 15x15, two neutrals');
+    expect(session.phases[0]!.area).toBeNull();
+  });
+});

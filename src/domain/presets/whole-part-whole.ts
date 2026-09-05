@@ -25,6 +25,10 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'wpw-warmup',
       order: 0,
+      defaultConstraints: [{ letter: 'equipment', text: 'A ball each' }],
+      defaultSpectrum: 'unopposed',
+      defaultProgressions: ['Add a turn before each pass'],
+      defaultRegressions: ['Bigger space, slower tempo'],
       kind: 'warm_up',
       title: 'Warm-up with the ball',
       durationWeight: 0.15,
@@ -35,6 +39,10 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'wpw-whole-1',
       order: 1,
+      defaultConstraints: [],
+      defaultSpectrum: 'matched_up',
+      defaultProgressions: [],
+      defaultRegressions: [],
       kind: 'small_sided_game',
       title: 'WHOLE — play, and find the problem',
       durationWeight: 0.22,
@@ -55,6 +63,14 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'wpw-part',
       order: 2,
+      defaultConstraints: [{ letter: 'people', text: 'No defender until the technique is clean' }],
+      defaultSpectrum: 'unopposed',
+      defaultProgressions: [
+        'Add pressure once it is clean',
+        'Add a passive defender',
+        'Speed it up',
+      ],
+      defaultRegressions: ['Back to no pressure', 'Slow it down and rebuild the technique'],
       kind: 'technical',
       title: 'PART — isolate it, high repetitions',
       durationWeight: 0.3,
@@ -72,6 +88,10 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'wpw-whole-2',
       order: 3,
+      defaultConstraints: [],
+      defaultSpectrum: 'matched_up',
+      defaultProgressions: [],
+      defaultRegressions: [],
       kind: 'small_sided_game',
       title: 'WHOLE — the same game, look for the change',
       durationWeight: 0.28,
@@ -89,6 +109,10 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'wpw-review',
       order: 4,
+      defaultConstraints: [],
+      defaultSpectrum: null,
+      defaultProgressions: [],
+      defaultRegressions: [],
       kind: 'player_review',
       title: 'Review huddle',
       durationWeight: 0.05,
