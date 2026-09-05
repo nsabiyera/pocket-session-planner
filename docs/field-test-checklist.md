@@ -19,8 +19,11 @@ npx serve site -l 3000
 ## Offline and install
 
 - [ ] Cold open in airplane mode. **Every** route works: `/`, `/plan`, `/plan/phases`,
-      `/plan/intervention`, `/run`, `/review`, `/sessions`, `/sessions/detail`, `/squad`,
-      `/squad/player`, `/settings`.
+      `/plan/challenges`, `/plan/intervention`, `/run`, `/review`, `/sessions`,
+      `/sessions/detail`, `/squad`, `/squad/player`, `/settings`.
+- [ ] Reach `/plan/challenges` **by tapping through from the phase editor**, not by typing the
+      URL. It shipped once without reaching the precache manifest, and only a cold offline tap
+      would have caught it — the app fell back to home and looked like a mis-tap.
 - [ ] Installs to the home screen, with the right icon and no browser chrome.
 - [ ] Long-press the home-screen icon: `Start a session`, `Resume` and `Squad` shortcuts work.
 - [ ] Settings shows a storage estimate and offers to protect storage if it is not yet
