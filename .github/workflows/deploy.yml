@@ -25,7 +25,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # `enablement` turns Pages on with this workflow's own token rather than requiring
+      # someone with admin to flip Settings -> Pages by hand first. Without it the very
+      # first deploy of a fresh repository fails on `Get Pages site failed ... Not Found`,
+      # which reads like a broken workflow rather than an unconfigured repository.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - run: npm ci
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
