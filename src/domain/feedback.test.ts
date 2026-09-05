@@ -71,11 +71,28 @@ describe('the issue body', () => {
     );
   });
 
-  it('omits the whole context block when the coach unticked it', () => {
+  it('omits every device detail when the coach unticked it', () => {
     const body = feedbackBody(report({ context: null, area: null }));
-    expect(body).not.toContain('---');
     expect(body).not.toContain('Mozilla');
+    expect(body).not.toContain('App version');
+    expect(body).not.toContain('Screen');
     expect(body).toContain('The timer froze');
+  });
+
+  /**
+   * The label on the URL is a courtesy that only lands for a maintainer: GitHub drops
+   * `?labels=` from anyone without triage rights, which is every coach this was built for.
+   * Confirmed by posting a real issue — label requested, label existed, issue came out bare.
+   * So the kind travels in the body, where nobody's permissions can strip it.
+   */
+  it('names the kind in the body, because the label may never arrive', () => {
+    expect(feedbackBody(report({ kind: 'bug' }))).toContain('- **Kind:** Something broke');
+    expect(feedbackBody(report({ kind: 'idea' }))).toContain('- **Kind:** An idea');
+  });
+
+  it('still names the kind when everything optional was declined', () => {
+    const body = feedbackBody(report({ context: null, area: null, kind: 'idea' }));
+    expect(body).toContain('- **Kind:** An idea');
   });
 
   it('still records the area when the device details were declined', () => {
@@ -105,6 +122,7 @@ describe('what a report can possibly contain', () => {
         '',
         '---',
         '',
+        '- **Kind:** Something broke',
         '- **Where:** Do — running it pitch-side',
         '- **App version:** 0.1.0',
         '- **Installed:** to the home screen',

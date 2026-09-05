@@ -119,11 +119,17 @@ export function feedbackTitle(report: FeedbackReport): string {
  *
  * The context sits below a horizontal rule and is never mixed into their prose, so a
  * maintainer reading the issue can tell at a glance which half a human wrote.
+ *
+ * **The kind is written into the body because the label cannot be trusted to arrive.**
+ * GitHub silently drops `?labels=` from anyone without triage rights on the repository —
+ * which is every coach this feature was built for. Verified by posting one: the label was
+ * requested, the label existed, and the issue came out with none. `labels` stays on the URL
+ * because it still works for a maintainer, but the line below is what actually survives.
  */
 export function feedbackBody(report: FeedbackReport): string {
   const sections: string[] = [report.note.trim()];
 
-  const facts: string[] = [];
+  const facts: string[] = [`- **Kind:** ${FEEDBACK_KIND_LABELS[report.kind]}`];
   if (report.area !== null) {
     facts.push(`- **Where:** ${FEEDBACK_AREA_LABELS[report.area]}`);
   }
@@ -136,7 +142,8 @@ export function feedbackBody(report: FeedbackReport): string {
     facts.push(`- **Browser:** ${report.context.userAgent}`);
   }
 
-  if (facts.length > 0) sections.push(['---', '', ...facts].join('\n'));
+  // Never empty — the kind is always known — so the rule is always drawn.
+  sections.push(['---', '', ...facts].join('\n'));
   sections.push('_Sent from the feedback box in Pocket Session Planner._');
 
   return sections.join('\n\n');
