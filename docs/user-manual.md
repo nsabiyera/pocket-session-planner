@@ -234,3 +234,14 @@ this phase, with `＋1` if you missed one. `Undo` on the toast removes the most 
 **A number you did not expect.** Every report on the review screen is derived from what you
 logged, and nothing is inferred that cannot be. If a line says nothing about a corner or a
 capability, it is because no observation carried one — not because the app decided for you.
+
+**None of the above.** `Settings → Feedback` writes it up for you. Pick whether something
+broke or you want something changed, type what happened, and tap `Open GitHub to post it` —
+GitHub opens with the report already written, and it is posted only once you press `Create`
+there, under your own GitHub name. Nothing leaves the phone until you do.
+
+Two things worth knowing. `Device details` attaches the app version, your browser and your
+screen size, which is usually what turns "the timer froze" into a fix; you can leave it off,
+and either way **nothing about your squad, players or sessions is ever attached**. And if you
+write the note pitch-side with no signal, it is saved on the device — come back to Settings
+when you are back online and the words are still there.

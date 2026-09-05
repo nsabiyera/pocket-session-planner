@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Empty, Loading, Screen, ScreenHead, Segmented } from '../_components/ui';
 import { showToast } from '../_components/toast-host';
 import { InstallRow } from '../_components/install-prompt';
+import { FeedbackBox } from '../_components/feedback-box';
 import { getServiceContext, refresh, reopen, useAppState } from '@/modules/app/app-store';
 import {
   commitImport,
@@ -264,6 +265,8 @@ export default function SettingsPage() {
           </div>
         ) : null}
       </section>
+
+      <FeedbackBox />
 
       <section className="stack">
         <h2>About</h2>
