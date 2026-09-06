@@ -114,3 +114,20 @@ Two things this ADR explicitly does **not** do:
   `Squad` carries no roster size. The stepper is therefore seeded from the roster count and
   stepped down, which is a default rather than a derivation. If an attendance model ever lands,
   revisit.
+
+### Revisited 2026-09-06 — match-day presence does not unblock `groupSize`
+
+Match day (ADR 0005) landed something that looks like the attendance model this follow-up was
+waiting for: a starting `lineup`, and `presence` recorded per period. It does not unblock
+`groupSize`, and the reasons are worth writing down so nobody re-investigates.
+
+Presence is recorded **on matches only** — a training session has no periods to tick and no
+presence array, so the data simply is not there on the sessions `groupSize` belongs to. And even
+where it exists it answers a different question: presence is *who was on the pitch for this
+period*, while `groupSize` is *how many players are in this practice grid*, which for a rondo
+inside a squad of fourteen is four. One does not imply the other in either direction.
+
+So `groupSize` stays a default the coach steps, and the sentence it produces stays the bare
+number. The condition on the original follow-up is now narrower than "an attendance model": it
+would take **per-session attendance for training**, which nothing in the app currently asks for
+and which would cost a tap on the twenty-second path to collect.

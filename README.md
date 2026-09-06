@@ -116,11 +116,17 @@ against `FakeDataStore`.
    happened lives in `Session.run.phaseRuns[]` and the `observations` store. Re-planning can
    never corrupt evidence.
 
-Three divergences from the house conventions in `hodorhub` are recorded as ADRs:
+The decisions worth arguing with are recorded as ADRs. The first three are divergences from the
+house conventions in `hodorhub`; the last two are modelling calls this app had to make on its
+own.
 
 - [ADR 0001](docs/adr/0001-indexeddb-not-drizzle-postgres.md) — IndexedDB behind a repository port
 - [ADR 0002](docs/adr/0002-client-heavy-app-router.md) — a client-heavy App Router tree
 - [ADR 0003](docs/adr/0003-no-dynamic-route-segments.md) — singleton routes, not dynamic segments
+- [ADR 0004](docs/adr/0004-structured-practice-design.md) — practice design as data, with
+  `organisation` kept as free text
+- [ADR 0005](docs/adr/0005-match-day-as-a-session-kind.md) — match day as a `Session` kind, not a
+  second aggregate
 
 ## Testing
 
