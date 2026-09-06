@@ -21,6 +21,7 @@ import {
   PracticeAreaSchema,
   PracticeSpectrumSchema,
 } from './practice';
+import { MatchDetailsSchema, refineMatchDetails } from './match-day';
 import { MethodologySnapshotSchema, PhaseKindSchema } from './methodology';
 import {
   DurationMinSchema,
@@ -127,11 +128,33 @@ export const SessionPhaseSchema = z.object({
 export type SessionPhase = z.infer<typeof SessionPhaseSchema>;
 export type SessionPhaseInput = z.input<typeof SessionPhaseSchema>;
 
+/**
+ * Training or a match.
+ *
+ * A discriminator rather than a second aggregate: a match reuses phases (as periods),
+ * challenges, the run state machine, observations and the whole review pipeline, so a new
+ * object store would buy a truer noun and pay for it in duplicated machinery. See the note at
+ * the top of `match-day.ts`.
+ *
+ * Defaulted, so every session written before match day shipped is a `training` session
+ * without a migration — the same free path the practice-design fields took.
+ */
+export const SessionKindSchema = z.enum(['training', 'match']);
+export type SessionKind = z.infer<typeof SessionKindSchema>;
+
 const SessionShape = {
   id: SessionIdSchema,
   squadId: SquadIdSchema,
   /** Auto-generated as `{Objective} · {short date}`. There is no session-name field. */
   title: nonEmptyText(80),
+  kind: SessionKindSchema.default('training'),
+  /**
+   * Present exactly when `kind` is `match` — enforced below, both ways, because a match
+   * without a shape to play or a training session carrying an opponent would each be a
+   * quietly corrupt record that still parsed.
+   */
+  match: MatchDetailsSchema.nullable().default(null),
+  /** On a match this is the **whole-team** objective. Units get their own; players get challenges. */
   objective: ObjectiveSchema,
   /** Frozen at creation. Editing or deleting the source can never rewrite this. */
   methodology: MethodologySnapshotSchema,
@@ -256,6 +279,44 @@ function refineSession(session: z.infer<z.ZodObject<typeof SessionShape>>, ctx: 
       code: z.ZodIssueCode.custom,
       path: ['run'],
       message: `A ${session.status} session must not have a run.`,
+    });
+  }
+
+  // The discriminator, enforced in both directions. A match with no match block has no
+  // opponent, shape or units; a training session carrying one would export as evidence of a
+  // fixture that never happened. Either way the record parses, which is what makes it worth
+  // rejecting here rather than discovering in a season report.
+  if (session.kind === 'match' && session.match === null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['match'],
+      message: 'A match session must carry its match details.',
+    });
+  }
+
+  if (session.kind === 'training' && session.match !== null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['match'],
+      message: 'A training session must not carry match details.',
+    });
+  }
+
+  if (session.match !== null) {
+    refineMatchDetails(session.match, (path, message) => {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['match', ...path], message });
+    });
+
+    // Presence is recorded against periods, so a stale phase id would credit minutes to a
+    // period that no longer exists — and minutes are the whole point of recording it.
+    session.match.presence.forEach((period, index) => {
+      if (!phaseIds.has(period.phaseId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['match', 'presence', index, 'phaseId'],
+          message: `Presence references unknown period ${period.phaseId}.`,
+        });
+      }
     });
   }
 
