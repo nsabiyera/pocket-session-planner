@@ -1661,3 +1661,49 @@ summary {
   border-left: 4px solid var(--line);
   padding-left: var(--sp-3);
 }
+
+/* ------------------------------------------------------- minutes played */
+
+/*
+ * The match-day minutes list. A name, a bar to scan, a number to read.
+ *
+ * The bar is deliberately quiet — `--line-strong` rather than a semantic colour — because a
+ * short bar is a fact and not a warning. The app reports who played and declines to say what
+ * that ought to have been.
+ */
+.minutes-row {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, auto) 1fr auto;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap);
+}
+
+.minutes-row__name {
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.minutes-row__track {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.minutes-row__fill {
+  display: block;
+  height: 100%;
+  background: var(--line-strong);
+  border-radius: var(--radius-pill);
+}
+
+/* Zero width would vanish. A player who got no minutes still gets a row and a track. */
+.minutes-row__value {
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  min-width: 3.5rem;
+  text-align: right;
+}

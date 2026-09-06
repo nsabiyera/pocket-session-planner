@@ -326,6 +326,21 @@ export async function logPracticeAdjustment(
   return isErr(result) ? result : ok({ session: result.value, id });
 }
 
+/**
+ * Who was on the pitch for one period of a match.
+ *
+ * The whole minutes report rests on this one interaction, so it is deliberately the cheapest
+ * thing on the screen: the squad, tapped, once per period.
+ */
+export async function setPeriodPresence(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  phaseId: PhaseId,
+  playerIds: readonly PlayerId[],
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, { kind: 'setPeriodPresence', phaseId, playerIds });
+}
+
 /** The `Undo` on the adjustment toast. By id — see the note above. */
 export async function undoPracticeAdjustment(
   ctx: ServiceContext,

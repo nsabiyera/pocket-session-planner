@@ -107,6 +107,12 @@ export type SessionCommand =
       readonly step?: StepLetter;
     }
   | { readonly kind: 'undoPracticeAdjustment'; readonly id: PracticeAdjustmentId }
+  | {
+      /** Who was on the pitch for one period of a match. Replaces that period's record. */
+      readonly kind: 'setPeriodPresence';
+      readonly phaseId: PhaseId;
+      readonly playerIds: readonly PlayerId[];
+    }
   | { readonly kind: 'heartbeat' }
   | { readonly kind: 'reconcileToLastActivity' }
   | { readonly kind: 'finish' }
@@ -171,6 +177,8 @@ function reduce(
       return logPracticeAdjustment(session, command, now);
     case 'undoPracticeAdjustment':
       return undoPracticeAdjustment(session, command.id);
+    case 'setPeriodPresence':
+      return setPeriodPresence(session, command);
     case 'heartbeat':
       return heartbeat(session, now);
     case 'reconcileToLastActivity':
@@ -677,6 +685,41 @@ function undoPracticeAdjustment(
  * natural part of Review, which happens after `finish`, and a guard here would make the
  * obvious moment the impossible one.
  */
+/**
+ * Ticking who was on for a period.
+ *
+ * A whole-period replace rather than a per-player toggle command, because that is how the
+ * control works: the coach sees the squad, taps the ones who are on, and the sheet closes.
+ * Replacing also makes the write idempotent, which matters on a touchline where a coach may
+ * correct the same period twice.
+ *
+ * No run guard. A coach may well tick the first half at half time, but they may equally do it
+ * on the drive home — and a rule that refused the second would lose the data rather than
+ * protect it.
+ */
+function setPeriodPresence(
+  session: Session,
+  command: Extract<SessionCommand, { kind: 'setPeriodPresence' }>,
+): Result<Session, TransitionError> {
+  if (session.kind !== 'match' || session.match === null) {
+    return fail('guard_failed', 'Only a match records who was on the pitch.');
+  }
+
+  const period = session.phases.find((phase) => phase.id === command.phaseId);
+  if (!period) return fail('not_found', `No phase ${command.phaseId} in this session.`);
+  if (period.kind !== 'game') {
+    return fail('guard_failed', 'Presence is recorded against a period, not a break.');
+  }
+
+  const others = session.match.presence.filter((entry) => entry.phaseId !== command.phaseId);
+  const presence =
+    command.playerIds.length === 0
+      ? others
+      : [...others, { phaseId: command.phaseId, playerIds: [...command.playerIds] }];
+
+  return ok({ ...session, match: { ...session.match, presence } });
+}
+
 function setChallengeStatus(
   session: Session,
   command: Extract<SessionCommand, { kind: 'setChallengeStatus' }>,

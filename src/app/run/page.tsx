@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Empty, Loading, Screen, Sheet } from '../_components/ui';
 import { TimerDial } from '../_components/timer-dial';
+import { PeriodPresenceBar } from '../_components/period-presence';
 import { showToast } from '../_components/toast-host';
 import { useNow } from '../_components/use-now';
 import { useVisibilityRefresh } from '../_components/use-visibility-refresh';
@@ -23,6 +24,7 @@ import {
   logPracticeAdjustment,
   observationTagGroups,
   setChallengeStatus,
+  setPeriodPresence,
   undoChallengeProgress,
   undoObservation,
   undoPracticeAdjustment,
@@ -415,6 +417,34 @@ export default function RunPage() {
           </ul>
         )}
       </section>
+
+      {/*
+        Match periods only. A training phase has no notion of who is on the pitch, and a
+        break is not a period — the state machine refuses presence against both.
+      */}
+      {session.kind === 'match' && phase.kind === 'game' ? (
+        <section className="stack" aria-label="Who is on the pitch">
+          <PeriodPresenceBar
+            session={session}
+            phase={phase}
+            players={state.players}
+            onSave={async (playerIds) => {
+              const result = await setPeriodPresence(
+                getServiceContext(),
+                session.id,
+                phase.id,
+                playerIds,
+              );
+              if (isErr(result)) {
+                showToast('Could not save who was on.', { tone: 'stop' });
+                return;
+              }
+              await refresh();
+              showToast(`${playerIds.length} on for ${phase.title.toLowerCase()}`);
+            }}
+          />
+        </section>
+      ) : null}
 
       <section className="run-focus" aria-label="Focus players">
         <div className="row row--wrap">

@@ -23,6 +23,7 @@ import {
   type ObjectiveOutcome,
 } from '@/domain/review';
 import { describeCornerBalance } from '@/domain/four-corners/balance';
+import { MinutesReport } from '../_components/minutes-report';
 import { describeChoice, hasEnoughForChoice } from '@/domain/engagement';
 import { REFLECTION_PROMPTS } from '@/domain/practice/match';
 import { describeAdjustments, describeStepCoverage, hasEnoughForStepView } from '@/domain/practice';
@@ -386,6 +387,15 @@ export default function ReviewPage() {
               {describeStepCoverage(data.stepCoverage)}
               <Why id="report:step-coverage" />
             </div>
+          ) : null}
+
+          {/*
+            Minutes, on a match only. First of the reports, and above the intervention line,
+            because on a Saturday it is the one with a duty of care attached — who did not
+            get on is a more urgent question than how often you stopped play.
+          */}
+          {session.kind === 'match' ? (
+            <MinutesReport session={session} players={state.players} />
           ) : null}
 
           {/*
