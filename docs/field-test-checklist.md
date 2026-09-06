@@ -77,6 +77,36 @@ npx serve site -l 3000
       proposal appears **unticked**.
 - [ ] Export, import on a second device, and confirm the 4 Corner checks came across.
 
+## Match day
+
+Everything here is new and none of it has been on a pitch. The presence tick is the single
+point of failure for the whole minutes report — if it is awkward mid-game the record simply
+will not get kept, and every number downstream of it is then absent rather than wrong.
+
+- [ ] `Match day instead` is on the home screen without hunting for it.
+- [ ] With an age group set on the squad, the **format is already right** and the shapes offered
+      are only that format's. Clear the age group and check it falls back without breaking.
+- [ ] Pick a shape, then check the unit inputs offered match the units it fields — a `2-1`
+      must not ask you for a midfield.
+- [ ] **Time it.** Home → running match. Only the opponent should need typing.
+- [ ] Quarters as well as halves. The middle break reads `Half time`, the others `Break`.
+- [ ] In a period, confirm there is **no intervention budget** — the app must not offer to stop
+      a referee's game. At half time, confirm there is one.
+- [ ] **`Who is on?` with one thumb, standing up, while the game is running.** This is the one
+      that matters. It should open with the previous period already ticked, so a period with no
+      changes is a single confirm.
+- [ ] Tick a period, then reopen it and change one player. The count must not double.
+- [ ] Force-quit mid-match. Reopen — the presence you ticked is still there.
+- [ ] Review: minutes **least played first**, with anyone who did not get on at the top. Check
+      the numbers against what you actually remember doing.
+- [ ] A half the referee stretched should report the minutes it really ran, not the planned ones.
+- [ ] Rule each unit met / partly / missed, then tap the same verdict again to clear it.
+- [ ] Add the score, then clear it. Confirm nothing in the carry-forward chips changes either way.
+- [ ] History: the match reads as a fixture — opponent and a `Match` pill — and is
+      distinguishable at a glance from the Tuesday before it.
+- [ ] Export, import on a second device, and confirm the minutes report recomputes **the same
+      numbers**. This is the only copy those ticks exist in.
+
 ## Reviewing, and closing the loop
 
 - [ ] Finish the session. `/review` restates the objective verbatim and needs no typing.
