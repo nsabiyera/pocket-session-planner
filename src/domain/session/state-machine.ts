@@ -10,6 +10,7 @@ import type {
 } from '../ids';
 import type { ChallengeEvent, ChallengeStatus } from '../challenge';
 import type { AdjustmentDirection, PracticeAdjustment, StepLetter } from '../practice';
+import type { MatchResult, MatchUnit } from '../match-day';
 import {
   mechanicStopsPlay,
   resolvePhaseIntervention,
@@ -113,6 +114,12 @@ export type SessionCommand =
       readonly phaseId: PhaseId;
       readonly playerIds: readonly PlayerId[];
     }
+  | { readonly kind: 'setMatchResult'; readonly result: MatchResult | null }
+  | {
+      readonly kind: 'setUnitObjectiveStatus';
+      readonly unit: MatchUnit;
+      readonly status: ChallengeStatus;
+    }
   | { readonly kind: 'heartbeat' }
   | { readonly kind: 'reconcileToLastActivity' }
   | { readonly kind: 'finish' }
@@ -179,6 +186,10 @@ function reduce(
       return undoPracticeAdjustment(session, command.id);
     case 'setPeriodPresence':
       return setPeriodPresence(session, command);
+    case 'setMatchResult':
+      return setMatchResult(session, command);
+    case 'setUnitObjectiveStatus':
+      return setUnitObjectiveStatus(session, command);
     case 'heartbeat':
       return heartbeat(session, now);
     case 'reconcileToLastActivity':
@@ -718,6 +729,47 @@ function setPeriodPresence(
       : [...others, { phaseId: command.phaseId, playerIds: [...command.playerIds] }];
 
   return ok({ ...session, match: { ...session.match, presence } });
+}
+
+/**
+ * The score.
+ *
+ * Recorded because a coach will want it, and then deliberately not the headline: nothing in
+ * carry-forward reads it, because a result is not evidence about a player. `null` clears it,
+ * for the coach who tapped it in wrong.
+ */
+function setMatchResult(
+  session: Session,
+  command: Extract<SessionCommand, { kind: 'setMatchResult' }>,
+): Result<Session, TransitionError> {
+  if (session.kind !== 'match' || session.match === null) {
+    return fail('guard_failed', 'Only a match has a result.');
+  }
+  return ok({ ...session, match: { ...session.match, result: command.result } });
+}
+
+/**
+ * Ruling on a unit's objective, at review.
+ *
+ * Tapping the verdict already recorded clears it back to `open`, the same gesture both ways —
+ * matching how a player challenge is ruled, because *"I shouldn't have ruled that yet"* is as
+ * common as ruling it.
+ */
+function setUnitObjectiveStatus(
+  session: Session,
+  command: Extract<SessionCommand, { kind: 'setUnitObjectiveStatus' }>,
+): Result<Session, TransitionError> {
+  if (session.kind !== 'match' || session.match === null) {
+    return fail('guard_failed', 'Only a match has unit objectives.');
+  }
+  if (!session.match.unitObjectives.some((objective) => objective.unit === command.unit)) {
+    return fail('not_found', `No objective for the ${command.unit} in this match.`);
+  }
+
+  const unitObjectives = session.match.unitObjectives.map((objective) =>
+    objective.unit === command.unit ? { ...objective, status: command.status } : objective,
+  );
+  return ok({ ...session, match: { ...session.match, unitObjectives } });
 }
 
 function setChallengeStatus(

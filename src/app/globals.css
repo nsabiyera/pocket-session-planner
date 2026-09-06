@@ -1707,3 +1707,14 @@ summary {
   min-width: 3.5rem;
   text-align: right;
 }
+
+/*
+ * The match pill. Uses the accent rather than the signal green, so a fixture is
+ * distinguishable from a status pill at a glance without implying anything good or bad about
+ * it — a match is a different kind of thing, not a better or worse one.
+ */
+.pill--match {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--ink);
+}

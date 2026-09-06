@@ -301,3 +301,91 @@ describe('the setPeriodPresence command', () => {
     expect(result.ok).toBe(false);
   });
 });
+
+describe('the result', () => {
+  it('records a score and reads it back as an outcome', () => {
+    const session = played(aMatch(), [20, 20]);
+    const next = unwrap(
+      applySessionCommand(
+        session,
+        { kind: 'setMatchResult', result: { goalsFor: 3, goalsAgainst: 1 } },
+        T0,
+      ),
+    );
+    expect(next.match?.result).toEqual({ goalsFor: 3, goalsAgainst: 1 });
+  });
+
+  it('clears a score that was tapped in wrong', () => {
+    const session = played(aMatch(), [20, 20]);
+    let next = unwrap(
+      applySessionCommand(
+        session,
+        { kind: 'setMatchResult', result: { goalsFor: 3, goalsAgainst: 1 } },
+        T0,
+      ),
+    );
+    next = unwrap(applySessionCommand(next, { kind: 'setMatchResult', result: null }, T0));
+    expect(next.match?.result).toBeNull();
+  });
+
+  it('refuses a result on a training session', () => {
+    const training = SessionSchema.parse({ ...aMatch(), kind: 'training', match: null });
+    const result = applySessionCommand(
+      training,
+      { kind: 'setMatchResult', result: { goalsFor: 1, goalsAgainst: 0 } },
+      T0,
+    );
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('ruling a unit objective', () => {
+  const withUnits = (): Session =>
+    SessionSchema.parse({
+      ...aMatch(),
+      match: {
+        ...aMatch().match,
+        unitObjectives: [
+          { unit: 'defence', text: 'First pass forward' },
+          { unit: 'midfield', text: 'Screen the back three' },
+        ],
+      },
+    });
+
+  it('starts every unit objective open', () => {
+    expect(withUnits().match?.unitObjectives.every((o) => o.status === 'open')).toBe(true);
+  });
+
+  it('records a verdict against the right unit only', () => {
+    const next = unwrap(
+      applySessionCommand(
+        withUnits(),
+        { kind: 'setUnitObjectiveStatus', unit: 'midfield', status: 'met' },
+        T0,
+      ),
+    );
+    const byUnit = new Map(next.match!.unitObjectives.map((o) => [o.unit, o.status]));
+    expect(byUnit.get('midfield')).toBe('met');
+    expect(byUnit.get('defence')).toBe('open');
+  });
+
+  it('refuses a unit this match never briefed', () => {
+    // Ruling on a unit that was never given an objective would invent the objective.
+    const result = applySessionCommand(
+      withUnits(),
+      { kind: 'setUnitObjectiveStatus', unit: 'attack', status: 'met' },
+      T0,
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it('refuses unit objectives on a training session', () => {
+    const training = SessionSchema.parse({ ...aMatch(), kind: 'training', match: null });
+    const result = applySessionCommand(
+      training,
+      { kind: 'setUnitObjectiveStatus', unit: 'midfield', status: 'met' },
+      T0,
+    );
+    expect(result.ok).toBe(false);
+  });
+});

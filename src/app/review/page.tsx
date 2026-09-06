@@ -24,6 +24,7 @@ import {
 } from '@/domain/review';
 import { describeCornerBalance } from '@/domain/four-corners/balance';
 import { MinutesReport } from '../_components/minutes-report';
+import { MatchReview } from '../_components/match-review';
 import { describeChoice, hasEnoughForChoice } from '@/domain/engagement';
 import { REFLECTION_PROMPTS } from '@/domain/practice/match';
 import { describeAdjustments, describeStepCoverage, hasEnoughForStepView } from '@/domain/practice';
@@ -395,7 +396,10 @@ export default function ReviewPage() {
             get on is a more urgent question than how often you stopped play.
           */}
           {session.kind === 'match' ? (
-            <MinutesReport session={session} players={state.players} />
+            <>
+              <MinutesReport session={session} players={state.players} />
+              <MatchReview session={session} />
+            </>
           ) : null}
 
           {/*

@@ -12,6 +12,7 @@ import {
   type SessionId,
 } from '@/domain/ids';
 import type { ChallengeStatus } from '@/domain/challenge';
+import type { MatchResult, MatchUnit } from '@/domain/match-day';
 import type { AdjustmentDirection, StepLetter } from '@/domain/practice';
 import { normaliseCoachingPointText } from '@/domain/coaching-point';
 import {
@@ -339,6 +340,30 @@ export async function setPeriodPresence(
   playerIds: readonly PlayerId[],
 ): Promise<Result<Session, RunError>> {
   return dispatch(ctx, sessionId, { kind: 'setPeriodPresence', phaseId, playerIds });
+}
+
+/**
+ * The score, at review. `null` clears it.
+ *
+ * Lives in the run service beside the other match writes rather than in review, because it is
+ * the same session document and the same dispatch path.
+ */
+export async function setMatchResult(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  result: MatchResult | null,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, { kind: 'setMatchResult', result });
+}
+
+/** The coach's ruling on a unit's objective. Re-tapping the same verdict clears it. */
+export async function setUnitObjectiveStatus(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  unit: MatchUnit,
+  status: ChallengeStatus,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, { kind: 'setUnitObjectiveStatus', unit, status });
 }
 
 /** The `Undo` on the adjustment toast. By id — see the note above. */

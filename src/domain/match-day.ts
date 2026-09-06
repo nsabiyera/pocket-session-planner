@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PhaseIdSchema, PlayerIdSchema } from './ids';
+import { ChallengeStatusSchema } from './challenge';
 import { nonEmptyText, optionalText } from './primitives';
 import { matchReference, type AgeBand } from './practice/match';
 
@@ -217,6 +218,14 @@ export const FIXTURE_TYPE_LABELS: Record<FixtureType, string> = {
 export const UnitObjectiveSchema = z.object({
   unit: z.enum(MATCH_UNITS),
   text: nonEmptyText(140),
+  /**
+   * The coach's verdict, ruled at review.
+   *
+   * Reuses `ChallengeStatus` rather than inventing a parallel vocabulary: it is the same
+   * question one level up, and a coach who has learned met / partly / missed on a player
+   * challenge should not have to learn a second set of words for a unit.
+   */
+  status: ChallengeStatusSchema.default('open'),
 });
 export type UnitObjective = z.infer<typeof UnitObjectiveSchema>;
 

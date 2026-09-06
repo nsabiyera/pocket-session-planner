@@ -156,6 +156,29 @@ A judged challenge can only be settled here — Do mode has gone by now.
 focusing on a player, a coaching point you did not get to, a nudge about your intervention
 habit. Untick anything you do not want. **Nothing is written until you tap `Save review`.**
 
+## Match day
+
+``Match day instead`` on the home screen plans a game rather than a practice.
+
+Type who you are playing — that is the only typing — then pick where, what kind of game, and
+the objective from the same list you use for training. The **format** is already right if your
+squad has an age group set (U12 plays 9v9), and the **shapes** offered are only the ones that
+field the right number of players at that format. Pick one and each unit it fields can be
+given a word of its own: *"midfield, screen in front of the back three"*. Halves or quarters,
+minutes per period, and ``Build the match``.
+
+Running it works exactly like a session — same timer, same two-tap observations, same player
+challenges. Two differences. The periods have **no intervention budget**, because you cannot
+stop a referee's game to coach; half time has one instead. And each period shows
+``Who is on?`` — tap everyone who played any part of it. It opens with the previous period's
+players already ticked, so most periods are two or three taps for the subs.
+
+That tick is what produces the **minutes report** on the review screen: every player, least
+played first, with the ones who did not get on at the top. It counts to the nearest period and
+says so. There is no target and no warning — you are the one who knows a player arrived late
+or asked to come off. Review also asks whether each unit did its job, and takes the score,
+which is deliberately the quietest thing on the page.
+
 ## Between sessions
 
 **Today** is the home screen. It shows the session in progress or the plan you were part-way

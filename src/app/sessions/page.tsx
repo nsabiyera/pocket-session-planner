@@ -6,6 +6,7 @@ import { Empty, Loading, Screen, ScreenHead, formatShortDate } from '../_compone
 import { getServiceContext, useAppState } from '@/modules/app/app-store';
 import { coachingStyleInput, sessionStage } from '@/domain/session/selectors';
 import { coachingStyle } from '@/domain/coaching-style';
+import { describeFixture } from '@/domain/match-day';
 import { CoachingStylePanel } from '../_components/coaching-style';
 import type { Session } from '@/domain/session';
 
@@ -57,7 +58,18 @@ export default function SessionsPage() {
                   <span className="card-title">{session.objective.text}</span>
                   <span className="card-meta">{formatShortDate(session.scheduledFor)}</span>
                 </div>
+                {/*
+                  A fixture reads as a fixture. Scanning a term of history, "away to Eastfield
+                  Rovers" is what tells a coach which of these Saturdays they are looking at —
+                  the objective alone makes a match indistinguishable from the Tuesday before it.
+                */}
+                {session.kind === 'match' && session.match !== null ? (
+                  <span className="card-meta">{describeFixture(session.match)}</span>
+                ) : null}
                 <span className="row row--wrap">
+                  {session.kind === 'match' ? (
+                    <span className="pill pill--match">Match</span>
+                  ) : null}
                   <span className="pill">{session.methodology.name}</span>
                   <span className="pill">{stageLabel(session)}</span>
                   {session.status === 'abandoned' ? (

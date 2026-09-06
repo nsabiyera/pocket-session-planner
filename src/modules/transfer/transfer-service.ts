@@ -358,6 +358,33 @@ async function checkReferences(
       });
       continue;
     }
+
+    // The match block names players twice more. `presence` is the one that matters most:
+    // minutes are derived from it, so a phantom id there would put a row reading "Unknown"
+    // into the report a coach opens to check nobody was left out.
+    if (session.match !== null) {
+      const unknownLineupPlayer = session.match.lineup.some((slot) => !playerExists(slot.playerId));
+      if (unknownLineupPlayer) {
+        dropped.push({
+          store: 'sessions',
+          id: session.id,
+          reason: 'A player in the lineup is missing.',
+        });
+        continue;
+      }
+      const unknownPresencePlayer = session.match.presence.some((period) =>
+        period.playerIds.some((playerId) => !playerExists(playerId)),
+      );
+      if (unknownPresencePlayer) {
+        dropped.push({
+          store: 'sessions',
+          id: session.id,
+          reason: 'A player who was on the pitch is missing.',
+        });
+        continue;
+      }
+    }
+
     validSessions.add(session.id);
   }
 

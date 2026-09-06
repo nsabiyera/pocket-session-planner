@@ -84,7 +84,8 @@ describe('startMatchDraft', () => {
       { unitObjectives: [{ unit: 'midfield', text: 'Screen the back three' }] },
     );
     expect(draft.match?.unitObjectives).toEqual([
-      { unit: 'midfield', text: 'Screen the back three' },
+      // `open` by default: a unit objective is not ruled on until the coach rules on it.
+      { unit: 'midfield', text: 'Screen the back three', status: 'open' },
     ]);
   });
 
