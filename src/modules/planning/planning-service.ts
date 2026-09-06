@@ -19,6 +19,8 @@ import {
   buildSessionFromMethodology,
   rescaleSessionPhases,
 } from '@/domain/session/build-from-methodology';
+import { buildMatch } from '@/domain/session/build-match';
+import type { MatchDetailsInput } from '@/domain/match-day';
 import { applySessionCommand, type TransitionError } from '@/domain/session/state-machine';
 import { mainPracticePhase } from '@/domain/session/selectors';
 import { SessionSchema, type Objective, type Session, type SessionPhase } from '@/domain/session';
@@ -43,6 +45,17 @@ export interface StartDraftInput {
   objectiveTemplateId?: string;
   methodologyId?: MethodologyId;
   totalMin?: number;
+  focusPlayerIds?: readonly PlayerId[];
+  scheduledFor?: IsoDateTime;
+}
+
+export interface StartMatchInput {
+  squadId: SquadId;
+  /** The **whole-team** objective. Units get their own; players get challenges. */
+  objectiveText: string;
+  objectiveTemplateId?: string;
+  match: MatchDetailsInput;
+  periodMin?: number;
   focusPlayerIds?: readonly PlayerId[];
   scheduledFor?: IsoDateTime;
 }
@@ -110,6 +123,59 @@ export async function startDraft(
   return ok(withPoints);
 }
 
+/**
+ * Creates a **match** draft, replacing any existing draft.
+ *
+ * Same one-draft-at-a-time rule as `startDraft` (ADR 0003), and deliberately the same
+ * replacement behaviour: a coach who taps `Match day` has decided.
+ *
+ * No methodology lookup, because a match is not one of the training presets — `buildMatch`
+ * carries its own snapshot. That is the only structural difference between this and
+ * `startDraft`; everything downstream, the phase editor and Do mode included, treats what
+ * comes back as an ordinary session.
+ */
+export async function startMatchDraft(
+  ctx: ServiceContext,
+  input: StartMatchInput,
+): Promise<Result<Session, PlanningError>> {
+  const squad = await ctx.store.squads.get(input.squadId);
+  if (!squad) return err({ kind: 'squad_not_found' });
+
+  const at = now(ctx);
+  const template = input.objectiveTemplateId
+    ? findObjectiveTemplate(input.objectiveTemplateId)
+    : undefined;
+
+  const objective: Objective = {
+    text: input.objectiveText,
+    successCriteria: [...(template?.successCriteria ?? [])],
+    sourceActionId: null,
+  };
+
+  const session = buildMatch({
+    squad,
+    objective,
+    match: input.match,
+    now: at,
+    ids: ctx.ids,
+    ...(input.periodMin !== undefined ? { periodMin: input.periodMin } : {}),
+    ...(input.scheduledFor !== undefined ? { scheduledFor: input.scheduledFor } : {}),
+    focusPlayers: (input.focusPlayerIds ?? []).map((playerId) => ({
+      playerId,
+      sourceActionId: null,
+    })),
+  });
+
+  const existingDraft = await ctx.store.sessions.findDraft(input.squadId);
+  await ctx.store.transact(['sessions', 'app_meta'], 'readwrite', async (tx) => {
+    if (existingDraft) await tx.sessions.hardDelete(existingDraft.id);
+    await tx.sessions.put(session);
+    await tx.meta.patch({ activeSessionId: session.id, activeSquadId: input.squadId }, at);
+  });
+
+  return ok(session);
+}
+
 function addObjectivePoints(
   ctx: ServiceContext,
   session: Session,
@@ -158,13 +224,22 @@ function addObjectivePoints(
   };
 }
 
-/** Sticky last-used methodology, so the segmented control is already right. */
+/**
+ * Sticky last-used methodology, so the segmented control is already right.
+ *
+ * **Training sessions only.** A match carries the `match-day` snapshot, which is deliberately
+ * not one of the training presets and therefore does not resolve — so before this filter,
+ * planning a match and then tapping `New session` failed outright with
+ * `methodology_not_found`. It is also the wrong answer even where it resolves: how you coached
+ * on Saturday is no guide to how you want to practise on Tuesday.
+ */
 export async function lastUsedMethodologyId(
   ctx: ServiceContext,
   squadId: SquadId,
 ): Promise<MethodologyId> {
-  const recent = await ctx.store.sessions.listBySquad(squadId, { limit: 1 });
-  return recent[0]?.methodology.methodologyId ?? (DEFAULT_METHODOLOGY_ID as MethodologyId);
+  const recent = await ctx.store.sessions.listBySquad(squadId, { limit: 10 });
+  const training = recent.find((session) => session.kind !== 'match');
+  return training?.methodology.methodologyId ?? (DEFAULT_METHODOLOGY_ID as MethodologyId);
 }
 
 export async function getDraft(

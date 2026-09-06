@@ -71,6 +71,17 @@ export default function TodayPage() {
 
       <Hero session={state.activeSession} reviewSession={state.reviewSession} now={now} />
 
+      {/*
+        Match day sits under the hero rather than beside it. Most weeks are training weeks, so
+        the hero stays the one big target — but a Saturday should never cost a coach a hunt
+        through Settings to find.
+      */}
+      {state.activeSession === null ? (
+        <Link href="/plan/match" className="btn btn--block">
+          Match day instead
+        </Link>
+      ) : null}
+
       {/* One dismissible bar, and only after a second completed session. */}
       <InstallBar
         completedSessions={state.meta?.completedSessionCount ?? state.recentSessions.length}
