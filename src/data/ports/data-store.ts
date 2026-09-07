@@ -11,8 +11,10 @@ import type {
   ReviewId,
   SessionId,
   SquadId,
+  GameModelId,
 } from '@/domain/ids';
 import type { PhaseImage } from '@/domain/phase-image';
+import type { GameModel } from '@/domain/game-model';
 import type { CapabilityScan, ObservedSkill } from '@/domain/capabilities/scan';
 import type { CarryForwardAction, CarryForwardStatus } from '@/domain/carry-forward';
 import type { Methodology, MethodologyPreset } from '@/domain/methodology';
@@ -43,6 +45,7 @@ export const STORE_NAMES = [
   'player_assessments',
   'capability_scans',
   'phase_images',
+  'game_models',
   'app_meta',
 ] as const;
 export type StoreName = (typeof STORE_NAMES)[number];
@@ -133,6 +136,16 @@ export interface PlayerAssessmentRepository extends Repository<
  * Deliberately thin. Do mode looks one up by id, which `Repository` already answers; the only
  * bulk question anything asks is *"every drawing in this session"*, for export and cleanup.
  */
+/**
+ * One game model per squad. `findBySquad` rather than a list, because a squad has exactly one
+ * current model — versioning it is deliberately out of scope for now (ADR 0007 follow-up).
+ */
+export interface GameModelRepository extends Repository<GameModelId, GameModel> {
+  findBySquad(squadId: SquadId): Promise<GameModel | undefined>;
+  /** Every model in the database, for the export. */
+  listAll(): Promise<GameModel[]>;
+}
+
 export interface PhaseImageRepository extends Repository<PhaseImageId, PhaseImage> {
   listBySession(sessionId: SessionId): Promise<PhaseImage[]>;
   /** Every image in the database, for the export. Rare, and never on the pitch-side path. */
@@ -215,6 +228,7 @@ export interface PocketDataStore {
   readonly assessments: PlayerAssessmentRepository;
   readonly scans: CapabilityScanRepository;
   readonly phaseImages: PhaseImageRepository;
+  readonly gameModels: GameModelRepository;
   readonly meta: MetaRepository;
 
   /**

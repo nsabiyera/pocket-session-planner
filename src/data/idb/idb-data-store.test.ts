@@ -65,6 +65,7 @@ describe('IdbDataStore — IndexedDB specifics', () => {
       'app_meta',
       'capability_scans',
       'carry_forward_actions',
+      'game_models',
       'methodologies',
       'methodology_prefs',
       'observations',
@@ -78,9 +79,16 @@ describe('IdbDataStore — IndexedDB specifics', () => {
     expect(db.version).toBe(DB_VERSION);
 
     const tx = db.transaction(
-      ['observations', 'carry_forward_actions', 'player_assessments', 'capability_scans'],
+      [
+        'observations',
+        'carry_forward_actions',
+        'player_assessments',
+        'capability_scans',
+        'game_models',
+      ],
       'readonly',
     );
+    expect([...tx.objectStore('game_models').indexNames].sort()).toEqual(['by-squad']);
     expect([...tx.objectStore('observations').indexNames].sort()).toEqual([
       'by-phase',
       'by-player-at',

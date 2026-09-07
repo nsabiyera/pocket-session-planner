@@ -11,6 +11,7 @@ import type {
   ReviewId,
   SessionId,
   SquadId,
+  GameModelId,
 } from '@/domain/ids';
 import type { CapabilityScan, ObservedSkill } from '@/domain/capabilities/scan';
 import type { CarryForwardAction, CarryForwardStatus } from '@/domain/carry-forward';
@@ -22,6 +23,7 @@ import type { PlayerAssessment } from '@/domain/player-assessment';
 import { CURRENT_SCHEMA_VERSION, type IsoDateTime } from '@/domain/primitives';
 import { PRESET_CATALOG_VERSION } from '@/domain/presets';
 import type { PhaseImage } from '@/domain/phase-image';
+import type { GameModel } from '@/domain/game-model';
 import type { SessionReview } from '@/domain/review';
 import type { Session, SessionStatus } from '@/domain/session';
 import type { Squad } from '@/domain/squad';
@@ -29,6 +31,7 @@ import { buildCatalog, resolveMethodology } from '../methodology-catalog';
 import type {
   AppMeta,
   CapabilityScanRepository,
+  GameModelRepository,
   PhaseImageRepository,
   CarryForwardActionRepository,
   CatalogEntry,
@@ -407,6 +410,22 @@ class IdbPlayerAssessmentRepository
   }
 }
 
+class IdbGameModelRepository
+  extends IdbRepository<GameModelId, GameModel>
+  implements GameModelRepository
+{
+  async findBySquad(squadId: SquadId): Promise<GameModel | undefined> {
+    // One per squad, so the first hit on the index is the answer. `putGameModel` is what
+    // keeps that true; IndexedDB has no way to enforce a unique non-key index.
+    const found = await this.fromIndex('by-squad', squadId);
+    return found[0];
+  }
+
+  async listAll(): Promise<GameModel[]> {
+    return this.all();
+  }
+}
+
 class IdbPhaseImageRepository
   extends IdbRepository<PhaseImageId, PhaseImage>
   implements PhaseImageRepository
@@ -507,6 +526,7 @@ export class IdbDataStore implements PocketDataStore {
   readonly actions: CarryForwardActionRepository;
   readonly assessments: PlayerAssessmentRepository;
   readonly scans: CapabilityScanRepository;
+  readonly gameModels: GameModelRepository;
   readonly phaseImages: PhaseImageRepository;
   readonly meta: MetaRepository;
 
@@ -522,6 +542,7 @@ export class IdbDataStore implements PocketDataStore {
     this.actions = new IdbCarryForwardActionRepository(ctx, 'carry_forward_actions');
     this.assessments = new IdbPlayerAssessmentRepository(ctx, 'player_assessments');
     this.scans = new IdbCapabilityScanRepository(ctx, 'capability_scans');
+    this.gameModels = new IdbGameModelRepository(ctx, 'game_models');
     this.phaseImages = new IdbPhaseImageRepository(ctx, 'phase_images');
     this.meta = new IdbMetaRepository(ctx);
   }

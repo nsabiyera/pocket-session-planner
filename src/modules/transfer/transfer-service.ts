@@ -109,10 +109,22 @@ async function collect(store: PocketDataStore, squadId?: SquadId): Promise<Trans
       .map(async ({ blob, ...meta }) => ({ ...meta, dataUrl: await blobToDataUrl(blob) })),
   );
 
+  /**
+   * The game model, scoped to the squads being exported.
+   *
+   * Easy to omit, and silent when omitted — `TransferDataSchema` defaults the array to `[]`,
+   * so a forgotten line here loses a coach's whole game model with no error anywhere. The
+   * comment in `planImport` says the same thing about drawings; this is the export half.
+   */
+  const gameModels = (
+    await Promise.all(squads.map((squad) => store.gameModels.findBySquad(squad.id)))
+  ).filter((model): model is NonNullable<typeof model> => model !== undefined);
+
   return TransferDataSchema.parse({
     squads,
     players,
     images,
+    gameModels,
     // **Custom only.** Built-in presets are code-resident and never travel.
     methodologies: await store.methodologies.listCustom(),
     sessions,
@@ -196,6 +208,7 @@ export async function planImport(
      * `transfer-service.test.ts` pins the round trip for exactly this reason.
      */
     images: migrateAll(rawData.images ?? []),
+    gameModels: migrateAll(rawData.gameModels ?? []),
   };
 
   // **Parse first.** A malformed file never touches IndexedDB.
@@ -231,6 +244,7 @@ export async function planImport(
     assessments: await diff(ctx.store, 'assessments', envelope.data.assessments, droppedIds, mode),
     scans: await diff(ctx.store, 'scans', envelope.data.scans, droppedIds, mode),
     images: await diff(ctx.store, 'images', envelope.data.images, droppedIds, mode),
+    gameModels: await diff(ctx.store, 'gameModels', envelope.data.gameModels, droppedIds, mode),
   };
 
   return ok({ mode, envelope, counts: envelope.counts, entries, dropped });
@@ -288,6 +302,7 @@ function repositoryFor(store: PocketDataStore, name: keyof TransferData): AnyRep
     assessments: store.assessments,
     scans: store.scans,
     images: store.phaseImages,
+    gameModels: store.gameModels,
   };
   return map[name] as AnyRepository;
 }
@@ -322,6 +337,12 @@ async function checkReferences(
   for (const player of data.players) {
     if (!squadExists(player.squadId)) {
       dropped.push({ store: 'players', id: player.id, reason: 'Its squad is missing.' });
+    }
+  }
+
+  for (const model of data.gameModels) {
+    if (!squadExists(model.squadId)) {
+      dropped.push({ store: 'gameModels', id: model.id, reason: 'Its squad is missing.' });
     }
   }
 
@@ -482,6 +503,7 @@ export async function commitImport(
     assessments: keep('assessments', data.assessments),
     scans: keep('scans', data.scans),
     images: keep('images', data.images),
+    gameModels: keep('gameModels', data.gameModels),
   };
 
   // In merge mode, resolve every conflict *before* opening the transaction.
@@ -499,6 +521,7 @@ export async function commitImport(
           assessments: await newerOnly(ctx.store, 'assessments', payload.assessments),
           scans: await newerOnly(ctx.store, 'scans', payload.scans),
           images: await newerOnly(ctx.store, 'images', payload.images),
+          gameModels: await newerOnly(ctx.store, 'gameModels', payload.gameModels),
         };
 
   if (plan.mode === 'replace') await ctx.store.clear();
@@ -519,6 +542,7 @@ export async function commitImport(
       'player_assessments',
       'capability_scans',
       'phase_images',
+      'game_models',
     ],
     'readwrite',
     async (tx) => {
@@ -535,6 +559,7 @@ export async function commitImport(
       await tx.phaseImages.putMany(
         toWrite.images.map(({ dataUrl, ...meta }) => ({ ...meta, blob: dataUrlToBlob(dataUrl) })),
       );
+      await tx.gameModels.putMany(toWrite.gameModels);
     },
   );
 
@@ -550,6 +575,7 @@ export async function commitImport(
       assessments: toWrite.assessments.length,
       scans: toWrite.scans.length,
       images: toWrite.images.length,
+      gameModels: toWrite.gameModels.length,
     },
     dropped: plan.dropped,
   });

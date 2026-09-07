@@ -10,8 +10,10 @@ import type {
   ReviewId,
   SessionId,
   SquadId,
+  GameModelId,
 } from '@/domain/ids';
 import type { PhaseImage } from '@/domain/phase-image';
+import type { GameModel } from '@/domain/game-model';
 import type { CapabilityScan, ObservedSkill } from '@/domain/capabilities/scan';
 import type { CarryForwardAction, CarryForwardStatus } from '@/domain/carry-forward';
 import type { Methodology } from '@/domain/methodology';
@@ -27,6 +29,7 @@ import { buildCatalog, resolveMethodology } from '../methodology-catalog';
 import type {
   AppMeta,
   CapabilityScanRepository,
+  GameModelRepository,
   PhaseImageRepository,
   CarryForwardActionRepository,
   CatalogEntry,
@@ -70,6 +73,7 @@ interface Tables {
   player_assessments: Map<string, PlayerAssessment>;
   capability_scans: Map<string, CapabilityScan>;
   phase_images: Map<string, PhaseImage>;
+  game_models: Map<string, GameModel>;
   app_meta: Map<string, AppMeta>;
 }
 
@@ -86,6 +90,7 @@ function emptyTables(): Tables {
     player_assessments: new Map(),
     capability_scans: new Map(),
     phase_images: new Map(),
+    game_models: new Map(),
     app_meta: new Map(),
   };
 }
@@ -351,6 +356,19 @@ class FakeCarryForwardActionRepository
   }
 }
 
+class FakeGameModelRepository
+  extends FakeRepository<GameModelId, GameModel>
+  implements GameModelRepository
+{
+  async findBySquad(squadId: SquadId): Promise<GameModel | undefined> {
+    return (await this.listAll()).find((model) => model.squadId === squadId);
+  }
+
+  async listAll(): Promise<GameModel[]> {
+    return [...this.table().values()].map(clone);
+  }
+}
+
 class FakePhaseImageRepository
   extends FakeRepository<PhaseImageId, PhaseImage>
   implements PhaseImageRepository
@@ -503,6 +521,7 @@ export class FakeDataStore implements PocketDataStore {
   readonly actions: CarryForwardActionRepository;
   readonly assessments: PlayerAssessmentRepository;
   readonly scans: CapabilityScanRepository;
+  readonly gameModels: GameModelRepository;
   readonly phaseImages: PhaseImageRepository;
   readonly meta: MetaRepository;
 
@@ -529,6 +548,7 @@ export class FakeDataStore implements PocketDataStore {
       touch,
     );
     this.scans = new FakeCapabilityScanRepository(() => this.tables.capability_scans, touch);
+    this.gameModels = new FakeGameModelRepository(() => this.tables.game_models, touch);
     this.phaseImages = new FakePhaseImageRepository(() => this.tables.phase_images, touch);
     this.meta = new FakeMetaRepository(() => this.tables.app_meta);
   }

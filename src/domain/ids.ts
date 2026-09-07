@@ -50,6 +50,12 @@ export const PlayerAssessmentIdSchema = z.string().uuid().brand<'PlayerAssessmen
 export type PlayerAssessmentId = z.infer<typeof PlayerAssessmentIdSchema>;
 
 /** A per-player challenge set at plan time. */
+export const GameModelIdSchema = z.string().uuid().brand<'GameModelId'>();
+export type GameModelId = z.infer<typeof GameModelIdSchema>;
+
+export const PrincipleIdSchema = z.string().uuid().brand<'PrincipleId'>();
+export type PrincipleId = z.infer<typeof PrincipleIdSchema>;
+
 export const ChallengeIdSchema = z.string().uuid().brand<'ChallengeId'>();
 export type ChallengeId = z.infer<typeof ChallengeIdSchema>;
 
@@ -79,6 +85,8 @@ export type CarryForwardActionId = z.infer<typeof CarryForwardActionIdSchema>;
  * Casting helpers for the one place a cast is legitimate: turning a freshly generated UUID
  * into a branded id. Everywhere else, parse.
  */
+export const asGameModelId = (v: string): GameModelId => GameModelIdSchema.parse(v);
+export const asPrincipleId = (v: string): PrincipleId => PrincipleIdSchema.parse(v);
 export const asSquadId = (v: string): SquadId => SquadIdSchema.parse(v);
 export const asPlayerId = (v: string): PlayerId => PlayerIdSchema.parse(v);
 export const asMethodologyId = (v: string): MethodologyId => MethodologyIdSchema.parse(v);

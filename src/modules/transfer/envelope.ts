@@ -9,6 +9,7 @@ import { CURRENT_SCHEMA_VERSION, IsoDateTimeSchema } from '@/domain/primitives';
 import { SessionReviewSchema } from '@/domain/review';
 import { SessionSchema } from '@/domain/session';
 import { SquadSchema } from '@/domain/squad';
+import { GameModelSchema } from '@/domain/game-model';
 import { PhaseImageSchema } from '@/domain/phase-image';
 
 /**
@@ -54,6 +55,8 @@ export const TransferDataSchema = z.object({
   scans: z.array(CapabilityScanSchema).default([]),
   /** Photographed practice drawings, base64'd. Added with the v4 store. */
   images: z.array(PhaseImageTransferSchema).default([]),
+  /** The squad's game model and its principles. Added with the v5 store. */
+  gameModels: z.array(GameModelSchema).default([]),
 });
 export type TransferData = z.infer<typeof TransferDataSchema>;
 
@@ -75,6 +78,8 @@ export const TransferCountsSchema = z.object({
   scans: z.number().int().min(0).default(0),
   /** Optional for the same reason: a file written before drawings must still parse. */
   images: z.number().int().min(0).default(0),
+  /** Optional for the same reason: a file written before game models must still parse. */
+  gameModels: z.number().int().min(0).default(0),
 });
 export type TransferCounts = z.infer<typeof TransferCountsSchema>;
 
@@ -102,6 +107,7 @@ export function countData(data: TransferData): TransferCounts {
     assessments: data.assessments.length,
     scans: data.scans.length,
     images: data.images.length,
+    gameModels: data.gameModels.length,
   };
 }
 

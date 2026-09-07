@@ -113,6 +113,15 @@ export default function SquadPage() {
       */}
       <PracticeMixPanel mix={practiceMix(mainPracticeSpectrums(state.recentSessions))} />
 
+      {/*
+        The game model belongs to the squad rather than to any session, so this is its home.
+        A quiet link: most weeks a coach opens Squad for the roster, and the model is edited
+        in pre-season and then rarely.
+      */}
+      <Link href="/squad/game-model" className="btn btn--block">
+        Game model
+      </Link>
+
       <section className="stack">
         <h2>
           {players.length} player{players.length === 1 ? '' : 's'}

@@ -1738,3 +1738,38 @@ summary {
   overflow-wrap: anywhere;
   color: var(--ink-soft);
 }
+
+/* ------------------------------------------------------ the game model */
+
+/*
+ * A principle and its branch. Indented by level, with a rule down the left so the tree is
+ * visible without drawing one — the hierarchy is the whole point, and a flat list of
+ * principles would lose the coherence the methodology insists on.
+ */
+.principle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3) 0 var(--sp-3) var(--sp-4);
+  border-left: 2px solid var(--line);
+}
+
+/* The trunk reads as the trunk. Everything below it is progressively quieter. */
+.principle--macro {
+  border-left-color: var(--signal);
+}
+.principle--meso {
+  border-left-color: var(--line-strong);
+}
+
+.principle__text {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.principle--micro .principle__text,
+.principle--sub .principle__text {
+  color: var(--ink-soft);
+}

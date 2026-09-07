@@ -232,3 +232,77 @@ describe('a file written before match day existed', () => {
     expect(imported?.match).toBeNull();
   });
 });
+
+describe('the game model in the envelope', () => {
+  it('travels with its principles, and recomputes on the far side', async () => {
+    const { setIdentity, addPrinciple } = await import('../planning/game-model-service');
+    const { describeGameModel } = await import('@/domain/game-model');
+
+    const squad = await createSquad(ctx, { name: 'First Team' });
+    const model = unwrap(await setIdentity(ctx, squad.id, 'We build from the back'));
+    const macro = unwrap(
+      await addPrinciple(ctx, {
+        squadId: squad.id,
+        moment: 'offensive_organisation',
+        level: 'macro',
+        text: 'Play out, do not clear',
+      }),
+    ).principles[0]!;
+    unwrap(
+      await addPrinciple(ctx, {
+        squadId: squad.id,
+        moment: 'offensive_organisation',
+        level: 'meso',
+        text: 'Through the pivot',
+        parentId: macro.id,
+      }),
+    );
+
+    const envelope = JSON.parse(JSON.stringify(await exportAll(ctx)));
+    expect(envelope.counts.gameModels).toBe(1);
+    expect(envelope.data.gameModels[0].principles).toHaveLength(2);
+
+    const target = freshContext('bbbb');
+    const plan = unwrap(await planImport(target, envelope, 'merge'));
+    expect(plan.dropped).toEqual([]);
+    unwrap(await commitImport(target, plan));
+
+    const imported = await target.store.gameModels.findBySquad(squad.id);
+    expect(imported?.id).toBe(model.id);
+    expect(imported?.identity).toBe('We build from the back');
+    // The tree survived, so the derived sentence still computes on the second device.
+    expect(imported?.principles.map((p) => p.level)).toEqual(['macro', 'meso']);
+    expect(describeGameModel(imported!)).toBe(
+      '2 principles across 1 moment. Nothing yet on when we lose it, out of possession or when we win it.',
+    );
+  });
+
+  it('drops a game model whose squad did not come with it', async () => {
+    const { setIdentity } = await import('../planning/game-model-service');
+    const squad = await createSquad(ctx, { name: 'First Team' });
+    unwrap(await setIdentity(ctx, squad.id, 'We build from the back'));
+
+    const envelope = JSON.parse(JSON.stringify(await exportAll(ctx)));
+    envelope.data.squads = [];
+
+    const target = freshContext('bbbb');
+    const plan = unwrap(await planImport(target, envelope, 'merge'));
+
+    expect(plan.entries.gameModels.create).toBe(0);
+    expect(plan.dropped.some((entry) => entry.store === 'gameModels')).toBe(true);
+  });
+
+  it('accepts a file written before game models existed', async () => {
+    const squad = await createSquad(ctx, { name: 'First Team' });
+    const envelope = JSON.parse(JSON.stringify(await exportAll(ctx)));
+    delete envelope.data.gameModels;
+    delete envelope.counts.gameModels;
+
+    const target = freshContext('bbbb');
+    const plan = unwrap(await planImport(target, envelope, 'merge'));
+    expect(plan.dropped).toEqual([]);
+    unwrap(await commitImport(target, plan));
+
+    expect(await target.store.gameModels.findBySquad(squad.id)).toBeUndefined();
+  });
+});

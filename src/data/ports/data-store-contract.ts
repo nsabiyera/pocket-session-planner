@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { asMethodologyId, asPlayerId, asSessionId, asSquadId } from '@/domain/ids';
 import { cloneMethodology } from '@/domain/methodology-clone';
 import { PLAY_PRACTICE_PLAY } from '@/domain/presets';
-import { isoDateTime, type IsoDateTime } from '@/domain/primitives';
+import { CURRENT_SCHEMA_VERSION, isoDateTime, type IsoDateTime } from '@/domain/primitives';
+import { GameModelSchema } from '@/domain/game-model';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import {
   aPlayer,
@@ -613,6 +614,49 @@ export function describeDataStoreContract(
     // -----------------------------------------------------------------------
     // Meta
     // -----------------------------------------------------------------------
+
+    describe('game models', () => {
+      const aGameModel = () =>
+        GameModelSchema.parse({
+          schemaVersion: CURRENT_SCHEMA_VERSION,
+          createdAt: T0,
+          updatedAt: T0,
+          id: testId('gm01'),
+          squadId: SQUAD_ID,
+          identity: 'We build from the back and attack through the middle',
+          principles: [
+            {
+              id: testId('pr01'),
+              moment: 'offensive_organisation',
+              level: 'macro',
+              parentId: null,
+              text: 'Build from the back',
+            },
+          ],
+        });
+
+      it('round-trips a model with its principles', async () => {
+        await store.gameModels.put(aGameModel());
+        const found = await store.gameModels.get(aGameModel().id);
+
+        expect(found?.identity).toBe('We build from the back and attack through the middle');
+        expect(found?.principles[0]?.text).toBe('Build from the back');
+      });
+
+      it('finds the one belonging to a squad', async () => {
+        await store.gameModels.put(aGameModel());
+        expect((await store.gameModels.findBySquad(SQUAD_ID))?.id).toBe(aGameModel().id);
+      });
+
+      it('finds nothing for a squad without one', async () => {
+        expect(await store.gameModels.findBySquad(asSquadId(testId('other')))).toBeUndefined();
+      });
+
+      it('lists every model, for the export', async () => {
+        await store.gameModels.put(aGameModel());
+        expect(await store.gameModels.listAll()).toHaveLength(1);
+      });
+    });
 
     describe('app meta', () => {
       it('is absent until written', async () => {

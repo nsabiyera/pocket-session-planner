@@ -9,6 +9,7 @@ import type { SessionReview } from '@/domain/review';
 import type { PhaseImage } from '@/domain/phase-image';
 import type { Session } from '@/domain/session';
 import type { Squad } from '@/domain/squad';
+import type { GameModel } from '@/domain/game-model';
 import type { AppMeta, MethodologyPrefs } from '../ports/data-store';
 
 export const DB_NAME = 'pocket-session-planner';
@@ -21,7 +22,7 @@ export const DB_NAME = 'pocket-session-planner';
  * Document *shape* changes use `RecordMeta.schemaVersion` instead and are applied lazily on
  * read, so a coach with three seasons of observations does not stare at a spinner on launch.
  */
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 
 /**
  * `idb`'s generic schema type. This is most of the reason the library is worth its 1.2 kB:
@@ -117,6 +118,17 @@ export interface PocketDBSchema extends DBSchema {
       /** multiEntry, so one action carrying three players is findable under each of them. */
       'by-player': string;
     };
+  };
+  /**
+   * Added in v5: the squad's intended way of playing, decomposed into principles.
+   *
+   * Its own store because a game model is a genuinely new aggregate (ADR 0007) — it outlives
+   * every session that refers to it and is edited on its own schedule.
+   */
+  game_models: {
+    key: string;
+    value: GameModel;
+    indexes: { 'by-squad': string };
   };
   app_meta: {
     key: string;
