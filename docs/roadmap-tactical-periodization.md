@@ -16,15 +16,14 @@ dimensions of football are **inseparable**, so they are never trained apart: the
 isolated fitness work, and "physical" is a consequence of playing rather than a component to be
 added.
 
-Six ideas carry it:
+Its ideas, and the distinction that matters most — **principles of play** are what you train, **methodological principles** are how:
 
 | Idea | What it means |
 | --- | --- |
 | **Game model** | The team's intended way of playing. Not a formation — an identity. Everything trained refers back to it. |
 | **The four moments** | Offensive organisation, defensive organisation, and the two transitions (attack→defence, defence→attack). The game is trained through these. |
-| **Principles hierarchy** | The game model is decomposed: macro-principles → meso → micro → sub-principles. Complexity is reduced by fragmentation. |
-| **Specificity** | Every practice must contain the way you intend to play. This is the governing principle. |
-| **Propensities** | Practices are designed so the wanted behaviour happens *often*, not occasionally. |
+| **Principles of play** | The game model decomposed by level. Naming varies: macro → meso → micro (→ sub), or principles → sub-principles → sub-sub-principles. The levels are structural; **no source publishes a canonical enumeration**. |
+| **Methodological principles** | *Specificity* is the supra-principle. *Propensities*, *complex progression* and *horizontal alternation* exist to make it real, and together take shape as the morphocycle. |
 | **The morphocycle** | The repeating week between matches, in which each day carries a different dominant sub-dynamic of football effort — tension, duration, velocity — alternated so the same quality is never hammered twice. |
 
 > **Revised.** The two problems below were written assuming a grassroots audience. Under a pro /
@@ -125,10 +124,21 @@ labels, and every report that groups by theme. Needs a migration for stored sess
 one in this app that cannot ride `nullable().default()`, because the old value is genuinely
 ambiguous and must be mapped, not defaulted.
 
-### Phase 3 — The principles hierarchy
+### Phase 3 — The principles of play
 
-Principles hang off the game model at macro / meso / micro / sub level, and a session's
-objective and coaching points reference one. This is what lets the app answer *"which principle
+Principles hang off the game model by level, and a session's objective and coaching points
+reference one.
+
+**The coach authors the hierarchy; the app does not ship one.** No source publishes a canonical
+enumeration of principles — the University of Denver series names the levels and defers examples
+to the official school — and in any case the principles *are* the coach'''s game model, so a
+shipped list would be someone else'''s. The app supplies the structure, the levels, and the
+coherence check the sources do describe: a micro-principle detached from its macro is a leaf off
+a tree.
+
+This also settles the open question about the objective library. Principles sit **above** the
+fourteen objectives rather than replacing them — the chips stay as fast starting points, and a
+coach who wants their own principle-linked objectives adds them. This is what lets the app answer *"which principle
 did we actually work on this month?"* — and it is where the existing carry-forward warning gains
 real teeth, because chasing the same point three weeks running is a sub-principle that has not
 been acquired.
