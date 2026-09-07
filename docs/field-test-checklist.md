@@ -117,6 +117,19 @@ will not get kept, and every number downstream of it is then absent rather than 
 - [ ] Run the same unresolved point through three sessions and confirm the planner warns:
       *"change the practice, not the point."*
 
+## Crashes
+
+- [ ] Force a crash on a screen (temporarily throw in a component). Confirm you get the
+      recovery page and **not a blank white screen**, and that `Reload and carry on` resumes a
+      running session with its elapsed time intact.
+- [ ] Crash during a session, force-quit, reopen. The report is still in Settings.
+- [ ] With a squad loaded, trigger an error whose message contains a player name — confirm the
+      stored report shows `[name]` and not the name. **This is the one that matters.**
+- [ ] Send a crash report and read the issue GitHub opens. Check the stack is legible and that
+      nothing about the squad survived.
+- [ ] Trigger the same crash repeatedly. It should stay one report with a count, not fill the list.
+- [ ] Discard a report, and discard all.
+
 ## Conditions
 
 - [ ] **Outdoors in daylight**: read the timer at arm's length. Read the phase name. Read a

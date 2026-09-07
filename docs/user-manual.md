@@ -258,6 +258,16 @@ this phase, with `＋1` if you missed one. `Undo` on the toast removes the most 
 logged, and nothing is inferred that cannot be. If a line says nothing about a corner or a
 capability, it is because no observation carried one — not because the app decided for you.
 
+**The app broke.** If a screen ever fails to draw you get a page saying so, with
+``Reload and carry on`` — take it. Your session is still running and nothing you logged is
+lost, because it was saved as you tapped it.
+
+The error itself is saved on the device automatically. `Settings -> Crash reports` shows what
+happened and offers to send it, and you can read the whole thing first. **Player and squad
+names are removed before you ever see it** — replaced with `[name]` — so a crash cannot
+publish anything about your squad. As with feedback, nothing is sent until you press the
+button on GitHub.
+
 **None of the above.** `Settings → Feedback` writes it up for you. Pick whether something
 broke or you want something changed, type what happened, and tap `Open GitHub to post it` —
 GitHub opens with the report already written, and it is posted only once you press `Create`

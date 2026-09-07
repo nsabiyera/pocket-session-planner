@@ -6,6 +6,7 @@ import type { SessionId, SquadId } from '@/domain/ids';
 import type { Player } from '@/domain/player';
 import type { Session } from '@/domain/session';
 import type { Squad } from '@/domain/squad';
+import { rememberNamesToRedact } from '@/lib/crash-store';
 import { IdbDataStore } from '@/data/idb/idb-data-store';
 import type { AppMeta, CatalogEntry, PocketDataStore } from '@/data/ports/data-store';
 import { systemClock } from '@/lib/clock';
@@ -156,6 +157,18 @@ export async function refresh(): Promise<void> {
       dataStore.actions.listOpen(squad.id),
       dataStore.methodologies.list(),
     ]);
+
+  /*
+   * Hand the crash reporter the names it must never publish.
+   *
+   * Done here because a global error handler has no React context and cannot await a read.
+   * The reporter keeps them in `localStorage` so it can redact a stack trace synchronously,
+   * before anything is rendered and before the coach sees the report.
+   */
+  rememberNamesToRedact([
+    ...players.map((player) => player.name),
+    ...squads.map((candidate) => candidate.name),
+  ]);
 
   store.setState((current) => ({
     ...current,

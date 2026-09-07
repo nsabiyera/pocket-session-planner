@@ -6,6 +6,7 @@ import { initApp, useAppState } from '@/modules/app/app-store';
 import { BottomNav } from './bottom-nav';
 import { ToastHost } from './toast-host';
 import { UpdateToast } from './update-toast';
+import { CrashBoundary, useCrashHandlers } from './crash-boundary';
 
 /**
  * The client boundary everything else lives inside.
@@ -18,6 +19,9 @@ import { UpdateToast } from './update-toast';
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const state = useAppState();
   const pathname = usePathname();
+
+  // The two crashes a render boundary cannot see: uncaught errors and rejected promises.
+  useCrashHandlers();
 
   useEffect(() => {
     void initApp();
@@ -34,7 +38,12 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         </div>
       ) : null}
 
-      {children}
+      {/*
+        Inside the boundary, so a render error shows a way back to the session rather than a
+        blank white screen. The nav and the toasts sit outside it deliberately — if the crash
+        is in a page, the chrome should survive it.
+      */}
+      <CrashBoundary>{children}</CrashBoundary>
 
       {/* Do mode is a mode, not a page: no nav to mis-tap while the timer runs. */}
       {pathname?.startsWith('/run') ? null : <BottomNav />}

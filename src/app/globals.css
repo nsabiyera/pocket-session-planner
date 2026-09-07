@@ -1718,3 +1718,23 @@ summary {
   border-color: var(--accent);
   color: var(--ink);
 }
+
+/*
+ * A stack trace in the crash panel. Scrolls in its own box — a trace has no line-length
+ * discipline whatsoever, and letting it stretch the page would break every other screen's
+ * promise that the body never scrolls sideways.
+ */
+.crash-stack {
+  margin: 0;
+  max-height: 40vh;
+  overflow: auto;
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+  border: var(--border);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink-soft);
+}

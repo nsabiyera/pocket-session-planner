@@ -172,10 +172,30 @@ export function feedbackUrl(report: FeedbackReport, repository = FEEDBACK_REPOSI
 }
 
 function buildUrl(report: FeedbackReport, repository: string): string {
+  return issueUrl(
+    { title: feedbackTitle(report), body: feedbackBody(report), label: GITHUB_LABEL[report.kind] },
+    repository,
+  );
+}
+
+/** How long a prefilled issue URL may get. Shared with the crash reporter. */
+export const ISSUE_URL_LIMIT = URL_LIMIT;
+
+/**
+ * A prefilled new-issue URL.
+ *
+ * Shared with `crash.ts`, which needs the same query-string discipline for a different body.
+ * The label rides along and is genuinely useful to a maintainer, but note that GitHub drops it
+ * for anyone without triage rights — which is why both callers also name the kind in the body.
+ */
+export function issueUrl(
+  issue: { title: string; body: string; label: string },
+  repository = FEEDBACK_REPOSITORY,
+): string {
   const params = new URLSearchParams({
-    title: feedbackTitle(report),
-    body: feedbackBody(report),
-    labels: GITHUB_LABEL[report.kind],
+    title: issue.title,
+    body: issue.body,
+    labels: issue.label,
   });
   return `https://github.com/${repository}/issues/new?${params.toString()}`;
 }
