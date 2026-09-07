@@ -117,8 +117,7 @@ against `FakeDataStore`.
    never corrupt evidence.
 
 The decisions worth arguing with are recorded as ADRs. The first three are divergences from the
-house conventions in `hodorhub`; the last two are modelling calls this app had to make on its
-own.
+house conventions in `hodorhub`; the rest are modelling calls this app had to make on its own.
 
 - [ADR 0001](docs/adr/0001-indexeddb-not-drizzle-postgres.md) — IndexedDB behind a repository port
 - [ADR 0002](docs/adr/0002-client-heavy-app-router.md) — a client-heavy App Router tree
@@ -127,6 +126,8 @@ own.
   `organisation` kept as free text
 - [ADR 0005](docs/adr/0005-match-day-as-a-session-kind.md) — match day as a `Session` kind, not a
   second aggregate
+- [ADR 0006](docs/adr/0006-tactical-periodization-without-the-morphocycle.md) — tactical
+  periodization's tactical core, without the morphocycle
 
 ## Testing
 

@@ -1,6 +1,6 @@
 # Roadmap — preparing for a match with tactical periodization
 
-- **Status:** Proposed. Nothing here is built.
+- **Status:** Phase 0 done ([ADR 0006](adr/0006-tactical-periodization-without-the-morphocycle.md)). No code yet.
 - **Date:** 2026-09-07
 - **Asked for:** *"As a coach, on a match day I would like to prepare for a game using tactical
   periodization methodology."*
@@ -91,7 +91,7 @@ More than expected. This is mostly composition:
 
 ## The phases
 
-### Phase 0 — Write the ADR first
+### Phase 0 — Write the ADR first — **done**
 
 The scope decision above (tactical half yes, physical periodization no) is the whole design, and
 it is contentious enough that it should be argued in `docs/adr/0006-*` before any code. It also
