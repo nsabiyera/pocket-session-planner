@@ -13,13 +13,16 @@ import {
 import { CoachingPointSchema, normaliseCoachingPointText } from '@/domain/coaching-point';
 import { findObjectiveTemplate } from '@/domain/objectives';
 import type { InterventionPlan } from '@/domain/intervention';
-import { CURRENT_SCHEMA_VERSION, type IsoDateTime } from '@/domain/primitives';
+import { CURRENT_SCHEMA_VERSION, isoDateTime, type IsoDateTime } from '@/domain/primitives';
 import {
   autoTitle,
   buildSessionFromMethodology,
   rescaleSessionPhases,
 } from '@/domain/session/build-from-methodology';
 import { buildMatch } from '@/domain/session/build-match';
+import { MatchDetailsSchema, describeFixture, matchFormatOf } from '@/domain/match-day';
+import { ageBandOf } from '@/domain/practice/match';
+import type { ParsedFixture } from '@/domain/fixture-list';
 import type { MatchDetailsInput } from '@/domain/match-day';
 import { applySessionCommand, type TransitionError } from '@/domain/session/state-machine';
 import { mainPracticePhase } from '@/domain/session/selectors';
@@ -176,6 +179,75 @@ export async function startMatchDraft(
   });
 
   return ok(session);
+}
+
+/**
+ * Adds a run of fixtures, each committed straight to `planned`.
+ *
+ * **Not drafts.** `startMatchDraft` replaces the squad's single draft (ADR 0003), so entering a
+ * second fixture would discard the first — which is exactly why there was no fixture list until
+ * now. A fixture goes to `planned` instead, where sessions accumulate freely, and the draft slot
+ * stays free for the session a coach is actually composing.
+ *
+ * The team objective starts as the fixture line. That is a **label, not an objective**: in July
+ * a coach does not know what March's game is about. It carries no `principleId`, so every report
+ * downstream correctly counts the fixture as unlinked until the brief is written — which is the
+ * honest reading rather than a placeholder pretending to be a plan.
+ */
+export async function addFixtures(
+  ctx: ServiceContext,
+  squadId: SquadId,
+  fixtures: readonly ParsedFixture[],
+): Promise<Result<Session[], PlanningError>> {
+  const squad = await ctx.store.squads.get(squadId);
+  if (!squad) return err({ kind: 'squad_not_found' });
+
+  const band = ageBandOf(squad.ageGroup);
+  const format = band === null ? '11v11' : (matchFormatOf(band) ?? '11v11');
+  const at = now(ctx);
+  const created: Session[] = [];
+
+  for (const fixture of fixtures) {
+    const details: MatchDetailsInput = {
+      opponent: fixture.opponent,
+      venue: fixture.venue,
+      fixtureType: 'league',
+      format,
+      shapeName: null,
+      periodCount: 2,
+    };
+
+    const draft = buildMatch({
+      squad,
+      objective: {
+        text: describeFixture(MatchDetailsSchema.parse(details)),
+        successCriteria: [],
+        sourceActionId: null,
+        principleId: null,
+      },
+      match: details,
+      now: at,
+      ids: ctx.ids,
+      scheduledFor: isoDateTime(fixture.kickOffAt),
+    });
+
+    // Straight past the draft slot. `commitPlan`'s only guard is a non-empty objective, which
+    // the fixture line satisfies.
+    const planned = applySessionCommand(draft, { kind: 'commitPlan' }, at);
+    if (!planned.ok) return err({ kind: 'transition', error: planned.error });
+    created.push(planned.value);
+  }
+
+  await ctx.store.sessions.putMany(created);
+  return ok(created);
+}
+
+/** Every fixture for a squad, soonest first. */
+export async function listFixtures(ctx: ServiceContext, squadId: SquadId): Promise<Session[]> {
+  const sessions = await ctx.store.sessions.listBySquad(squadId, { limit: 200 });
+  return sessions
+    .filter((session) => session.kind === 'match')
+    .sort((a, b) => (a.scheduledFor < b.scheduledFor ? -1 : 1));
 }
 
 function addObjectivePoints(

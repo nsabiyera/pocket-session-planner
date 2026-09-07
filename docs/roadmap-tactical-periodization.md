@@ -251,10 +251,10 @@ Worth stating so it is not quietly attempted later:
 All six phases are built, tested and deployed. **None of it has been used by a coach**, and the
 gaps that matters most are not in the phases:
 
-- **There is no fixture list.** `/plan/week` and `/plan/prepare` both assume a run of fixtures a
-  professional coach would maintain, and this app has no way to import one — matches are planned
-  one at a time. That is the first thing real use will complain about, and it is a bigger hole
-  than anything left inside the six phases.
+- ~~**There is no fixture list.**~~ **Built.** `/plan/fixtures` takes a pasted season and commits
+  each fixture to `planned` rather than into the single draft slot, which is what had made a run
+  of fixtures impossible. The parse is shown before anything is written and unreadable lines are
+  reported rather than dropped.
 - **The planning half wants a bigger screen.** ADR 0007 records this as a cost rather than a
   bug: the twenty-second create flow and the gloved-thumb sizing were built for a volunteer on a
   wet touchline, and authoring a forty-principle game model is not that task.

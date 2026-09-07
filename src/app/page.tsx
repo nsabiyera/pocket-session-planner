@@ -77,9 +77,14 @@ export default function TodayPage() {
         through Settings to find.
       */}
       {state.activeSession === null ? (
-        <Link href="/plan/match" className="btn btn--block">
-          Match day instead
-        </Link>
+        <div className="row row--wrap">
+          <Link href="/plan/match" className="btn">
+            Match day instead
+          </Link>
+          <Link href="/plan/fixtures" className="btn">
+            Fixtures
+          </Link>
+        </div>
       ) : null}
 
       {/* One dismissible bar, and only after a second completed session. */}

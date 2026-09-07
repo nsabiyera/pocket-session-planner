@@ -91,8 +91,8 @@ export default function PreparePage() {
       <Screen>
         <ScreenHead eyebrow="Match brief" title={squad.name} />
         <Empty>No fixture to prepare for yet.</Empty>
-        <Link href="/plan/match" className="btn btn--primary btn--block">
-          Plan a match
+        <Link href="/plan/fixtures" className="btn btn--primary btn--block">
+          Add your fixtures
         </Link>
       </Screen>
     );

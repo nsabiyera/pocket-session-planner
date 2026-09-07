@@ -99,11 +99,11 @@ export default function WeekPage() {
       <Screen>
         <ScreenHead eyebrow="The week" title={squad.name} />
         <Empty>
-          No fixture yet. The week is the cycle between two games, so plan a match and the sessions
-          before it appear here.
+          No fixture yet. The week is the cycle between two games, so the fixture list is what makes
+          this screen work — put the season in once and every week reads itself.
         </Empty>
-        <Link href="/plan/match" className="btn btn--primary btn--block">
-          Plan a match
+        <Link href="/plan/fixtures" className="btn btn--primary btn--block">
+          Add your fixtures
         </Link>
       </Screen>
     );
