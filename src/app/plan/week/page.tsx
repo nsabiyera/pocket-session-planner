@@ -18,6 +18,13 @@ import {
   type Morphocycle,
 } from '@/domain/morphocycle';
 import { describeFixture } from '@/domain/match-day';
+import { getGameModel } from '@/modules/planning/game-model-service';
+import {
+  describeMomentsInWeek,
+  describeWeekReview,
+  reviewWeek,
+} from '@/domain/game-model/week-review';
+import type { GameModel } from '@/domain/game-model';
 import { isErr } from '@/lib/result';
 import type { Session } from '@/domain/session';
 import type { SessionId } from '@/domain/ids';
@@ -38,13 +45,19 @@ import type { SessionId } from '@/domain/ids';
 export default function WeekPage() {
   const state = useAppState();
   const [sessions, setSessions] = useState<Session[] | null>(null);
+  const [model, setModel] = useState<GameModel | null>(null);
 
   const squadId = state.squad?.id;
 
   const reload = useCallback(async () => {
     if (!squadId) return;
-    const rows = await getServiceContext().store.sessions.listBySquad(squadId, { limit: 60 });
+    const ctx = getServiceContext();
+    const [rows, found] = await Promise.all([
+      ctx.store.sessions.listBySquad(squadId, { limit: 60 }),
+      getGameModel(ctx, squadId),
+    ]);
     setSessions(rows);
+    setModel(found ?? null);
   }, [squadId]);
 
   useEffect(() => {
@@ -142,8 +155,53 @@ export default function WeekPage() {
         </section>
       )}
 
+      <WeekReviewPanel cycle={cycle} model={model} sessions={sessions} />
+
       <PatternNote cycle={cycle} level={squad.level} />
     </Screen>
+  );
+}
+
+/**
+ * Did the week contain the game model?
+ *
+ * The report the whole feature builds toward, and the only part of it that can falsify a
+ * coach's own week rather than display it.
+ *
+ * **It does not flag a week concentrated on one moment.** In tactical periodization a
+ * morphocycle has a theme, and working one macro principle across the days at descending levels
+ * is the normal shape of an acquisition week — see the note at the top of `week-review.ts`.
+ */
+function WeekReviewPanel({
+  cycle,
+  model,
+  sessions,
+}: {
+  cycle: Morphocycle;
+  model: GameModel | null;
+  sessions: readonly Session[];
+}) {
+  if (model === null) return null;
+
+  const principleIdOf = (sessionId: string) =>
+    sessions.find((session) => session.id === sessionId)?.objective.principleId ?? null;
+
+  const review = reviewWeek(cycle, model, principleIdOf);
+  const sentence = describeWeekReview(review, model);
+  if (sentence === null) return null;
+
+  const moments = describeMomentsInWeek(review);
+
+  return (
+    <section className="stack">
+      <h2>The week against your model</h2>
+      <p className="banner banner--signal">{sentence}</p>
+      {moments === null ? null : <p className="card-meta">Moments touched: {moments}.</p>}
+      <p className="card-meta">
+        Reported, not scored. A week on one macro principle is the normal shape of an acquisition
+        week, so it is not flagged.
+      </p>
+    </section>
   );
 }
 

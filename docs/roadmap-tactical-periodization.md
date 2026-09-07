@@ -1,6 +1,6 @@
 # Roadmap — preparing for a match with tactical periodization
 
-- **Status:** Phases 0–4 done. Phase 5 (alternation) and Phase 6 (match preparation) are next.
+- **Status:** Phases 0–5 done. Phase 6 (match preparation) is next.
   **Revised 2026-09-07** for a pro / semi-pro audience — see
   [ADR 0007](adr/0007-morphocycle-for-adult-squads.md), which supersedes ADR 0006.
 - **Date:** 2026-09-07
@@ -178,15 +178,26 @@ The last session before the match goes to the opponent and set pieces, which is 
 source agrees on. Where the app has no defensible number it shows none, in the manner
 `describeRepresentativeness` already uses.
 
-### Phase 5 — Alternation, and did the week contain the game model?
+### Phase 5 — Alternation, and did the week contain the game model? — **done**
 
 The report that makes the whole thing honest, and the only part that can falsify a coach's own
-plan. It reuses representativeness and the practice mix to say whether the sessions before a
-match actually contained the principle they were supposed to train, and whether the moments were
-alternated or the same one worked three times.
+plan across a week rather than display it.
 
-Nothing here scores the coach. It reports the record, in the voice the practice-mix and
-minutes reports already use.
+**One thing this phase originally proposed was wrong and was not built.** The line above used to
+say the report should flag "the same moment worked three times". It should not: in tactical
+periodization a morphocycle **has a theme**, and working one macro principle across the week at
+descending levels is the normal shape of an acquisition week. Flagging it would have marked good
+practice as a fault. Horizontal alternation is a claim about the *sub-dynamics of effort* —
+tension, duration, velocity — not about the moments.
+
+So the findings are only the ones the sources support: an effort quality on consecutive days;
+sessions naming no principle at all, which is a fact about the record rather than a judgement
+about the coaching; a labelled week with no acquisitive day; and — reported, never judged — how
+many distinct macro principles the week's work rolled up to. Sub-principles roll up to their
+macro, so a week on three sub-principles of one macro reports as **one** theme.
+
+Nothing here scores the coach. It reports the record, in the voice the practice-mix and minutes
+reports already use, and it says nothing at all when there is no game model to check against.
 
 ### Phase 6 — Match preparation
 
