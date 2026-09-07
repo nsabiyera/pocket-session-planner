@@ -12,7 +12,12 @@ import type { CarryForwardAction } from '@/domain/carry-forward';
 function draftFixture(over: Partial<Session> = {}): Session {
   const draft = buildSessionFromMethodology(PLAY_PRACTICE_PLAY, {
     squad: aSquad(),
-    objective: { text: 'Original objective', successCriteria: [], sourceActionId: null },
+    objective: {
+      text: 'Original objective',
+      successCriteria: [],
+      sourceActionId: null,
+      principleId: null,
+    },
     now: T0,
     ids: new FakeIdGenerator('aaaa'),
   });

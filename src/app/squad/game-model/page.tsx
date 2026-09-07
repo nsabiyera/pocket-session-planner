@@ -25,6 +25,7 @@ import {
   type Principle,
   type PrincipleLevel,
 } from '@/domain/game-model';
+import { coverageOf, describeCoverage } from '@/domain/game-model/coverage';
 import { isErr } from '@/lib/result';
 import type { PrincipleId } from '@/domain/ids';
 
@@ -133,6 +134,13 @@ export default function GameModelPage() {
         <>
           <p className="banner banner--signal">{describeGameModel(model)}</p>
 
+          {/*
+            What the sessions actually trained, against what the model says. The first thing in
+            this feature that can falsify the coach's own plan rather than record it — and the
+            reason the principle link on a session is worth asking for.
+          */}
+          <CoveragePanel model={model} sessions={state.recentSessions} />
+
           {MOMENTS.map((moment) => (
             <MomentSection
               key={moment}
@@ -164,6 +172,48 @@ export default function GameModelPage() {
         </p>
       </details>
     </Screen>
+  );
+}
+
+/**
+ * Sessions against the model.
+ *
+ * Silent below four linked sessions, in the spirit of the corner-balance report's eight
+ * observations: a report that accuses a coach of neglecting a moment after one Tuesday is a
+ * report they learn to ignore.
+ */
+function CoveragePanel({
+  model,
+  sessions,
+}: {
+  model: GameModel;
+  sessions: readonly {
+    objective: { principleId: PrincipleId | null; text: string };
+    scheduledFor: string;
+  }[];
+}) {
+  const report = coverageOf(model, sessions);
+  const sentence = describeCoverage(report);
+  if (sentence === null) return null;
+
+  const trained = report.principles.filter((entry) => entry.sessions > 0);
+
+  return (
+    <section className="stack">
+      <h2>What you have actually trained</h2>
+      <p className="banner banner--signal">{sentence}</p>
+      <ul className="stack stack--tight">
+        {trained.map((entry) => (
+          <li key={entry.principle.id} className="card-meta">
+            {entry.principle.text} — {entry.sessions} session{entry.sessions === 1 ? '' : 's'}
+          </li>
+        ))}
+      </ul>
+      <p className="card-meta">
+        From your last {sessions.length} completed session{sessions.length === 1 ? '' : 's'}. No
+        target and no judgement — it reports the record.
+      </p>
+    </section>
   );
 }
 

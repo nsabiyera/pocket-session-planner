@@ -1,5 +1,11 @@
 import { err, ok, type Result } from '@/lib/result';
-import { asGameModelId, asPrincipleId, type PrincipleId, type SquadId } from '@/domain/ids';
+import {
+  asGameModelId,
+  asPrincipleId,
+  type PrincipleId,
+  type SessionId,
+  type SquadId,
+} from '@/domain/ids';
 import { CURRENT_SCHEMA_VERSION } from '@/domain/primitives';
 import {
   GameModelSchema,
@@ -9,6 +15,7 @@ import {
   type Principle,
   type PrincipleLevel,
 } from '@/domain/game-model';
+import { SessionSchema, type Session } from '@/domain/session';
 import { now, type ServiceContext } from '../context';
 
 /**
@@ -178,6 +185,34 @@ export async function setNotes(
   const model = await ctx.store.gameModels.findBySquad(squadId);
   if (!model) return err({ kind: 'no_game_model' });
   return write(ctx, { ...model, notes, updatedAt: now(ctx) });
+}
+
+/**
+ * Names the principle a session is training.
+ *
+ * On the session rather than on the model, because it is a fact about that Tuesday and not
+ * about the game model — which is also why it survives the principle later being deleted. See
+ * the note on `Objective.principleId`.
+ */
+export async function setObjectivePrinciple(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  principleId: PrincipleId | null,
+): Promise<Result<Session, GameModelError>> {
+  const session = await ctx.store.sessions.get(sessionId);
+  if (!session) return err({ kind: 'invalid', message: 'That session is gone.' });
+
+  const updated = SessionSchema.safeParse({
+    ...session,
+    objective: { ...session.objective, principleId },
+    updatedAt: now(ctx),
+  });
+  if (!updated.success) {
+    return err({ kind: 'invalid', message: 'Could not save that.' });
+  }
+
+  await ctx.store.sessions.put(updated.data);
+  return ok(updated.data);
 }
 
 /** A principle and every principle beneath it, at any depth. */

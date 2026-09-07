@@ -8,6 +8,7 @@ import {
   PhaseImageIdSchema,
   PhaseTemplateIdSchema,
   PlayerIdSchema,
+  PrincipleIdSchema,
   ReviewIdSchema,
   SessionIdSchema,
   SquadIdSchema,
@@ -53,6 +54,20 @@ export const ObjectiveSchema = z.object({
   successCriteria: z.array(nonEmptyText(120)).max(5).default([]),
   /** Set when the objective was seeded by carry-forward, for the "carried from" marker. */
   sourceActionId: CarryForwardActionIdSchema.nullable().default(null),
+  /**
+   * The game-model principle this session is training (ADR 0007, Phase 3).
+   *
+   * **Deliberately unvalidated against the game model.** The model is a different document, so
+   * a schema on this one cannot resolve the id — and it should not want to. Sessions are
+   * evidence of what was trained: a coach who later rewrites their game model must not have
+   * their history rewritten with it, so a principle that has since been removed leaves a
+   * *dangling id on purpose* and the report says the principle is gone rather than pretending
+   * the session trained something else.
+   *
+   * Nullable and defaulted, so every session written before this parses unchanged and a coach
+   * who never authors a game model is never asked for one.
+   */
+  principleId: PrincipleIdSchema.nullable().default(null),
 });
 export type Objective = z.infer<typeof ObjectiveSchema>;
 

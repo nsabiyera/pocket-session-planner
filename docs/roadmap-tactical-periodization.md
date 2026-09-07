@@ -137,7 +137,7 @@ rather than a phase of the game, and filing *"first touch out of your feet"* und
 organisation to fit a four-moments model would be the app inventing a fact. `momentOf` returns
 null for them, so a caller that needs a moment skips them rather than being handed a guess.
 
-### Phase 3 — The principles of play
+### Phase 3 — The principles of play — **done**
 
 Principles hang off the game model by level, and a session's objective and coaching points
 reference one.

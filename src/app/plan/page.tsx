@@ -5,18 +5,21 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Loading, Screen, ScreenHead, Segmented, Stepper } from '../_components/ui';
 import { CarryForwardChips } from '../_components/carry-forward-chips';
+import { PrinciplePicker } from '../_components/principle-picker';
 import { showToast } from '../_components/toast-host';
 import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
 import { startDraft } from '@/modules/planning/planning-service';
+import { setObjectivePrinciple } from '@/modules/planning/game-model-service';
 import { applyActionsToDraft } from '@/modules/review/review-service';
 import {
+  momentOf,
   objectiveUsageFrom,
   OBJECTIVE_LIBRARY,
   orderObjectives,
   type ObjectiveTemplate,
 } from '@/domain/objectives';
 import { describeInterventionPlan } from '@/domain/intervention';
-import type { MethodologyId, PlayerId } from '@/domain/ids';
+import type { MethodologyId, PlayerId, PrincipleId } from '@/domain/ids';
 import { shortPlayerName } from '@/domain/player';
 import { isErr } from '@/lib/result';
 import type { CarryForwardAction } from '@/domain/carry-forward';
@@ -39,6 +42,7 @@ export default function PlanPage() {
   const [durationMin, setDurationMin] = useState<number | null>(null);
   const [focusIds, setFocusIds] = useState<Set<PlayerId>>(new Set());
   const [selectedActions, setSelectedActions] = useState<Set<string>>(new Set());
+  const [principleId, setPrincipleId] = useState<PrincipleId | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Recents-first, ordered by frequency then recency. A coach works on the same three or
@@ -106,6 +110,12 @@ export default function PlanPage() {
         if (!isErr(applied) && applied.value.skipped.length > 0) {
           showToast(`${applied.value.skipped.length} carried item(s) did not fit.`);
         }
+      }
+
+      // The principle is set after the draft exists, because it is a fact about this session
+      // rather than an input to building one.
+      if (principleId !== null) {
+        await setObjectivePrinciple(ctx, created.value.id, principleId);
       }
 
       await refresh();
@@ -177,6 +187,20 @@ export default function PlanPage() {
             </details>
           </div>
         </details>
+
+        {/*
+          Only once an objective is chosen, and only for one that belongs to a moment. The
+          picker narrows itself to that moment, so this costs a tap rather than a scroll
+          through a professional coach's whole model.
+        */}
+        {objectiveText !== '' ? (
+          <PrinciplePicker
+            squadId={squad.id}
+            moment={objective ? momentOf(objective.theme) : null}
+            selectedId={principleId}
+            onSelect={setPrincipleId}
+          />
+        ) : null}
       </section>
 
       <Segmented

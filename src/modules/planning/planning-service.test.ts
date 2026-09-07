@@ -216,7 +216,12 @@ describe('updateDraft', () => {
     const draft = await draftFor();
     const updated = unwrap(
       await updateDraft(ctx, draft.id, {
-        objective: { text: 'Pressing as a unit', successCriteria: [], sourceActionId: null },
+        objective: {
+          text: 'Pressing as a unit',
+          successCriteria: [],
+          sourceActionId: null,
+          principleId: null,
+        },
       }),
     );
     expect(updated.title).toBe('Pressing as a unit · 31 Aug');
@@ -227,7 +232,12 @@ describe('updateDraft', () => {
     unwrap(await updateDraft(ctx, draft.id, { title: 'Tuesday night' }));
     const updated = unwrap(
       await updateDraft(ctx, draft.id, {
-        objective: { text: 'Pressing as a unit', successCriteria: [], sourceActionId: null },
+        objective: {
+          text: 'Pressing as a unit',
+          successCriteria: [],
+          sourceActionId: null,
+          principleId: null,
+        },
       }),
     );
     expect(updated.title).toBe('Tuesday night');

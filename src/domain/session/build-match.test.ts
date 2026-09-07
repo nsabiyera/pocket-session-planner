@@ -11,6 +11,7 @@ const objective = {
   text: 'Play out from the back',
   successCriteria: [],
   sourceActionId: null,
+  principleId: null,
 };
 
 const fixture = (over: Partial<MatchDetailsInput> = {}): MatchDetailsInput => ({

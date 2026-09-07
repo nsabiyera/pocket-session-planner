@@ -94,6 +94,7 @@ export async function startDraft(
     text: input.objectiveText,
     successCriteria: [...(template?.successCriteria ?? [])],
     sourceActionId: null,
+    principleId: null,
   };
 
   const session = buildSessionFromMethodology(methodology, {
@@ -150,6 +151,7 @@ export async function startMatchDraft(
     text: input.objectiveText,
     successCriteria: [...(template?.successCriteria ?? [])],
     sourceActionId: null,
+    principleId: null,
   };
 
   const session = buildMatch({

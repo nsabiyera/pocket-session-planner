@@ -147,7 +147,12 @@ function startedSession(): { session: Session; clock: FakeClock } {
   const clock = new FakeClock(T0);
   const draft = buildSessionFromMethodology(PLAY_PRACTICE_PLAY, {
     squad: aSquad(),
-    objective: { text: 'Playing out', successCriteria: [], sourceActionId: null },
+    objective: {
+      text: 'Playing out',
+      successCriteria: [],
+      sourceActionId: null,
+      principleId: null,
+    },
     now: T0,
     ids: new FakeIdGenerator(),
   });
@@ -359,7 +364,12 @@ describe('a session run through the field scenarios', () => {
   it('returns no session clock for a session that has not started', () => {
     const draft = buildSessionFromMethodology(PLAY_PRACTICE_PLAY, {
       squad: aSquad(),
-      objective: { text: 'Playing out', successCriteria: [], sourceActionId: null },
+      objective: {
+        text: 'Playing out',
+        successCriteria: [],
+        sourceActionId: null,
+        principleId: null,
+      },
       now: T0,
       ids: new FakeIdGenerator(),
     });

@@ -14,7 +14,12 @@ const SAM = playerId('sam');
 const ROSA = playerId('rosa');
 const SQUAD: PlayerId[] = [KAI, SAM, ROSA];
 
-const objective = { text: 'Play out from the back', successCriteria: [], sourceActionId: null };
+const objective = {
+  text: 'Play out from the back',
+  successCriteria: [],
+  sourceActionId: null,
+  principleId: null,
+};
 
 function aMatch(periodCount: 2 | 4 = 2): Session {
   return buildMatch({

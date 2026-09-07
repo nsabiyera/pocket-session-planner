@@ -65,6 +65,7 @@ export function applyCarryForwardActions(
               text: payload.text,
               successCriteria: payload.successCriteria.slice(0, 5),
               sourceActionId: action.id,
+              principleId: null,
             },
           };
           applied.push(action.id);

@@ -12,7 +12,12 @@ import { isoDateTime } from '../primitives';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { aSquad, T0 } from '@/test/builders';
 
-const objective = { text: 'Playing out from the back', successCriteria: [], sourceActionId: null };
+const objective = {
+  text: 'Playing out from the back',
+  successCriteria: [],
+  sourceActionId: null,
+  principleId: null,
+};
 
 const build = (methodology = PLAY_PRACTICE_PLAY, over = {}) =>
   buildSessionFromMethodology(methodology, {

@@ -22,6 +22,7 @@ function sessionFixture(): Session {
       text: 'Playing out from the back',
       successCriteria: ['We beat the first press', 'The keeper is an option'],
       sourceActionId: null,
+      principleId: null,
     },
     now: T0,
     ids: new FakeIdGenerator(),
@@ -315,7 +316,12 @@ describe('trigger: ball rolling time', () => {
     const clock = new FakeClock(T0);
     const draft = buildSessionFromMethodology(PLAY_PRACTICE_PLAY, {
       squad: aSquad(),
-      objective: { text: 'Playing out', successCriteria: [], sourceActionId: null },
+      objective: {
+        text: 'Playing out',
+        successCriteria: [],
+        sourceActionId: null,
+        principleId: null,
+      },
       now: T0,
       ids: new FakeIdGenerator(),
     });

@@ -17,7 +17,12 @@ const nowIso = (clock: FakeClock) => isoDateTime(clock.nowIso());
 function draftSession(): Session {
   return buildSessionFromMethodology(PLAY_PRACTICE_PLAY, {
     squad: aSquad(),
-    objective: { text: 'Playing out from the back', successCriteria: [], sourceActionId: null },
+    objective: {
+      text: 'Playing out from the back',
+      successCriteria: [],
+      sourceActionId: null,
+      principleId: null,
+    },
     now: T0,
     ids: new FakeIdGenerator(),
   });
