@@ -116,13 +116,26 @@ identity statement plus principles per moment.
 Deliberately cheap to fill in: a coach who writes one line per moment has a usable game model,
 and the app should ship starter models by age band rather than an empty form.
 
-### Phase 2 — Split the transitions
+### Phase 2 — Split the transitions — **done**
 
-`ObjectiveTheme`'s single `transition` becomes `transition_to_attack` and
-`transition_to_defence`. Small change, wide blast radius: the objective library, the theme
-labels, and every report that groups by theme. Needs a migration for stored sessions — the first
-one in this app that cannot ride `nullable().default()`, because the old value is genuinely
-ambiguous and must be mapped, not defaulted.
+`ObjectiveTheme`'s single `transition` became `transition_to_attack` and
+`transition_to_defence`.
+
+**No migration was needed, and this roadmap was wrong to predict one.** The claim was that
+stored sessions held an ambiguous `transition` which would have to be mapped rather than
+defaulted. They do not. A session's `Objective` carries `text`, `successCriteria` and
+`sourceActionId` and no theme; `objectiveUsageFrom` keys on the objective *text*; and
+`OBJECTIVE_THEMES` was read by no screen at all. The theme was **dormant data** — recorded on
+every template in code, consumed by nothing — so splitting it touched no document and no report.
+
+It becomes load-bearing for the first time in Phase 3. The theme now reuses `Moment` from
+`game-model.ts` rather than spelling the moments a second time, so an objective and a principle
+share one vocabulary instead of two enums that happen to agree.
+
+`individual` stayed outside the scheme. Four of the fourteen objectives are about a player
+rather than a phase of the game, and filing *"first touch out of your feet"* under offensive
+organisation to fit a four-moments model would be the app inventing a fact. `momentOf` returns
+null for them, so a caller that needs a moment skips them rather than being handed a guess.
 
 ### Phase 3 — The principles of play
 

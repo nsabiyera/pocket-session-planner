@@ -4,10 +4,12 @@ import {
   objectiveUsageFrom,
   OBJECTIVE_LIBRARY,
   OBJECTIVE_THEMES,
+  momentOf,
   orderObjectives,
   type ObjectiveTemplate,
 } from './objectives';
 import { FOUR_CORNERS } from './four-corners';
+import { MOMENTS } from './game-model';
 
 describe('the objective library', () => {
   it('ships fourteen objectives — enough to cover a season, few enough to scan', () => {
@@ -59,7 +61,7 @@ describe('orderObjectives', () => {
   const objective = (id: string): ObjectiveTemplate => ({
     id,
     text: id,
-    theme: 'in_possession',
+    theme: 'offensive_organisation',
     successCriteria: ['x'],
     coachingPoints: ['a', 'b', 'c', 'd'],
     preferredPhaseKind: 'skill_practice',
@@ -138,5 +140,62 @@ describe('objectiveUsageFrom', () => {
 
   it('is empty for a squad with no history', () => {
     expect(objectiveUsageFrom([]).size).toBe(0);
+  });
+});
+
+describe('the four moments, split', () => {
+  /**
+   * The two transitions were one `transition` value until Phase 2. They map in opposite
+   * directions and neither is ambiguous — which is what made the split cheap.
+   */
+  it('files counter-attacking as the attacking transition', () => {
+    expect(findObjectiveTemplate('counter-attacking')?.theme).toBe('transition_to_attack');
+  });
+
+  it('files reacting to losing the ball as the defensive transition', () => {
+    expect(findObjectiveTemplate('reaction-to-losing-the-ball')?.theme).toBe(
+      'transition_to_defence',
+    );
+  });
+
+  it('speaks the same moment vocabulary as the game model', () => {
+    // One enum, not two that happen to agree. Phase 3 links an objective to a principle by
+    // moment, and a second spelling would drift the first time either was edited.
+    for (const objective of OBJECTIVE_LIBRARY) {
+      const moment = momentOf(objective.theme);
+      if (moment !== null) expect(MOMENTS).toContain(moment);
+    }
+  });
+
+  it('returns no moment for an individual objective, rather than guessing one', () => {
+    // "First touch out of your feet" is not offensive organisation, and filing it there to
+    // fit a four-moments scheme would be the app inventing a fact.
+    expect(momentOf('individual')).toBeNull();
+    expect(momentOf(findObjectiveTemplate('first-touch')!.theme)).toBeNull();
+  });
+
+  it('covers every moment at least once', () => {
+    const covered = new Set(
+      OBJECTIVE_LIBRARY.map((objective) => momentOf(objective.theme)).filter(
+        (moment): moment is (typeof MOMENTS)[number] => moment !== null,
+      ),
+    );
+    expect([...covered].sort()).toEqual([...MOMENTS].sort());
+  });
+
+  it('is thin on the transitions, which is worth knowing before Phase 3', () => {
+    // Two of fourteen, against half the moments in the methodology. Recorded as a fact so a
+    // coach authoring principles knows the library will not carry that weight for them.
+    const transitions = OBJECTIVE_LIBRARY.filter((objective) =>
+      objective.theme.startsWith('transition_'),
+    );
+    expect(transitions).toHaveLength(2);
+  });
+
+  it('labels every theme, moments included', () => {
+    for (const objective of OBJECTIVE_LIBRARY) {
+      expect(OBJECTIVE_THEMES[objective.theme]).toBeTruthy();
+    }
+    expect(OBJECTIVE_THEMES.individual).toBe('Individual');
   });
 });

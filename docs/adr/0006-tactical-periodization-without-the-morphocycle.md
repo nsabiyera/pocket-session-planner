@@ -78,11 +78,15 @@ coach's. There is no existing document it could ride without distorting one.
 three of the four moments, with the two transitions merged and `individual` sitting outside the
 scheme. A second, parallel taxonomy would mean every report choosing which one it grouped by.
 
-The cost is the app's **first migration that cannot ride `nullable().default()`**: splitting
-`transition` into `transition_to_attack` and `transition_to_defence` leaves stored sessions
-holding a value that is genuinely ambiguous, so it must be mapped rather than defaulted, and a
-mapping that guesses is worse than one that admits it. Whatever is chosen, it belongs in
-`document-migrations.ts` with a test, not in a schema default.
+The cost was predicted to be the app's **first migration that cannot ride
+`nullable().default()`**, on the reasoning that stored sessions hold an ambiguous `transition`
+which must be mapped rather than defaulted.
+
+**That prediction was wrong, and the split cost no migration at all.** No document holds an
+`ObjectiveTheme`: a session's `Objective` carries text, success criteria and a source action and
+no theme, `objectiveUsageFrom` keys on the text, and the labels were read by no screen. The theme
+was dormant data in code. Left recorded here rather than quietly corrected, because a wrong
+prediction about a migration is exactly the kind of thing worth being able to find again.
 
 ### The week is "the sessions you have before this fixture"
 

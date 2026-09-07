@@ -1,3 +1,4 @@
+import { MOMENT_LABELS, type Moment } from './game-model';
 import type { FourCorner } from './four-corners';
 import type { PhaseKind } from './methodology';
 
@@ -31,20 +32,36 @@ export interface ObjectiveTemplate {
   readonly primaryCorner: FourCorner;
 }
 
-export type ObjectiveTheme = 'in_possession' | 'out_of_possession' | 'transition' | 'individual';
+/**
+ * What an objective is about: one of the four moments, or the player rather than the team.
+ *
+ * **The moments come from `game-model.ts` rather than being spelled again here.** One
+ * vocabulary, because Phase 3 links an objective to a principle *by moment* — two enums that
+ * happened to agree would drift the first time either was edited.
+ *
+ * `individual` is deliberately not a moment. Four of the fourteen objectives are about a
+ * player rather than a phase of the game, and forcing them into a four-moments scheme would
+ * file *"first touch out of your feet"* under offensive organisation, which is not what it is
+ * about. `momentOf` returns null for them, and callers that need a moment skip them rather
+ * than being handed a guess.
+ */
+export type ObjectiveTheme = Moment | 'individual';
 
 export const OBJECTIVE_THEMES: Record<ObjectiveTheme, string> = {
-  in_possession: 'In possession',
-  out_of_possession: 'Out of possession',
-  transition: 'Transition',
+  ...MOMENT_LABELS,
   individual: 'Individual',
 };
+
+/** The moment an objective trains, or null when it is about the player rather than the team. */
+export function momentOf(theme: ObjectiveTheme): Moment | null {
+  return theme === 'individual' ? null : theme;
+}
 
 export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'playing-out-from-the-back',
     text: 'Playing out from the back',
-    theme: 'in_possession',
+    theme: 'offensive_organisation',
     successCriteria: [
       'We keep the ball past the first line of pressure',
       'The keeper is an option',
@@ -62,7 +79,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'creating-width',
     text: 'Creating and using width',
-    theme: 'in_possession',
+    theme: 'offensive_organisation',
     successCriteria: ['We switch the play at least once per attack', 'Wingers stay high and wide'],
     coachingPoints: [
       'Stay on the touchline until the ball travels',
@@ -76,7 +93,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'combination-play',
     text: 'Combination play in tight areas',
-    theme: 'in_possession',
+    theme: 'offensive_organisation',
     successCriteria: [
       'Three-player combinations break a line',
       'Fewer than two touches under pressure',
@@ -93,7 +110,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'finishing',
     text: 'Finishing in the box',
-    theme: 'in_possession',
+    theme: 'offensive_organisation',
     successCriteria: ['Shots are on target', 'Someone attacks the near post every cross'],
     coachingPoints: [
       'Near post, far post, edge of the box — fill all three',
@@ -149,7 +166,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'pressing-as-a-unit',
     text: 'Pressing as a unit',
-    theme: 'out_of_possession',
+    theme: 'defensive_organisation',
     successCriteria: ['The press is triggered together', 'We win the ball in their half'],
     coachingPoints: [
       'First player sets the angle, everyone follows',
@@ -163,7 +180,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'defending-one-v-one',
     text: 'Defending 1v1',
-    theme: 'out_of_possession',
+    theme: 'defensive_organisation',
     successCriteria: ['Defenders delay rather than dive in'],
     coachingPoints: [
       'Close the distance while the ball travels',
@@ -177,7 +194,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'compact-defensive-shape',
     text: 'Staying compact',
-    theme: 'out_of_possession',
+    theme: 'defensive_organisation',
     successCriteria: ['No gaps between the lines', 'The far winger tucks in'],
     coachingPoints: [
       'Ball side, goal side',
@@ -191,7 +208,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'counter-attacking',
     text: 'Counter-attacking',
-    theme: 'transition',
+    // We have just won it. This is the attacking transition.
+    theme: 'transition_to_attack',
     successCriteria: ['We get forward within five seconds of winning it'],
     coachingPoints: [
       'First pass forward if it is on',
@@ -205,7 +223,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'reaction-to-losing-the-ball',
     text: 'Reacting to losing the ball',
-    theme: 'transition',
+    // We have just lost it. The defensive transition — the counter-press.
+    theme: 'transition_to_defence',
     successCriteria: ['The nearest player presses immediately'],
     coachingPoints: [
       'Nearest player presses, everyone else recovers',
@@ -233,7 +252,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'game-understanding',
     text: 'When to keep it and when to go',
-    theme: 'in_possession',
+    theme: 'offensive_organisation',
     successCriteria: ['Fewer forced forward passes', 'We recycle rather than lose it'],
     coachingPoints: [
       'If the forward pass is not on, keep it',
