@@ -1,6 +1,6 @@
 # Roadmap — preparing for a match with tactical periodization
 
-- **Status:** Phases 0–5 done. Phase 6 (match preparation) is next.
+- **Status:** **All six phases done.** What remains is device and field use — see the note at the end.
   **Revised 2026-09-07** for a pro / semi-pro audience — see
   [ADR 0007](adr/0007-morphocycle-for-adult-squads.md), which supersedes ADR 0006.
 - **Date:** 2026-09-07
@@ -199,7 +199,7 @@ macro, so a week on three sub-principles of one macro reports as **one** theme.
 Nothing here scores the coach. It reports the record, in the voice the practice-mix and minutes
 reports already use, and it says nothing at all when there is no game model to check against.
 
-### Phase 6 — Match preparation
+### Phase 6 — Match preparation — **done**
 
 Pulls it together on the fixture: the game model's principles for the moments this opponent
 threatens, what the week actually trained, the unit objectives that follow, and the player
@@ -245,3 +245,22 @@ Worth stating so it is not quietly attempted later:
 - [Tactical Periodization in Grassroots Football — Mingle Sport](https://mingle.sport/blog/tactical-periodization-in-grassroots-football-a-blueprint-for-smarter/)
 - [Training a Tactical Periodization Game Idea Principle — University of Denver](https://www.du.edu/sport-sense/news/training-tactical-periodization-game-idea-principle-example-ball-progression)
 - [A tactical periodisation model for Gaelic football — Mangan et al., 2022](https://journals.sagepub.com/doi/10.1177/17479541211016269)
+
+## What is left, and it is not code
+
+All six phases are built, tested and deployed. **None of it has been used by a coach**, and the
+gaps that matters most are not in the phases:
+
+- **There is no fixture list.** `/plan/week` and `/plan/prepare` both assume a run of fixtures a
+  professional coach would maintain, and this app has no way to import one — matches are planned
+  one at a time. That is the first thing real use will complain about, and it is a bigger hole
+  than anything left inside the six phases.
+- **The planning half wants a bigger screen.** ADR 0007 records this as a cost rather than a
+  bug: the twenty-second create flow and the gloved-thumb sizing were built for a volunteer on a
+  wet touchline, and authoring a forty-principle game model is not that task.
+- **The pattern is not yet editable in the UI.** `morphocycleFor` takes a `pattern` argument and
+  nothing passes one, so a coach gets the classical reading as a suggestion and can override each
+  day but cannot save their own mapping. The domain is ready; the screen is not.
+- **`docs/field-test-checklist.md` has no section for any of this.** Every previous feature
+  earned one, and the same failure mode applies here: the reports are silent by design below
+  their floors, so a broken one looks exactly like a quiet one.

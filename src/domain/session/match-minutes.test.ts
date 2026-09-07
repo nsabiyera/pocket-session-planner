@@ -394,3 +394,82 @@ describe('ruling a unit objective', () => {
     expect(result.ok).toBe(false);
   });
 });
+
+describe('writing a unit brief', () => {
+  const withUnits = (): Session =>
+    SessionSchema.parse({
+      ...aMatch(),
+      match: {
+        ...aMatch().match,
+        unitObjectives: [{ unit: 'defence', text: 'First pass forward' }],
+      },
+    });
+
+  it('writes a brief for a unit that had none', () => {
+    const next = unwrap(
+      applySessionCommand(
+        withUnits(),
+        { kind: 'setUnitObjective', unit: 'midfield', text: 'Screen the back three' },
+        T0,
+      ),
+    );
+    const byUnit = new Map(next.match!.unitObjectives.map((o) => [o.unit, o.text]));
+    expect(byUnit.get('midfield')).toBe('Screen the back three');
+    expect(byUnit.get('defence')).toBe('First pass forward');
+  });
+
+  it('replaces the wording without disturbing the other units', () => {
+    const next = unwrap(
+      applySessionCommand(
+        withUnits(),
+        { kind: 'setUnitObjective', unit: 'defence', text: 'Play out, do not clear' },
+        T0,
+      ),
+    );
+    expect(next.match!.unitObjectives).toHaveLength(1);
+    expect(next.match!.unitObjectives[0]?.text).toBe('Play out, do not clear');
+  });
+
+  /**
+   * Editing the wording of a brief is not the same as un-ruling it. Silently clearing a `met`
+   * because a coach fixed a typo would lose a real judgement.
+   */
+  it('keeps an existing verdict when the wording is edited', () => {
+    let next = unwrap(
+      applySessionCommand(
+        withUnits(),
+        { kind: 'setUnitObjectiveStatus', unit: 'defence', status: 'met' },
+        T0,
+      ),
+    );
+    next = unwrap(
+      applySessionCommand(
+        next,
+        { kind: 'setUnitObjective', unit: 'defence', text: 'Reworded' },
+        T0,
+      ),
+    );
+    expect(next.match!.unitObjectives[0]?.status).toBe('met');
+  });
+
+  it('removes the objective when the text is emptied', () => {
+    const next = unwrap(
+      applySessionCommand(
+        withUnits(),
+        { kind: 'setUnitObjective', unit: 'defence', text: '  ' },
+        T0,
+      ),
+    );
+    expect(next.match!.unitObjectives).toEqual([]);
+  });
+
+  it('refuses a unit brief on a training session', () => {
+    const training = SessionSchema.parse({ ...aMatch(), kind: 'training', match: null });
+    const result = applySessionCommand(
+      training,
+      { kind: 'setUnitObjective', unit: 'defence', text: 'Anything' },
+      T0,
+    );
+    expect(result.ok).toBe(false);
+  });
+});

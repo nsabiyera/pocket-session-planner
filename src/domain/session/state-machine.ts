@@ -120,6 +120,12 @@ export type SessionCommand =
       readonly unit: MatchUnit;
       readonly status: ChallengeStatus;
     }
+  | {
+      /** Writes or replaces a unit's objective. Empty text removes it. */
+      readonly kind: 'setUnitObjective';
+      readonly unit: MatchUnit;
+      readonly text: string;
+    }
   | { readonly kind: 'heartbeat' }
   | { readonly kind: 'reconcileToLastActivity' }
   | { readonly kind: 'finish' }
@@ -190,6 +196,8 @@ function reduce(
       return setMatchResult(session, command);
     case 'setUnitObjectiveStatus':
       return setUnitObjectiveStatus(session, command);
+    case 'setUnitObjective':
+      return setUnitObjective(session, command);
     case 'heartbeat':
       return heartbeat(session, now);
     case 'reconcileToLastActivity':
@@ -746,6 +754,40 @@ function setMatchResult(
     return fail('guard_failed', 'Only a match has a result.');
   }
   return ok({ ...session, match: { ...session.match, result: command.result } });
+}
+
+/**
+ * Writing what a unit is being asked to do.
+ *
+ * Separate from the create flow because a brief is written the day before a game, not the day
+ * the fixture was entered — and by then the coach knows what the week actually trained.
+ *
+ * Empty text removes the objective rather than storing a blank one, and a replacement **keeps
+ * the existing verdict**: editing the wording of a brief is not the same as un-ruling it, and
+ * silently clearing a `met` because a coach fixed a typo would lose a real judgement.
+ */
+function setUnitObjective(
+  session: Session,
+  command: Extract<SessionCommand, { kind: 'setUnitObjective' }>,
+): Result<Session, TransitionError> {
+  if (session.kind !== 'match' || session.match === null) {
+    return fail('guard_failed', 'Only a match has unit objectives.');
+  }
+
+  const text = command.text.trim();
+  const others = session.match.unitObjectives.filter((o) => o.unit !== command.unit);
+
+  if (text === '') {
+    return ok({ ...session, match: { ...session.match, unitObjectives: others } });
+  }
+
+  const existing = session.match.unitObjectives.find((o) => o.unit === command.unit);
+  const unitObjectives = [
+    ...others,
+    { unit: command.unit, text, status: existing?.status ?? 'open' },
+  ];
+
+  return ok({ ...session, match: { ...session.match, unitObjectives } });
 }
 
 /**

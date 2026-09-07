@@ -360,6 +360,16 @@ export async function setMatchResult(
   return dispatch(ctx, sessionId, { kind: 'setMatchResult', result });
 }
 
+/** Writes or replaces what a unit is being asked to do. Empty text removes it. */
+export async function setUnitObjective(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  unit: MatchUnit,
+  text: string,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, { kind: 'setUnitObjective', unit, text });
+}
+
 /** The coach's ruling on a unit's objective. Re-tapping the same verdict clears it. */
 export async function setUnitObjectiveStatus(
   ctx: ServiceContext,

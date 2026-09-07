@@ -157,6 +157,11 @@ export default function WeekPage() {
 
       <WeekReviewPanel cycle={cycle} model={model} sessions={sessions} />
 
+      {/* The week is the training; the brief is the game. Separate screens, one link. */}
+      <Link href="/plan/prepare" className="btn btn--block">
+        Match brief
+      </Link>
+
       <PatternNote cycle={cycle} level={squad.level} />
     </Screen>
   );
