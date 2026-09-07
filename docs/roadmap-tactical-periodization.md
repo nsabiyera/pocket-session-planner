@@ -1,6 +1,6 @@
 # Roadmap — preparing for a match with tactical periodization
 
-- **Status:** Phases 0–3 done. Phase 4 (the morphocycle) and Phase 5 (alternation) are next.
+- **Status:** Phases 0–4 done. Phase 5 (alternation) and Phase 6 (match preparation) are next.
   **Revised 2026-09-07** for a pro / semi-pro audience — see
   [ADR 0007](adr/0007-morphocycle-for-adult-squads.md), which supersedes ADR 0006.
 - **Date:** 2026-09-07
@@ -162,7 +162,7 @@ did we actually work on this month?"* — and it is where the existing carry-for
 real teeth, because chasing the same point three weeks running is a sub-principle that has not
 been acquired.
 
-### Phase 4 — The morphocycle
+### Phase 4 — The morphocycle — **done**
 
 Derived from the fixture list rather than a fixed week, so it compresses to three days in a
 midweek-game week and stretches in a break. Each session inside the cycle carries a day label

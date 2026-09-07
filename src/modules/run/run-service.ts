@@ -13,6 +13,8 @@ import {
 } from '@/domain/ids';
 import type { ChallengeStatus } from '@/domain/challenge';
 import type { MatchResult, MatchUnit } from '@/domain/match-day';
+import type { EffortQuality } from '@/domain/morphocycle';
+import { SessionSchema } from '@/domain/session';
 import type { AdjustmentDirection, StepLetter } from '@/domain/practice';
 import { normaliseCoachingPointText } from '@/domain/coaching-point';
 import {
@@ -72,6 +74,8 @@ import { now, type ServiceContext } from '../context';
 
 export type RunError =
   | { kind: 'session_not_found' }
+  /** Load labelling on a youth squad. The safeguarding gate on `Squad.level` (ADR 0007). */
+  | { kind: 'not_allowed' }
   | { kind: 'no_active_session' }
   | { kind: 'no_current_phase' }
   | { kind: 'transition'; error: TransitionError };
@@ -364,6 +368,33 @@ export async function setUnitObjectiveStatus(
   status: ChallengeStatus,
 ): Promise<Result<Session, RunError>> {
   return dispatch(ctx, sessionId, { kind: 'setUnitObjectiveStatus', unit, status });
+}
+
+/**
+ * The morphocycle emphasis a coach put on a session (ADR 0007, Phase 4).
+ *
+ * A label, not a measurement. Refused on a youth squad — the safeguarding gate lives on
+ * `Squad.level`, and a service that trusted the UI to enforce it would be one deep link away
+ * from putting adult load concepts against a squad of eleven-year-olds.
+ */
+export async function setEffortQuality(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  effortQuality: EffortQuality | null,
+): Promise<Result<Session, RunError>> {
+  const session = await ctx.store.sessions.get(sessionId);
+  if (!session) return err({ kind: 'session_not_found' });
+
+  const squad = await ctx.store.squads.get(session.squadId);
+  if (effortQuality !== null && squad?.level !== 'senior') {
+    return err({ kind: 'not_allowed' });
+  }
+
+  const parsed = SessionSchema.safeParse({ ...session, effortQuality, updatedAt: now(ctx) });
+  if (!parsed.success) return err({ kind: 'session_not_found' });
+
+  await ctx.store.sessions.put(parsed.data);
+  return ok(parsed.data);
 }
 
 /** The `Undo` on the adjustment toast. By id — see the note above. */

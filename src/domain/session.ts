@@ -23,6 +23,7 @@ import {
   PracticeSpectrumSchema,
 } from './practice';
 import { MatchDetailsSchema, refineMatchDetails } from './match-day';
+import { EffortQualitySchema } from './morphocycle';
 import { MethodologySnapshotSchema, PhaseKindSchema } from './methodology';
 import {
   DurationMinSchema,
@@ -202,6 +203,15 @@ const SessionShape = {
   status: SessionStatusSchema,
   run: SessionRunStateSchema.nullable().default(null),
   reviewId: ReviewIdSchema.nullable().default(null),
+  /**
+   * The morphocycle emphasis a coach put on this session (ADR 0007, Phase 4).
+   *
+   * A **label the coach assigned**, not a measurement and not a prescription — there is no RPE
+   * here, no intensity percentage and no session-load arithmetic. Meaningless on a youth squad,
+   * where `Squad.level` gates the whole feature off; nullable and defaulted so it costs nothing
+   * to every session that will never carry one.
+   */
+  effortQuality: EffortQualitySchema.nullable().default(null),
   /** Shown as a pre-session checklist on the Do screen. Seeded by `reminder` actions. */
   reminders: z.array(nonEmptyText(160)).max(10).default([]),
   seededFromActionIds: z.array(CarryForwardActionIdSchema).max(10).default([]),

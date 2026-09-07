@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Empty, Loading, Screen, ScreenHead, Sheet, Stepper } from '../_components/ui';
+import { Empty, Loading, Screen, ScreenHead, Segmented, Sheet, Stepper } from '../_components/ui';
 import { showToast } from '../_components/toast-host';
 import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
 import { PracticeMixPanel } from '../_components/practice-mix';
@@ -17,6 +17,7 @@ import {
   updateSquad,
 } from '@/modules/squad/squad-service';
 import { comparePlayers, type Player } from '@/domain/player';
+import { SQUAD_LEVEL_LABELS, type SquadLevel } from '@/domain/squad';
 
 /**
  * The roster. The simplest complete vertical slice, and the one screen where typing is
@@ -121,6 +122,34 @@ export default function SquadPage() {
       <Link href="/squad/game-model" className="btn btn--block">
         Game model
       </Link>
+
+      <Link href="/plan/week" className="btn btn--block">
+        The week
+      </Link>
+
+      {/*
+        The safeguarding gate from ADR 0007, and the reason it is a squad field rather than a
+        setting: a professional club runs an academy on this same app, and one global switch
+        would put adult load concepts in front of a coach planning for eleven-year-olds.
+        Defaults to youth, and the coach opts in.
+      */}
+      <Segmented<SquadLevel>
+        legend="Squad level"
+        value={squad.level}
+        onChange={async (level) => {
+          await updateSquad(getServiceContext(), squad.id, { level });
+          await refresh();
+          showToast(
+            level === 'senior'
+              ? 'Senior — effort labelling is available on The week.'
+              : 'Youth — no effort labelling.',
+          );
+        }}
+        options={[
+          { value: 'youth', label: SQUAD_LEVEL_LABELS.youth },
+          { value: 'senior', label: SQUAD_LEVEL_LABELS.senior },
+        ]}
+      />
 
       <section className="stack">
         <h2>

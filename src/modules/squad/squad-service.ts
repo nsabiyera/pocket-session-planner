@@ -49,7 +49,9 @@ export async function createSquad(ctx: ServiceContext, input: CreateSquadInput):
 export async function updateSquad(
   ctx: ServiceContext,
   squadId: SquadId,
-  changes: Partial<Pick<Squad, 'name' | 'ageGroup' | 'season' | 'defaultSessionDurationMin'>>,
+  changes: Partial<
+    Pick<Squad, 'name' | 'ageGroup' | 'season' | 'defaultSessionDurationMin' | 'level'>
+  >,
 ): Promise<Squad | undefined> {
   const current = await ctx.store.squads.get(squadId);
   if (!current) return undefined;
