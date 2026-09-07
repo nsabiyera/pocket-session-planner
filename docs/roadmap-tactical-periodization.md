@@ -1,7 +1,8 @@
 # Roadmap — preparing for a match with tactical periodization
 
-- **Status:** Phase 0 done. **Revised 2026-09-07** for a pro / semi-pro audience — see
-  [ADR 0007](adr/0007-morphocycle-for-adult-squads.md), which supersedes ADR 0006. No code yet.
+- **Status:** Phases 0–3 done. Phase 4 (the morphocycle) and Phase 5 (alternation) are next.
+  **Revised 2026-09-07** for a pro / semi-pro audience — see
+  [ADR 0007](adr/0007-morphocycle-for-adult-squads.md), which supersedes ADR 0006.
 - **Date:** 2026-09-07
 - **Asked for:** *"As a coach, on a match day I would like to prepare for a game using tactical
   periodization methodology."*
@@ -107,14 +108,19 @@ has to state plainly that this is **not** FA methodology — the app implements 
 Model and the FA practice spectrum, and a coach must not be able to mistake tactical
 periodization for England Football guidance.
 
-### Phase 1 — The game model
+### Phase 1 — The game model — **done**
 
 The missing spine, and the prerequisite for everything else. A new aggregate (this one genuinely
-is new, so it pays ADR 0001's store tax): a squad's intended way of playing, held as a short
-identity statement plus principles per moment.
+is new, so it pays ADR 0001's store tax — `DB_VERSION` 4 → 5): a squad's intended way of playing,
+held as a short identity statement plus principles per moment.
 
-Deliberately cheap to fill in: a coach who writes one line per moment has a usable game model,
-and the app should ship starter models by age band rather than an empty form.
+Deliberately cheap to fill in: the identity line is the only required field, and a coach with one
+line and no principles has a real game model.
+
+**No starter models shipped, contrary to the original plan here.** The reason is the one Phase 3
+found twice over: the principles *are* the coach's model, so a shipped list would be somebody
+else's. What ships instead is the tree rule — a principle hangs off the one above it, in the same
+moment — which is the one part of the methodology the app can enforce rather than suggest.
 
 ### Phase 2 — Split the transitions — **done**
 
