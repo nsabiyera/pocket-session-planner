@@ -127,7 +127,9 @@ house conventions in `hodorhub`; the rest are modelling calls this app had to ma
 - [ADR 0005](docs/adr/0005-match-day-as-a-session-kind.md) — match day as a `Session` kind, not a
   second aggregate
 - [ADR 0006](docs/adr/0006-tactical-periodization-without-the-morphocycle.md) — tactical
-  periodization's tactical core, without the morphocycle
+  periodization's tactical core, without the morphocycle *(superseded by 0007)*
+- [ADR 0007](docs/adr/0007-morphocycle-for-adult-squads.md) — the morphocycle, for adult squads,
+  with the coach's own pattern
 
 ## Testing
 

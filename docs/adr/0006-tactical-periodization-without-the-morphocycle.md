@@ -1,6 +1,9 @@
 # ADR 0006 — Tactical periodization's tactical core, without the morphocycle
 
-- **Status:** Accepted
+- **Status:** **Superseded by [ADR 0007](0007-morphocycle-for-adult-squads.md)** (2026-09-07). Its
+  reasoning held for the audience it assumed — grassroots youth — and two of its three arguments
+  do not survive a pro or semi-pro first team. Kept because the surviving argument still governs,
+  and because why we thought this is worth having.
 - **Date:** 2026-09-07
 - **Roadmap:** [`docs/roadmap-tactical-periodization.md`](../roadmap-tactical-periodization.md)
 

@@ -1,9 +1,12 @@
 # Roadmap — preparing for a match with tactical periodization
 
-- **Status:** Phase 0 done ([ADR 0006](adr/0006-tactical-periodization-without-the-morphocycle.md)). No code yet.
+- **Status:** Phase 0 done. **Revised 2026-09-07** for a pro / semi-pro audience — see
+  [ADR 0007](adr/0007-morphocycle-for-adult-squads.md), which supersedes ADR 0006. No code yet.
 - **Date:** 2026-09-07
 - **Asked for:** *"As a coach, on a match day I would like to prepare for a game using tactical
   periodization methodology."*
+- **Audience:** coaches at **professional and semi-professional** clubs. The app's existing
+  grassroots audience keeps ADR 0006's behaviour, keyed on the squad.
 
 ## What tactical periodization is
 
@@ -23,6 +26,12 @@ Six ideas carry it:
 | **Specificity** | Every practice must contain the way you intend to play. This is the governing principle. |
 | **Propensities** | Practices are designed so the wanted behaviour happens *often*, not occasionally. |
 | **The morphocycle** | The repeating week between matches, in which each day carries a different dominant sub-dynamic of football effort — tension, duration, velocity — alternated so the same quality is never hammered twice. |
+
+> **Revised.** The two problems below were written assuming a grassroots audience. Under a pro /
+> semi-pro premise the first one dissolves and the third applies only to academy squads; the
+> second survives intact. The section is kept because the surviving problem still governs the
+> design, and because the reasoning is what ADR 0007 argues against. **Read ADR 0007 for the
+> decision that now holds.**
 
 ## The two problems that decide everything below
 
@@ -124,16 +133,23 @@ did we actually work on this month?"* — and it is where the existing carry-for
 real teeth, because chasing the same point three weeks running is a sub-principle that has not
 been acquired.
 
-### Phase 4 — The match week
+### Phase 4 — The morphocycle
 
-The thing the coach actually asked for. Anchored to a fixture, it lays out the sessions available
-before it — however many there are — and assigns each a moment and a principle level, with the
-last one before the match given to the opponent and set pieces.
+Derived from the fixture list rather than a fixed week, so it compresses to three days in a
+midweek-game week and stretches in a break. Each session inside the cycle carries a day label
+relative to the next match, an effort quality, a moment and a principle level.
 
-Everything the sources disagree about stays the coach's to state. Where the app has no defensible
-number it shows none, in the manner `describeRepresentativeness` already uses.
+The pattern is the coach's. The app ships the classical reading as a labelled, editable default
+with the source disagreement stated beside it — never as the method's single correct form.
 
-### Phase 5 — Did the week contain the game model?
+**Gated on the squad being adult** (ADR 0007). A youth squad gets the principles and no load
+labelling, and a squad whose age group is blank defaults to the youth-safe behaviour.
+
+The last session before the match goes to the opponent and set pieces, which is the one day every
+source agrees on. Where the app has no defensible number it shows none, in the manner
+`describeRepresentativeness` already uses.
+
+### Phase 5 — Alternation, and did the week contain the game model?
 
 The report that makes the whole thing honest, and the only part that can falsify a coach's own
 plan. It reuses representativeness and the practice mix to say whether the sessions before a
