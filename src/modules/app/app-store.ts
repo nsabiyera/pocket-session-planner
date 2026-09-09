@@ -7,7 +7,7 @@ import type { Player } from '@/domain/player';
 import type { Session } from '@/domain/session';
 import type { Squad } from '@/domain/squad';
 import { rememberNamesToRedact } from '@/lib/crash-store';
-import { IdbDataStore } from '@/data/idb/idb-data-store';
+import { DatabaseClosedError, IdbDataStore } from '@/data/idb/idb-data-store';
 import type { AppMeta, CatalogEntry, PocketDataStore } from '@/data/ports/data-store';
 import { systemClock } from '@/lib/clock';
 import { cryptoIdGenerator } from '@/lib/id';
@@ -112,9 +112,14 @@ export function initApp(): Promise<void> {
 
   opening = (async () => {
     try {
+      /*
+       * Only a newer tab earns the reload prompt: this page is running the old code and
+       * cannot be talked round. A connection the *browser* drops — the ordinary fate of a
+       * backgrounded page on a phone — is reopened by the data store on the next call, so
+       * asking the coach to reload for it would be both alarming and unnecessary.
+       */
       dataStore = await IdbDataStore.open({
         onBlocking: () => store.setState((s) => ({ ...s, needsReload: true })),
-        onTerminated: () => store.setState((s) => ({ ...s, needsReload: true })),
       });
       await refresh();
     } catch (error) {
@@ -129,10 +134,26 @@ export function initApp(): Promise<void> {
   return opening;
 }
 
-/** Re-reads everything the shell shows. Cheap enough to call after every mutation. */
+/**
+ * Re-reads everything the shell shows. Cheap enough to call after every mutation.
+ *
+ * Called on every `visibilitychange → visible`, which is exactly when the connection is
+ * most likely to have been closed underneath us — so a closed store is answered with
+ * silence rather than a crash report. Either another tab is upgrading, and the reload
+ * banner is already up, or `reopen()` is swapping the store and a fresh read is moments
+ * away. Every other failure still surfaces.
+ */
 export async function refresh(): Promise<void> {
   if (!dataStore) return;
+  try {
+    await read(dataStore);
+  } catch (error) {
+    if (error instanceof DatabaseClosedError) return;
+    throw error;
+  }
+}
 
+async function read(dataStore: PocketDataStore): Promise<void> {
   const meta = await dataStore.meta.get();
   const squads = await dataStore.squads.list();
   const preferredId = (meta?.activeSquadId ?? null) as SquadId | null;

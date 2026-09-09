@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { describeDataStoreContract } from '../ports/data-store-contract';
-import { IdbDataStore } from './idb-data-store';
+import { DatabaseClosedError, IdbDataStore } from './idb-data-store';
 import { deleteDatabase, openDatabase } from './open-database';
 import { DB_VERSION } from './schema';
 import {
@@ -209,7 +209,7 @@ describe('IdbDataStore — IndexedDB specifics', () => {
 
     // And the new index works against a row written before it existed — which is only true
     // because IndexedDB rebuilds indexes over existing records during the upgrade.
-    const store = new IdbDataStore(await openDatabase({ name }));
+    const store = await IdbDataStore.open({ name });
     await store.observations.put(
       anObservation('after', { playerId: playerId('kai'), corner: 'social' }),
     );
@@ -248,7 +248,7 @@ describe('IdbDataStore — IndexedDB specifics', () => {
     v3.close();
 
     // And the store the migration added answers the question it exists for.
-    const store = new IdbDataStore(await openDatabase({ name }));
+    const store = await IdbDataStore.open({ name });
     await store.scans.put(aScan('turning1', { skill: 'turning' }));
     await store.scans.put(aScan('pressing1', { skill: 'pressing' }));
 
@@ -281,7 +281,7 @@ describe('IdbDataStore — IndexedDB specifics', () => {
     v4.close();
 
     // And the new store answers the one bulk question it exists for.
-    const store = new IdbDataStore(await openDatabase({ name }));
+    const store = await IdbDataStore.open({ name });
     await store.phaseImages.put(anImage('drawing1', sessionId('tuesday')));
     await store.phaseImages.put(anImage('drawing2', sessionId('tuesday')));
     await store.phaseImages.put(anImage('drawing3', sessionId('thursday')));
@@ -306,7 +306,7 @@ describe('IdbDataStore — IndexedDB specifics', () => {
   it('round-trips an image record, metadata and all', async () => {
     const name = 'psp-image-roundtrip';
     await deleteDatabase(name);
-    const store = new IdbDataStore(await openDatabase({ name }));
+    const store = await IdbDataStore.open({ name });
 
     await store.phaseImages.put(anImage('drawing1', sessionId('tuesday')));
     const read = await store.phaseImages.get(phaseImageId('drawing1'));
@@ -317,6 +317,65 @@ describe('IdbDataStore — IndexedDB specifics', () => {
     expect(read?.height).toBe(1200);
     expect(read?.sessionId).toBe(sessionId('tuesday'));
     store.close();
+  });
+
+  /**
+   * The crash this suite exists to keep out: `InvalidStateError: the database connection is
+   * closing`, on a phone that spent the warm-up in a pocket. Every browser is free to close
+   * an IndexedDB connection under a backgrounded page, and the first tap afterwards used to
+   * take the whole screen down with it.
+   */
+  describe('a connection that goes away underneath us', () => {
+    it('reopens on the next call, having lost nothing', async () => {
+      const store = await freshStore('psp-dropped-connection');
+      await store.sessions.put(aSession());
+
+      store.__dropConnectionForTest();
+
+      // A read and a write, both across the reopen. Neither knows it happened.
+      expect((await store.sessions.get(aSession().id))?.title).toBe(
+        'Playing out from the back · 31 Aug',
+      );
+      await store.sessions.put(aSession({ title: 'Pressing as a unit · 31 Aug' }));
+      expect((await store.sessions.get(aSession().id))?.title).toBe('Pressing as a unit · 31 Aug');
+      store.close();
+    });
+
+    it('reopens once for a burst of parallel reads, not once each', async () => {
+      const store = await freshStore('psp-dropped-parallel');
+      await store.sessions.put(aSession());
+      store.__dropConnectionForTest();
+
+      // What `refresh()` does on every return to the app: six reads, all at once.
+      const reads = await Promise.all([
+        store.sessions.get(aSession().id),
+        store.sessions.listBySquad(SQUAD_ID),
+        store.squads.list(),
+        store.meta.get(),
+        store.sessions.findActive(),
+        store.methodologies.listCustom(),
+      ]);
+
+      expect(reads[0]?.title).toBe('Playing out from the back · 31 Aug');
+      // The first open, and one reopen for the whole burst. Six reopens would leak five
+      // connections per trip to the background, each one holding the database open.
+      expect(store.__connectionsOpenedForTest()).toBe(2);
+      store.close();
+    });
+
+    it('stays closed once a newer tab has taken the database', async () => {
+      // The other case, and the one where reopening would be wrong: our connection was closed
+      // to let a newer version through, so coming back at the old version would only block it
+      // again. The app shows its reload banner instead.
+      const name = 'psp-blocked-by-newer';
+      const store = await freshStore(name);
+      await store.sessions.put(aSession());
+
+      const newer = await openDatabase({ name, version: DB_VERSION + 1 });
+
+      await expect(store.sessions.get(aSession().id)).rejects.toBeInstanceOf(DatabaseClosedError);
+      newer.close();
+    });
   });
 
   it('opening at the same version twice does not re-run the migration', async () => {

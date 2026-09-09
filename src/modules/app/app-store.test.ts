@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   __resetForTest,
   __setDataStoreForTest,
@@ -11,6 +11,7 @@ import {
   refresh,
   setActiveSquad,
 } from './app-store';
+import { DatabaseClosedError } from '@/data/idb/idb-data-store';
 import { FakeDataStore } from '@/data/ports/fake-data-store';
 import { commitAndStart, startDraft } from '../planning/planning-service';
 import { addPlayer, createSquad } from '../squad/squad-service';
@@ -137,6 +138,18 @@ describe('the app store', () => {
     __setDataStoreForTest(null);
     await expect(refresh()).resolves.toBeUndefined();
     await expect(setActiveSquad('x' as never)).resolves.toBeUndefined();
+  });
+
+  it('meets a closed database with silence rather than a crash report', async () => {
+    // `refresh()` runs on every return to the app, which is exactly when the connection is
+    // most likely to have gone — either a newer tab took it, and the reload banner is already
+    // up, or `reopen()` is mid-swap. Throwing here reaches the global crash handler.
+    vi.spyOn(store.meta, 'get').mockRejectedValue(new DatabaseClosedError());
+    await expect(refresh()).resolves.toBeUndefined();
+
+    // Everything else still surfaces.
+    vi.spyOn(store.meta, 'get').mockRejectedValue(new Error('the disk is full'));
+    await expect(refresh()).rejects.toThrow('the disk is full');
   });
 
   it('reports no active session when nothing is in flight', async () => {

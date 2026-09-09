@@ -66,12 +66,44 @@ type Mode = 'readonly' | 'readwrite';
 type Tx = IDBPTransaction<PocketDBSchema, StoreNames<PocketDBSchema>[], Mode>;
 
 /**
- * The transaction currently open on this data store, if any. This is what lets one set of
- * repository methods serve both `store.sessions.put(...)` and a multi-store
- * `transact([...], ...)` without a second implementation.
+ * The connection is gone **for good** — closed by us, or closed because a newer tab is
+ * upgrading the schema and holding on would deadlock both tabs.
+ *
+ * Distinct from a connection the browser merely dropped, which reopens on demand. There is
+ * nothing to retry here: the page is running the old code, and only a reload fixes that.
+ */
+export class DatabaseClosedError extends Error {
+  constructor() {
+    super('The database connection is closed.');
+    this.name = 'DatabaseClosedError';
+  }
+}
+
+/**
+ * `InvalidStateError: the database connection is closing`.
+ *
+ * A browser is free to close an IndexedDB connection under a page it has backgrounded, and a
+ * phone in a pocket between the warm-up and kick-off is the ordinary case rather than the
+ * edge one. The *connection* is gone; the data is not.
+ */
+function isConnectionGone(error: unknown): boolean {
+  // Duck-typed on purpose: `DOMException` is not reliably an `Error`, and in a browser it can
+  // arrive from another realm, so `instanceof` on either would miss the case that matters.
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { name?: unknown }).name === 'InvalidStateError'
+  );
+}
+
+/**
+ * How a repository reaches the database: the transaction currently open on this data store
+ * if there is one, and a fresh one otherwise. This is what lets one set of repository methods
+ * serve both `store.sessions.put(...)` and a multi-store `transact([...], ...)` without a
+ * second implementation.
  */
 interface Context {
-  db(): IDBPDatabase<PocketDBSchema>;
+  begin(stores: readonly StoreName[], mode: Mode): Promise<Tx>;
   tx(): Tx | null;
 }
 
@@ -108,9 +140,9 @@ async function run<R>(
     return body(active.objectStore(name) as unknown as AnyStore);
   }
 
-  const tx = ctx.db().transaction(name, mode);
+  const tx = await ctx.begin([name], mode);
   try {
-    const result = await body(tx.store as unknown as AnyStore);
+    const result = await body(tx.objectStore(name) as unknown as AnyStore);
     await tx.done;
     return result;
   } catch (error) {
@@ -516,6 +548,13 @@ class IdbMetaRepository implements MetaRepository {
 
 export class IdbDataStore implements PocketDataStore {
   private activeTx: Tx | null = null;
+  private database: IDBPDatabase<PocketDBSchema> | null = null;
+  /** The open in flight, so a burst of parallel reads reconnects once rather than six times. */
+  private connecting: Promise<IDBPDatabase<PocketDBSchema>> | null = null;
+  /** Closed for good. See `DatabaseClosedError`. */
+  private retired = false;
+  /** Connections opened over this store's life. Read by the reconnection tests. */
+  private opened = 0;
 
   readonly squads: SquadRepository;
   readonly players: PlayerRepository;
@@ -530,8 +569,11 @@ export class IdbDataStore implements PocketDataStore {
   readonly phaseImages: PhaseImageRepository;
   readonly meta: MetaRepository;
 
-  constructor(private readonly database: IDBPDatabase<PocketDBSchema>) {
-    const ctx: Context = { db: () => this.database, tx: () => this.activeTx };
+  private constructor(private readonly options: OpenDatabaseOptions) {
+    const ctx: Context = {
+      begin: (stores, mode) => this.begin(stores, mode),
+      tx: () => this.activeTx,
+    };
 
     this.squads = new IdbSquadRepository(ctx, 'squads');
     this.players = new IdbPlayerRepository(ctx, 'players');
@@ -547,8 +589,78 @@ export class IdbDataStore implements PocketDataStore {
     this.meta = new IdbMetaRepository(ctx);
   }
 
-  static async open(options?: OpenDatabaseOptions): Promise<IdbDataStore> {
-    return new IdbDataStore(await openDatabase(options));
+  static async open(options: OpenDatabaseOptions = {}): Promise<IdbDataStore> {
+    const store = new IdbDataStore(options);
+    await store.connect();
+    return store;
+  }
+
+  /**
+   * Opens the connection, or joins the one already opening.
+   *
+   * Deduplicated because `refresh()` fires six reads at once: without it a single dropped
+   * connection would be answered with six new ones, five of them leaked for the life of the
+   * page — every trip to the background costing another five.
+   */
+  private connect(): Promise<IDBPDatabase<PocketDBSchema>> {
+    if (this.connecting) return this.connecting;
+
+    this.opened += 1;
+    const opening = openDatabase({
+      ...this.options,
+      onBlocking: () => {
+        // A newer tab is upgrading, and `openDatabase` has already closed us to let it
+        // through. Reopening at the old version would only block it again, so this
+        // connection is finished — the UI's reload prompt is the only way forward.
+        this.retire();
+        this.options.onBlocking?.();
+      },
+    });
+
+    this.connecting = opening.then(
+      (database) => {
+        this.connecting = null;
+        // `retire()` can have run while we were opening — an import closing the store, say.
+        if (this.retired) {
+          database.close();
+          throw new DatabaseClosedError();
+        }
+        this.database = database;
+        return database;
+      },
+      (error) => {
+        this.connecting = null;
+        throw error;
+      },
+    );
+
+    return this.connecting;
+  }
+
+  /**
+   * Opens a transaction, reopening the connection first if the browser has taken it away.
+   *
+   * The retry is safe precisely because it is scoped to `transaction()` itself: when that
+   * call throws there is no transaction and nothing has been written, so reopening cannot
+   * replay a write. Without it, every call after a backgrounded stint fails with
+   * `InvalidStateError: the database connection is closing` — which the coach meets as a
+   * crash report and a lost tap, on a connection that would have reopened instantly.
+   */
+  private async begin(stores: readonly StoreName[], mode: Mode): Promise<Tx> {
+    const names = stores as unknown as StoreNames<PocketDBSchema>[];
+    const database = this.database;
+
+    if (database !== null) {
+      try {
+        return database.transaction(names, mode) as Tx;
+      } catch (error) {
+        if (!isConnectionGone(error)) throw error;
+        this.database = null;
+      }
+    }
+
+    if (this.retired) throw new DatabaseClosedError();
+    return (await this.connect()).transaction(names, mode) as Tx;
   }
 
   /**
@@ -569,10 +681,7 @@ export class IdbDataStore implements PocketDataStore {
       throw new Error('A transaction is already open on this data store.');
     }
 
-    const tx = this.database.transaction(
-      stores as unknown as StoreNames<PocketDBSchema>[],
-      mode,
-    ) as Tx;
+    const tx = await this.begin(stores, mode);
     this.activeTx = tx;
 
     try {
@@ -595,18 +704,36 @@ export class IdbDataStore implements PocketDataStore {
   }
 
   async clear(): Promise<void> {
-    const tx = this.database.transaction(
-      STORE_NAMES as unknown as StoreNames<PocketDBSchema>[],
-      'readwrite',
-    );
+    const tx = await this.begin(STORE_NAMES, 'readwrite');
     for (const name of STORE_NAMES) {
-      await tx.objectStore(name).clear();
+      // `Tx` keeps both modes open, so `clear` is only reachable through the store cast.
+      await (tx.objectStore(name) as unknown as AnyStore).clear();
     }
     await tx.done;
   }
 
   close(): void {
-    this.database.close();
+    this.retire();
+  }
+
+  /** Closed and not coming back: the next call gets a `DatabaseClosedError`, not a reopen. */
+  private retire(): void {
+    this.retired = true;
+    this.database?.close();
+    this.database = null;
+  }
+
+  /**
+   * Test seam: what a browser does to a backgrounded page. The connection goes; the handle
+   * this store is holding does not, so the next call must reopen rather than throw.
+   */
+  __dropConnectionForTest(): void {
+    this.database?.close();
+  }
+
+  /** Test seam: connections opened, so a reconnect storm cannot pass for a single reopen. */
+  __connectionsOpenedForTest(): number {
+    return this.opened;
   }
 }
 
