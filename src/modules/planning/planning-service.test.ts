@@ -9,10 +9,12 @@ import {
   reorderPhases,
   setIntervention,
   startDraft,
+  startMatchDraft,
   updateDraft,
   updatePhase,
 } from './planning-service';
 import { addChallenge } from './challenges';
+import { setMatchResult, setPeriodPresence, setUnitObjectiveStatus } from '../run/run-service';
 import { addPlayer, createSquad } from '../squad/squad-service';
 import { FakeDataStore } from '@/data/ports/fake-data-store';
 import { FakeClock } from '@/lib/fake-clock';
@@ -21,6 +23,7 @@ import { isErr, unwrap } from '@/lib/result';
 import { asMethodologyId, asSessionId, type PlayerId, type SquadId } from '@/domain/ids';
 import { InterventionPlanSchema } from '@/domain/intervention';
 import { totalPlannedPhaseMin } from '@/domain/session';
+import { periodsOf } from '@/domain/session/build-match';
 import { mainPracticePhase } from '@/domain/session/selectors';
 import { T0, testId } from '@/test/builders';
 import type { ServiceContext } from '../context';
@@ -446,6 +449,59 @@ describe('repeatSession', () => {
   it('reports a session that does not exist', async () => {
     const result = await repeatSession(ctx, asSessionId(testId('ghost')));
     expect(isErr(result) && result.error.kind).toBe('session_not_found');
+  });
+
+  /** A fixture played to the final whistle: presence ticked, score in, the units ruled. */
+  const playedMatch = async () => {
+    const draft = unwrap(
+      await startMatchDraft(ctx, {
+        squadId,
+        objectiveText: 'Away to Eastfield Rovers',
+        periodMin: 25,
+        match: {
+          opponent: 'Eastfield Rovers',
+          venue: 'away',
+          fixtureType: 'league',
+          format: '9v9',
+          shapeName: '3-2-3',
+          periodCount: 2,
+          unitObjectives: [{ unit: 'defence', text: 'First pass forward, not sideways' }],
+          lineup: [{ playerId: kai, unit: 'defence' }],
+        },
+      }),
+    );
+
+    const started = unwrap(await commitAndStart(ctx, draft.id));
+    unwrap(await setPeriodPresence(ctx, started.id, periodsOf(started)[0]!.id, [kai, maya]));
+    unwrap(await setMatchResult(ctx, started.id, { goalsFor: 3, goalsAgainst: 1 }));
+    return unwrap(await setUnitObjectiveStatus(ctx, started.id, 'defence', 'met'));
+  };
+
+  it('repeats the fixture plan — the shape, the lineup and the units’ asks', async () => {
+    const repeated = unwrap(await repeatSession(ctx, (await playedMatch()).id));
+
+    expect(repeated.kind).toBe('match');
+    expect(repeated.match).toMatchObject({
+      opponent: 'Eastfield Rovers',
+      venue: 'away',
+      format: '9v9',
+      shapeName: '3-2-3',
+      periodCount: 2,
+    });
+    expect(repeated.match?.unitObjectives[0]?.text).toBe('First pass forward, not sideways');
+    expect(repeated.match?.lineup).toEqual([{ playerId: kai, unit: 'defence' }]);
+  });
+
+  it('leaves behind the record of the game that was actually played', async () => {
+    const played = await playedMatch();
+    const repeated = unwrap(await repeatSession(ctx, played.id));
+
+    // The bug this covers: presence still pointed at the *source* session's periods, so the
+    // schema rejected the clone and Repeat threw before the coach saw a draft.
+    expect(played.match?.presence).toHaveLength(1);
+    expect(repeated.match?.presence).toEqual([]);
+    expect(repeated.match?.result).toBeNull();
+    expect(repeated.match?.unitObjectives[0]?.status).toBe('open');
   });
 });
 

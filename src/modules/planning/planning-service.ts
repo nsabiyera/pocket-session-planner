@@ -538,6 +538,10 @@ export async function commitAndStart(
  * draft, resets every coaching point to undelivered, and drops all run data. What it
  * deliberately does *not* clone is the run, the review link or the carry-forward provenance:
  * this is a new session that looks like the old one, not a copy of the old one.
+ *
+ * On a match the same line runs through the match block: the shape and the units to talk to
+ * are the plan and repeat; presence, the score and the conditions are the record of a game
+ * that was played once.
  */
 export async function repeatSession(
   ctx: ServiceContext,
@@ -576,6 +580,23 @@ export async function repeatSession(
     seededFromActionIds: [],
     objective: { ...source.objective, sourceActionId: null },
     focusPlayers,
+    // Period presence points at the *source* session's periods, which no longer exist once
+    // the phases are remapped — and it would be a lie besides, crediting this week's fixture
+    // with minutes played in last week's. The score and the conditions belong to that game
+    // too. The unit objectives are asks, so they come back the way challenges do: open.
+    match:
+      source.match === null
+        ? null
+        : {
+            ...source.match,
+            unitObjectives: source.match.unitObjectives.map((objective) => ({
+              ...objective,
+              status: 'open',
+            })),
+            presence: [],
+            result: null,
+            conditions: '',
+          },
     // The *asks* are worth repeating; last week's verdict on them is not. Every challenge
     // comes back open, with no sightings and no ruling, for a player still in the squad.
     challenges: source.challenges.map((challenge) => ({
