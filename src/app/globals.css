@@ -1317,6 +1317,37 @@ summary {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+  The regression offer (ADR 0009 §3). Two lines in one tap target: what the record says on top,
+  and the coach's own fix underneath in the accented weight, because the fix is the thing being
+  tapped.
+
+  Deliberately **not** `btn--warn`. That tint belongs to the open-intervention bar, where the
+  clock is stopped and something is genuinely wrong. Nothing is wrong here — a predicted
+  mistake turning up is the practice working as designed, and a warning colour would read as a
+  telling-off for a prediction the coach made themselves.
+*/
+.regression-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  border: 1px solid var(--signal);
+  height: auto;
+  padding-block: var(--sp-2);
+}
+
+.regression-bar-said {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.regression-bar-fix {
+  font-weight: 600;
+}
+
 /* ------------------------------------------------------ player challenges */
 
 /*

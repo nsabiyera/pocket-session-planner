@@ -85,6 +85,23 @@ reports it.
 Reflective reporting on `/review` still happens, and is still worth having — but a report is the
 *second* thing this feature does, not the first.
 
+**Built as an offer bar, not a toast.** A toast that expires while the coach is watching the
+drill is a response they never got, which defeats the phase entirely. The bar sits where the
+open-intervention bar sits, appears only when all three conditions hold, and clears the moment
+the coach makes the practice easier **by any route** — including a change they never planned,
+because that is still a response and the app is in no position to call it the wrong one.
+
+**It has no dismiss.** A nudge the coach dismisses is a nudge that did nothing, and this one is
+holding up their own sentence rather than the app's opinion. The cost is that a coach who
+decides against it carries the bar to the end of the phase. That is a field-test question, not
+a design one, and the checklist asks it directly.
+
+**The content already encodes the exception.** Whole-Part-Whole's two WHOLE games and the
+Constraints-Led free game ship with no regressions on purpose — adjusting them destroys the
+comparison those methodologies exist to make — and `presets.test.ts` pins that. So the offer is
+silent in exactly the phases where making it easier would be wrong, without this feature needing
+to know why.
+
 ### 4. The player-facing boundary
 
 A player card is the first artefact in the app intended for somebody other than the coach. It is:
@@ -160,7 +177,7 @@ phases that only *report*:
 | --- | --- | --- |
 | 1 | `checked` beside `delivered` | One field pair, one chip state, one review line |
 | 2 | The predicted misconception, in Do mode | One plan-time field, one pinned line, one tag |
-| 3 | A failed check routes to the written regression | No new store — existing adjustment path |
+| 3 | A failed check routes to the written regression | No new store, no new field — one derived offer over the existing adjustment path |
 | 4 | The player card | Derivation plus one component, gated |
 | 5 | Fix the write path, then the questioning and did-it-stick reports | See below |
 | 6 | Carry-forward learns from it, and the takeaway | Two rules, two rationales |

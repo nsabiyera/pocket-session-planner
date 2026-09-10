@@ -62,9 +62,10 @@ npx serve site -l 3000
 
 ## Checking for understanding (ADR 0009)
 
-Phases 1 and 2 — the `checked` state, its review line, and the predicted misconception. Every
-line here is silent below its floor or absent when unset, by design, so **a broken one looks
-exactly like a quiet one**: check the negative cases as carefully as the positive ones.
+Phases 1 to 3 — the `checked` state and its review line, the predicted misconception, and the
+regression offer. Every line here is silent below its floor or absent when unset, by design, so
+**a broken one looks exactly like a quiet one**: check the negative cases as carefully as the
+positive ones.
 
 ### The mistake you expected (phase 2)
 
@@ -84,6 +85,31 @@ exactly like a quiet one**: check the negative cases as carefully as the positiv
 - [ ] Review an objective, accept the `Revisit:` chip, and start the next session. The `Expect`
       line **comes back with it** — this is the session where the prediction earned its keep.
 - [ ] Open a session planned **before this shipped**. No `Expect` line, no chip, no error.
+
+### And what to do about it (phase 3)
+
+This is the only part of the feature that acts inside the session, so it is the part where
+being wrong costs the coach something. **The failure to look for is a bar that nags.**
+
+- [ ] In a practice phase with a regression written, log a `Struggled` with the misconception
+      chip. The offer bar appears above the two big buttons, carrying **your own** regression
+      text, not a suggestion of the app's.
+- [ ] Tap it. The practice adjustment is recorded, the bar goes, and `Undo` is on the toast.
+- [ ] Log the same thing again in the same phase. **No bar** — you have already responded.
+- [ ] Log it, then make the practice easier from the **phase sheet** instead. The bar goes.
+      Responding by another route still counts as responding.
+- [ ] Log it, then make the practice **harder**. The bar stays.
+- [ ] Move to the next phase. The bar goes, whether you acted on it or not.
+- [ ] Log a `Working` with the misconception chip. **No bar** — a player wrestling with it is
+      where the learning is, and making it easier would take the practice away.
+- [ ] Log a `Struggled` with a different tag. **No bar.**
+- [ ] Do the same in Whole-Part-Whole's second WHOLE game, which ships no regressions on
+      purpose. **No bar**, and nothing explaining its absence.
+- [ ] With the bar showing, portrait at 667px: Do mode still fits. It is two lines tall and it
+      sits where the intervention bar sits, so both showing at once is the case to check.
+- [ ] Ignore the bar for a whole phase. Decide honestly whether it read as a useful reminder or
+      as the app telling you off. If it nagged, it needs a dismiss — there is deliberately
+      none, and this is the item that would change that.
 
 ### Said it, and checked it (phase 1)
 

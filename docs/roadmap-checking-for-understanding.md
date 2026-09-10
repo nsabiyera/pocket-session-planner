@@ -2,10 +2,13 @@
 
 - **Status:** **building, in the order [ADR 0009](adr/0009-checking-for-understanding.md) sets
   rather than the one below.** Phase 0 is written and accepted. Built so far: the `checked` state
-  and its review line (ADR 0009 phase 1, "Phase 4" below), and the predicted misconception —
-  pinned in Do mode and tappable as an observation tag (ADR 0009 phase 2, half of "Phase 5"
-  below). The ADR supersedes this document wherever the two disagree — on the phase order, on
-  where the check question lives, on the scoring rule, and on what a phase costs.
+  and its review line (ADR 0009 phase 1, "Phase 4" below), the predicted misconception — pinned
+  in Do mode and tappable as an observation tag (ADR 0009 phase 2, half of "Phase 5" below), and
+  **the response half, which this document does not have a phase for**: a logged misconception
+  routes to the regression the coach already wrote, inside the session (ADR 0009 phase 3, and
+  §3 of the ADR for why it exists at all). The ADR supersedes this document wherever the two
+  disagree — on the phase order, on where the check question lives, on the scoring rule, and on
+  what a phase costs.
 - **Date:** 2026-09-10
 - **Reviewed:** [`review-checking-for-understanding.md`](review-checking-for-understanding.md)
   (2026-09-10) — argued for a different phase order, and found that three of the phases called
@@ -277,6 +280,12 @@ Four states rather than three because `not_asked` must be distinguishable from `
 verdict on the players.
 
 ### Phase 6 — Carry-forward learns from it
+
+> **This is the roadmap's only response, and it arrives next Tuesday.** That is the gap
+> [ADR 0009](adr/0009-checking-for-understanding.md) §3 fills with a phase this document has no
+> entry for: a predicted mistake, logged as it happens, routes to the regression the coach
+> already wrote — inside the session, which is where Black and Wiliam's definition puts it. Both
+> rules below are still worth building; they are the *term-scale* response, not the only one.
 
 Two rules in `derive-carry-forward.ts`, two sentences in `rationale.ts`, both proposals **unticked**
 like the four-corner and challenge-point nudges:

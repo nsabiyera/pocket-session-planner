@@ -37,6 +37,7 @@ import {
   coachingPointStateLabel,
   nextCoachingPointState,
 } from '@/domain/coaching-point';
+import { regressionOffer, REGRESSION_OFFER_MESSAGE } from '@/domain/checking';
 import { sessionChallengeProgress, type ChallengeProgress } from '@/domain/session/challenges';
 import { ACTION_MOMENTS, momentShortLabel, type ActionMoment } from '@/domain/capabilities';
 import type { Observation, ObservationRatingKind } from '@/domain/observation';
@@ -198,6 +199,15 @@ export default function RunPage() {
   const challenges = sessionChallengeProgress(session, phase.id).filter(
     (progress) => progress.liveNow,
   );
+
+  // Null almost always, which is the point — see `domain/checking.ts`.
+  const offer = regressionOffer({
+    phaseId: phase.id,
+    misconception: session.objective.commonMisconception,
+    regressions: phase.regressions,
+    observations,
+    adjustments: session.run.practiceAdjustments,
+  });
 
   const challengePlayerName = (progress: ChallengeProgress): string => {
     const player = state.players.find((candidate) => candidate.id === progress.challenge.playerId);
@@ -517,6 +527,27 @@ export default function RunPage() {
           }}
         >
           ⏱ Coaching · {formatClock(now - Date.parse(openIntervention.at))} · Resume play
+        </button>
+      ) : null}
+
+      {/*
+        **The response half** (ADR 0009 §3). The coach predicted the mistake, logged it
+        happening, and wrote down a way to make the practice easier — this puts the third
+        thing one tap from the second.
+
+        A bar rather than a toast on purpose: a toast that expires while the coach is watching
+        the drill is a response they never got, and the whole point of this phase is that it
+        arrives while the session is still running. It clears the moment they make the
+        practice easier by *any* route, and at the phase change regardless.
+      */}
+      {offer ? (
+        <button
+          type="button"
+          className="btn btn--lg btn--block regression-bar"
+          onClick={() => void adjust('regressed', offer.text)}
+        >
+          <span className="regression-bar-said">{REGRESSION_OFFER_MESSAGE}</span>
+          <span className="regression-bar-fix">Make it easier: {offer.text}</span>
         </button>
       ) : null}
 

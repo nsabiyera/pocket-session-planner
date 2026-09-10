@@ -129,6 +129,29 @@ difference between a note you can act on and a shrug.
 If you typed your own objective rather than tapping a chip, there is no line and no chip. The app
 does not invent a prediction you never made.
 
+### And what to do about it
+
+Log a `Struggled` with that chip tapped, and a bar appears above the two big buttons:
+
+> It went wrong the way you said it would.
+> **Make it easier: Take a defender out**
+
+That second line is **your own regression**, from the phase you planned. One tap records it, the
+same as changing the practice from the phase sheet — so the change ends up in your review either
+way.
+
+The bar is quiet about it and it does not nag:
+
+- it only appears when you predicted the mistake, logged it happening in **this** phase, and wrote
+  down a way to make the practice easier;
+- it goes as soon as you make the practice easier **by any route**, including a change you never
+  planned;
+- it goes at the next phase regardless.
+
+Some phases ship with no way back on purpose — Whole-Part-Whole's two WHOLE games and the
+Constraints-Led free game — because changing those destroys the comparison the session exists to
+make. You get no bar there, which is the right answer rather than a gap.
+
 ### Saying it, and checking it
 
 Each coaching point is a button with **three states**, and you tap through them:
