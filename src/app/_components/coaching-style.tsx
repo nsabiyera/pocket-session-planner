@@ -7,6 +7,11 @@ import {
   type CoachingStyle,
 } from '@/domain/coaching-style';
 import { INTERVENTION_METHODS, interventionMethodLabel } from '@/domain/intervention';
+import {
+  describeQuestioning,
+  hasEnoughForQuestioning,
+  type QuestioningSummary,
+} from '@/domain/questioning';
 import { Why } from './why';
 
 /**
@@ -21,7 +26,14 @@ import { Why } from './why';
  * Five Pillars are five tools and not a ranking, and which one a session needed is not a
  * judgement this app is in a position to make.
  */
-export function CoachingStylePanel({ style }: { style: CoachingStyle }) {
+export function CoachingStylePanel({
+  style,
+  questioning,
+}: {
+  style: CoachingStyle;
+  /** The term's questioning record. Its own floor, so it can be silent while the bars are not. */
+  questioning: QuestioningSummary;
+}) {
   if (!hasEnoughForStyle(style)) return null;
 
   const max = Math.max(1, ...INTERVENTION_METHODS.map((method) => style.countByMethod[method]));
@@ -65,6 +77,21 @@ export function CoachingStylePanel({ style }: { style: CoachingStyle }) {
         <div className="banner banner--warn">
           {evidence}
           <Why id="report:style-evidence" />
+        </div>
+      ) : null}
+
+      {/*
+        The questioning bar above says how often; this says to whom. It is the minutes report
+        about a different scarce resource — except that naming who you asked is optional, so
+        the sentence is scoped to what was recorded and never claims the rest.
+
+        Its own floor rather than the panel's: a coach with plenty of interventions and four
+        questions has a style worth showing and no questioning spread worth stating.
+      */}
+      {hasEnoughForQuestioning(questioning) ? (
+        <div className="card-meta">
+          {describeQuestioning(questioning)}
+          <Why id="report:questioning" />
         </div>
       ) : null}
     </section>

@@ -8,9 +8,19 @@ import { PLAY_PRACTICE_PLAY } from '@/domain/presets';
 import { unwrap } from '@/lib/result';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { FakeClock } from '@/lib/fake-clock';
-import { asInterventionEventId } from '@/domain/ids';
+import { asCoachingPointId, asInterventionEventId, asSessionId } from '@/domain/ids';
 import { isoDateTime } from '@/domain/primitives';
-import { aPlayer, aReview, aSquad, anAction, anObservation, playerId, T0 } from '@/test/builders';
+import {
+  aPlayer,
+  aReview,
+  aSquad,
+  anAction,
+  anObservation,
+  playerId,
+  testId,
+  T0,
+} from '@/test/builders';
+import type { PointFollowUp } from '@/domain/checking';
 import type { Session } from '@/domain/session';
 
 const players = [aPlayer('kai'), aPlayer('maya'), aPlayer('sam')];
@@ -23,6 +33,7 @@ function sessionFixture(): Session {
       successCriteria: ['We beat the first press', 'The keeper is an option'],
       sourceActionId: null,
       principleId: null,
+      commonMisconception: null,
     },
     now: T0,
     ids: new FakeIdGenerator(),
@@ -321,6 +332,7 @@ describe('trigger: ball rolling time', () => {
         successCriteria: [],
         sourceActionId: null,
         principleId: null,
+        commonMisconception: null,
       },
       now: T0,
       ids: new FakeIdGenerator(),
@@ -726,5 +738,116 @@ describe('proposalKey', () => {
       proposalKey('coaching_point', 'Scan', playerId('maya')),
     );
     expect(proposalKey('reminder', 'Scan')).not.toBe(proposalKey('coaching_point', 'Scan'));
+  });
+});
+
+/**
+ * ADR 0009 phase 6. Both rules arrive **unticked** and both are `reminder`s rather than
+ * `coaching_point`s, which is the whole point: a coaching point comes back as a chip to tick
+ * *said it*, and re-saying is the thing both rules exist to avoid.
+ */
+describe('trigger: re-test, do not re-teach', () => {
+  const followUpWith = (over: Partial<PointFollowUp> = {}) => ({
+    delivered: 1,
+    followedUp: 1,
+    points: [
+      {
+        pointId: asCoachingPointId(testId('point')),
+        text: 'Head up before you receive',
+        checked: true,
+        loggedAfter: 1,
+        ratings: ['good' as const],
+        ...over,
+      },
+    ],
+  });
+
+  it('proposes asking again when a checked point was logged good afterwards', () => {
+    const proposals = withKind(derive({ followUp: followUpWith() }), 'checking:re-test');
+
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]?.title).toBe('Ask again: Head up before you receive');
+    // A reminder, so it lands in "Before you go" rather than as a point to deliver.
+    expect(proposals[0]?.kind).toBe('reminder');
+    // Unticked: a coach who has moved on to something else is right to have.
+    expect(proposals[0]?.defaultSelected).toBe(false);
+    // The Bjork constraint, not a compliment.
+    expect(proposals[0]?.detail).toMatch(/whether it stuck/i);
+  });
+
+  it('says nothing about a point that was never checked', () => {
+    const proposals = derive({ followUp: followUpWith({ checked: false }) });
+    expect(withKind(proposals, 'checking:re-test')).toEqual([]);
+  });
+
+  it('says nothing when nothing good was logged against it', () => {
+    const struggled = derive({ followUp: followUpWith({ ratings: ['struggled'] }) });
+    expect(withKind(struggled, 'checking:re-test')).toEqual([]);
+
+    const nothing = derive({ followUp: followUpWith({ loggedAfter: 0, ratings: [] }) });
+    expect(withKind(nothing, 'checking:re-test')).toEqual([]);
+  });
+
+  it('makes no judgement at all without the follow-up join', () => {
+    expect(withKind(derive({}), 'checking:re-test')).toEqual([]);
+  });
+});
+
+describe('trigger: said three sessions running, never checked', () => {
+  const history = (checkedIn: readonly number[] = []) =>
+    [1, 2, 3].map((n) => ({
+      sessionId: asSessionId(testId(`s${n}`)),
+      text: 'Head up before you receive',
+      checked: checkedIn.includes(n),
+    }));
+
+  it('proposes checking it, quoting the point and the streak', () => {
+    const proposals = withKind(
+      derive({ deliveredPointHistory: history() }),
+      'checking:never-checked',
+    );
+
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]?.title).toBe('Check this one: Head up before you receive');
+    expect(proposals[0]?.kind).toBe('reminder');
+    expect(proposals[0]?.defaultSelected).toBe(false);
+    expect(proposals[0]?.detail).toBe(
+      'Said in 3 sessions running, and never checked in any of them.',
+    );
+  });
+
+  it('says nothing once the coach has checked it', () => {
+    const proposals = derive({ deliveredPointHistory: history([3]) });
+    expect(withKind(proposals, 'checking:never-checked')).toEqual([]);
+  });
+
+  it('makes no judgement at all without the term history', () => {
+    expect(withKind(derive({}), 'checking:never-checked')).toEqual([]);
+  });
+
+  it('ranks the never-checked nudge above the re-test one', () => {
+    // The point gone unchecked for three sessions is the one a coach cannot see from inside
+    // the habit; the one that went well is the smaller prompt.
+    const proposals = derive({
+      deliveredPointHistory: history(),
+      followUp: {
+        delivered: 1,
+        followedUp: 1,
+        points: [
+          {
+            pointId: asCoachingPointId(testId('other')),
+            text: 'Switch it when the far side is free',
+            checked: true,
+            loggedAfter: 1,
+            ratings: ['good' as const],
+          },
+        ],
+      },
+    });
+
+    const order = proposals
+      .map((proposal) => proposal.trigger)
+      .filter((trigger) => trigger.startsWith('checking:'));
+    expect(order).toEqual(['checking:never-checked', 'checking:re-test']);
   });
 });

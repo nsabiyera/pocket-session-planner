@@ -19,6 +19,25 @@ export interface ObjectiveTemplate {
   readonly theme: ObjectiveTheme;
   readonly successCriteria: readonly string[];
   readonly coachingPoints: readonly string[];
+  /**
+   * **What you expect to go wrong, written before it does** (ADR 0009).
+   *
+   * Teachers plan against the misconception, and it is what makes a `struggled` observation
+   * interpretable rather than merely negative: *"it went wrong the way we thought it would"*
+   * is a diagnosis, where *"struggled"* on its own is a shrug.
+   *
+   * **It lives on the objective rather than on the phase**, unlike the check question. A
+   * question is *method* — Guided Discovery asks them, Command does not, and five of them
+   * already ship in the methodology presets. A misconception is *content*: only the thing
+   * being trained can predict how it will be got wrong, and a methodology that does not know
+   * the objective cannot honestly guess. ADR 0009 §5 is amended by this reasoning.
+   *
+   * **Task, never person.** Every entry describes the error, not the child — the same
+   * Hattie split `ObservationKind` already draws. There is no entry here that a player could
+   * read as being about them, which matters because this string reaches the observation
+   * sheet and, through it, the record.
+   */
+  readonly commonMisconception: string;
   /** Where the points belong when carry-forward has to place them. */
   readonly preferredPhaseKind: PhaseKind;
   /**
@@ -31,6 +50,13 @@ export interface ObjectiveTemplate {
    */
   readonly primaryCorner: FourCorner;
 }
+
+/**
+ * Long enough for one predicted error, short enough to work as a chip on the observation
+ * sheet — because `commonMisconception` is both: prose pinned in Do mode, and a tag the coach
+ * taps when the error turns up.
+ */
+export const MAX_MISCONCEPTION = 160;
 
 /**
  * What an objective is about: one of the four moments, or the player rather than the team.
@@ -73,6 +99,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Head up before you receive',
       'If it is not on, go long and win the second ball',
     ],
+    commonMisconception:
+      'They think playing out means never going long, so they force a pass that is not there.',
     preferredPhaseKind: 'phase_of_play',
     primaryCorner: 'technical_tactical',
   },
@@ -87,6 +115,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Receive on the back foot to face forward',
       'One player in behind every time we go wide',
     ],
+    commonMisconception:
+      'They come inside to get the ball instead of staying wide and waiting for it to travel.',
     preferredPhaseKind: 'small_sided_game',
     primaryCorner: 'technical_tactical',
   },
@@ -104,6 +134,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Third player runs before the second pass',
       'Disguise the pass with your body shape',
     ],
+    commonMisconception:
+      'They stand square to the ball to offer support, rather than angling off it.',
     preferredPhaseKind: 'skill_practice',
     primaryCorner: 'technical_tactical',
   },
@@ -118,6 +150,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Follow the shot in',
       'Take the first-time option when it is on',
     ],
+    commonMisconception:
+      'They think power beats placement, so everything gets hit as hard as possible.',
     preferredPhaseKind: 'skill_practice',
     primaryCorner: 'technical_tactical',
   },
@@ -132,6 +166,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Open your body to see more of the pitch',
       'Say what you saw before you played it',
     ],
+    commonMisconception:
+      'They look up as the ball arrives rather than before it, and think that counts as scanning.',
     preferredPhaseKind: 'skill_practice',
     primaryCorner: 'technical_tactical',
   },
@@ -146,6 +182,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Cushion it, do not stop it dead',
       'Touch and go in one movement',
     ],
+    commonMisconception:
+      'They think a good first touch is a dead one, stopping the ball under their feet.',
     preferredPhaseKind: 'technical',
     primaryCorner: 'technical_tactical',
   },
@@ -160,6 +198,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Commit the defender before you go',
       'It is fine to lose it — go again',
     ],
+    commonMisconception:
+      'They think losing it is the mistake, so they pass backwards rather than go.',
     preferredPhaseKind: 'skill_practice',
     primaryCorner: 'psychological',
   },
@@ -174,6 +214,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Squeeze up behind the presser',
       'If the first press is beaten, drop together',
     ],
+    commonMisconception:
+      'They think pressing is the nearest player sprinting, with nobody squeezing up behind.',
     preferredPhaseKind: 'phase_of_play',
     primaryCorner: 'physical',
   },
@@ -188,6 +230,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Small steps, do not cross your feet',
       'Win it when their touch is heavy',
     ],
+    commonMisconception:
+      'They think defending means winning the ball, so they dive in at the first chance.',
     preferredPhaseKind: 'skill_practice',
     primaryCorner: 'technical_tactical',
   },
@@ -202,6 +246,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Far side tucks in when the ball is wide',
       'Talk — the ones behind can see it',
     ],
+    commonMisconception:
+      'They think compact means everyone near the ball, so the far side follows it across.',
     preferredPhaseKind: 'phase_of_play',
     primaryCorner: 'social',
   },
@@ -217,6 +263,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Two players commit, the rest hold the shape',
       'Finish the attack — do not slow it down',
     ],
+    commonMisconception:
+      'They run towards the player on the ball to offer a pass, instead of running beyond.',
     preferredPhaseKind: 'small_sided_game',
     primaryCorner: 'physical',
   },
@@ -232,6 +280,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Block the forward pass first',
       'Do not stand and watch the loss',
     ],
+    commonMisconception:
+      'They stop to appeal or watch the loss, instead of pressing in the first second.',
     preferredPhaseKind: 'small_sided_game',
     primaryCorner: 'psychological',
   },
@@ -246,6 +296,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'The player who can see it is the player who talks',
       'Encourage after a mistake, not before',
     ],
+    commonMisconception:
+      'They think talking means encouragement, not information given before the ball arrives.',
     preferredPhaseKind: 'small_sided_game',
     primaryCorner: 'social',
   },
@@ -260,6 +312,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Recognise the moment — do not force it',
       'One touch to escape, two to settle',
     ],
+    commonMisconception:
+      'They think forward is always better, so the pass goes in whether it is on or not.',
     preferredPhaseKind: 'small_sided_game',
     primaryCorner: 'psychological',
   },
@@ -269,6 +323,26 @@ const BY_ID = new Map(OBJECTIVE_LIBRARY.map((objective) => [objective.id, object
 
 export function findObjectiveTemplate(id: string): ObjectiveTemplate | undefined {
   return BY_ID.get(id);
+}
+
+const BY_TEXT = new Map(
+  OBJECTIVE_LIBRARY.map((objective) => [objective.text.toLowerCase(), objective]),
+);
+
+/**
+ * The same lookup by the objective's own words, for carry-forward.
+ *
+ * A stored `CarryForwardAction` carries the objective *text*, not the library id — it has to,
+ * because a coach's own typed objective is just as carryable as a chip. So a revisited
+ * objective finds its predicted misconception this way rather than by adding a field to a
+ * stored payload shape.
+ *
+ * Case-insensitive and nothing more. Deliberately **not** `normaliseCoachingPointText`: this
+ * decides whether to attach a sentence a coach never wrote, and a fuzzy match that occasionally
+ * attaches the wrong prediction is worse than one that quietly attaches none.
+ */
+export function findObjectiveTemplateByText(text: string): ObjectiveTemplate | undefined {
+  return BY_TEXT.get(text.trim().toLowerCase());
 }
 
 export interface ObjectiveUsage {

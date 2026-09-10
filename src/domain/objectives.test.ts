@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   findObjectiveTemplate,
+  findObjectiveTemplateByText,
   objectiveUsageFrom,
+  MAX_MISCONCEPTION,
   OBJECTIVE_LIBRARY,
   OBJECTIVE_THEMES,
   momentOf,
@@ -40,6 +42,54 @@ describe('the objective library', () => {
     expect(corners.size).toBeGreaterThanOrEqual(3);
   });
 
+  /**
+   * ADR 0009: the predicted misconception is the field that makes a `struggled` observation
+   * interpretable. It ships with all fourteen so the default path stays typing-free, and the
+   * guards below are the honesty rules rather than mere presence checks.
+   */
+  describe('the predicted misconception', () => {
+    it('ships with every objective, so the default path costs no typing', () => {
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.commonMisconception.trim().length, objective.id).toBeGreaterThan(20);
+        expect(objective.commonMisconception.length, objective.id).toBeLessThanOrEqual(
+          MAX_MISCONCEPTION,
+        );
+      }
+    });
+
+    it('describes the mistake, never the child', () => {
+      // Hattie's task/person split, enforced. This string reaches the observation sheet and,
+      // through it, the record — so a word about the player would end up quoted back at one.
+      const person = /lazy|stupid|careless|thick|slow|weak|useless|cannot be bothered|no good/i;
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.commonMisconception, objective.id).not.toMatch(person);
+      }
+    });
+
+    it('is a prediction about what they will do, not a claim about understanding', () => {
+      // ADR 0009 §1: the app never says a player understood or failed to understand anything.
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.commonMisconception, objective.id).not.toMatch(
+          /understood|comprehen|grasped|learned/i,
+        );
+      }
+    });
+
+    it('is distinct per objective — a shared sentence would predict nothing', () => {
+      const all = OBJECTIVE_LIBRARY.map((objective) => objective.commonMisconception);
+      expect(new Set(all).size).toBe(all.length);
+    });
+
+    it('is findable by the objective text, which is all a carried action stores', () => {
+      const scanning = findObjectiveTemplate('scanning')!;
+      expect(findObjectiveTemplateByText('Scanning before receiving')).toBe(scanning);
+      // Case and surrounding space are noise; anything else is a different objective.
+      expect(findObjectiveTemplateByText('  scanning BEFORE receiving ')).toBe(scanning);
+      expect(findObjectiveTemplateByText('Scanning before recieving')).toBeUndefined();
+      expect(findObjectiveTemplateByText('')).toBeUndefined();
+    });
+  });
+
   it('uses unique ids and a known theme', () => {
     const ids = OBJECTIVE_LIBRARY.map((o) => o.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -64,6 +114,7 @@ describe('orderObjectives', () => {
     theme: 'offensive_organisation',
     successCriteria: ['x'],
     coachingPoints: ['a', 'b', 'c', 'd'],
+    commonMisconception: 'They do the wrong thing, in the way we expected.',
     preferredPhaseKind: 'skill_practice',
     primaryCorner: 'technical_tactical',
   });

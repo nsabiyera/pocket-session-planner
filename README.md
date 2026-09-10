@@ -132,6 +132,8 @@ house conventions in `hodorhub`; the rest are modelling calls this app had to ma
   with the coach's own pattern
 - [ADR 0008](docs/adr/0008-periodization-behind-a-flag.md) — the whole periodization set
   behind a default-off flag in Settings
+- [ADR 0009](docs/adr/0009-checking-for-understanding.md) — checking for understanding as
+  records of coach actions, never a measurement of a player
 
 ## Testing
 

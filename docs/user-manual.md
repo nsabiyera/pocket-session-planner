@@ -60,6 +60,11 @@ watch today. They get a tappable chip in Do mode, and the review asks about them
 reorder them with `↑` `↓`, set [player challenges](#player-challenges), or `Discard this plan`.
 Then `Start session ▸`.
 
+The phase editor is also where two things from last week are waiting. **Last week you told
+them** quotes your takeaway back at you — ask the players what they remember before you tell
+them again. And **Before you go** lists any reminders you carried forward, including the two
+checking nudges from the review.
+
 > Squad home to a running session should take under twenty seconds and no typing. If it is
 > taking longer, you are working harder than the app intends.
 
@@ -90,6 +95,15 @@ The `⌄` on a row opens the verdict: **Met / Partly / Missed**, plus `＋1` if 
 count. `Partly` exists because the honest answer to *did Kai make three forward passes* is
 often "he made one, and he was looking for them".
 
+Under the verdict there is one optional field: **What did they say about it?** Their words, not
+yours. It is the only thing in the whole app that records something a *player* said, and it is
+what turns a verdict into a conversation — *"missed"* is a judgement, *"missed, and he said he
+couldn't see the far side"* is next week's practice.
+
+Nothing is ever done with it beyond showing it back to you. It is not scored, not counted, not
+read for mood or confidence — it is a quote. You will see it on their card in the huddle, and on
+the session in your history. Skip it every week and nothing breaks.
+
 Anything you have not ruled on can be settled in the review.
 
 ## Running a session
@@ -106,10 +120,113 @@ the drill genuinely was still running.
 - `⏸ Pause` stops the clock. `Next phase ▸` moves on.
 - **`✋ Intervene` is one tap**, pre-filled from your plan, because the common case is you
   doing what you said you would. A stop-play mechanic pauses the phase clock automatically, so
-  ball-rolling time measures itself. Long-press it (right-click on a desktop) for the detail
-  sheet, where you can change the method, aim it at one player, or add a note.
+  ball-rolling time measures itself. **Long-press it** (right-click on a desktop) for the detail
+  sheet: change what you did, how you stopped it and who it landed on, name the players you
+  spoke to, or add a note.
+
+  The long-press is worth knowing about, because two reports are built on it. Changing an axis
+  is what records that you *chose* a style rather than inheriting it from your plan — without
+  that, `How you coach` can only ever show you your own plan read back. And naming who you
+  spoke to is what makes the questioning report possible. Leave a control alone and it keeps
+  the plan's value, which is recorded honestly as inherited rather than chosen.
 - `＋ Note` for a team-wide note.
 - `End` finishes and takes you to the review.
+
+### The mistake you expected
+
+Under the objective, Do mode shows one line: **`Expect` — what usually goes wrong with this
+objective.** *"They think playing out means never going long, so they force a pass that is not
+there."*
+
+It comes from the objective you tapped, so it costs you no typing, and it is written down before
+the session precisely so you meet it at the moment it turns up rather than remembering it on the
+drive home.
+
+**It is also a tag.** When it happens, the observation sheet offers it under **The mistake you
+expected** — one chip, right under this phase's own coaching points. Tapping it turns
+*"struggled"* into *"struggled, and it went wrong the way we said it would"*, which is the
+difference between a note you can act on and a shrug.
+
+If you typed your own objective rather than tapping a chip, there is no line and no chip. The app
+does not invent a prediction you never made.
+
+### And what to do about it
+
+Log a `Struggled` with that chip tapped, and a bar appears above the two big buttons:
+
+> It went wrong the way you said it would.
+> **Make it easier: Take a defender out**
+
+That second line is **your own regression**, from the phase you planned. One tap records it, the
+same as changing the practice from the phase sheet — so the change ends up in your review either
+way.
+
+The bar is quiet about it and it does not nag:
+
+- it only appears when you predicted the mistake, logged it happening in **this** phase, and wrote
+  down a way to make the practice easier;
+- it goes as soon as you make the practice easier **by any route**, including a change you never
+  planned;
+- it goes at the next phase regardless.
+
+Some phases ship with no way back on purpose — Whole-Part-Whole's two WHOLE games and the
+Constraints-Led free game — because changing those destroys the comparison the session exists to
+make. You get no bar there, which is the right answer rather than a gap.
+
+### What to tell them
+
+At the end, `💬 Tell them` sits after the focus-player chips. It opens one card per player you
+were watching — anyone you made a focus player, or anyone you set a challenge. Two or three
+cards, not twelve, because those are the players the app has anything to say about.
+
+Each card is three lines, and they are Hattie and Timperley's three questions in order:
+
+| Line | The question it answers |
+| --- | --- |
+| **Your job** | *Where am I going?* — your challenge as you wrote it, with its tally, or why you made them a focus player |
+| **Went well** | *How am I going?* — one thing that worked, in the words of the tag you tapped |
+| **Next** | *Where to next?* — one thing to work on. One, not three |
+
+If you wrote down what they said about their challenge, that appears too — in quotes, under
+**You said**. It is the one line on the card that is not your language, which makes it the
+safest thing on there: reading a player their own sentence back is a check, not a verdict.
+
+**It is all your own words.** A challenge as you typed it, a tag as you tapped it, a next step
+carried over from last week's review. The card cannot produce "well done today" because there is
+nowhere in it for a sentence like that to come from.
+
+**And it is not a report card.** No rating out of five, no count of observations, no corner, no
+comparison with a teammate — nothing you would not want a ten-year-old reading over your
+shoulder, because they will be.
+
+If you logged nothing about somebody, their card says *"Nothing logged for Kai today."* That is
+the honest answer and it is not a telling-off: a coach who spent the session rescuing a rondo
+logged nothing about anybody.
+
+The chip is absent altogether when you set no challenges and made nobody a focus player. There
+is nothing to switch on — if there is somebody to talk about, it is there.
+
+### Saying it, and checking it
+
+Each coaching point is a button with **three states**, and you tap through them:
+
+| | What it means |
+| --- | --- |
+| `○` | Not said yet |
+| `✓` | **You said it** |
+| `✓✓` | **You said it, and you checked it** — you asked somebody to say it back or show it back |
+
+The second tick is the one worth having. Saying a thing and finding out whether it landed are
+different jobs, and only one of them was ever recorded before. A fourth tap takes the point back
+to `○`, so a mis-tap costs you one more tap and nothing else.
+
+Review then tells you: *"5 coaching points delivered. 1 checked."* There is **no right ratio**
+and the app never suggests one — one point checked properly is a better night than five ticked
+chips. And the app never claims the players understood anything: it counts what you did, because
+that is the only thing it can honestly see.
+
+Sessions you ran before this existed read as unchecked, which is the honest answer for them —
+nobody can now say whether those points were checked.
 
 ### Logging an observation
 
@@ -121,6 +238,7 @@ Everything else on the sheet is optional:
   touch.
 - **Core capabilities** — the FA's six, in their own words.
 - **This phase** — your own coaching points for the phase you are in.
+- **The mistake you expected** — the objective's predicted misconception, when it has one.
 - **The four corner groups** — the specific attribute you saw.
 
 Tapping a tag is what makes the reports work. The corner and the capability come along for
@@ -138,6 +256,17 @@ actually got, and a rating out of five.
 - which phases ran over, and by how much;
 - any focus player you logged nothing against — the omission coaches most want flagged;
 - **your challenges**: *"2 of 3 challenges met — 1 partly."*;
+- **said against checked**: *"5 coaching points delivered. 1 checked."* Shown once you have
+  ticked at least one point as said — below that there is nothing to compare;
+- **whether anything was logged afterwards**: *"3 of the 5 points you said have something
+  logged against them afterwards."* It works because tapping a coaching point's own tag on the
+  observation sheet links the two. **It never says a point did not land** — nothing logged is a
+  gap in your notes, and a coach busy coaching a point is a coach not writing notes;
+- **your questions**: *"12 questions, to 4 players. Seven players were never asked anything."*
+  That last clause only appears when you named somebody on **every** question. Name them on
+  some and it says how many you recorded; name them on none and it just tells you the control
+  is there. "Never named" and "never asked" are different things and only one of them is a
+  fact;
 - **your intervention record**: how many times you stopped play against how many you planned,
   and your ball-rolling time;
 - **your 4 Corner coverage**: *"9 observations for this session: 8 technical, 1 social —
@@ -148,6 +277,10 @@ actually got, and a rating out of five.
   receive — nothing before the ball arrives."* A coach who only ever watches the touch cannot
   see that about themselves, and no amount of logging reveals it on its own.
 
+**What did you leave them with?** is one optional line: the single thing you told the players
+as they went. It is the only field on the review pointed at anybody but you, and the app does
+nothing with it except read it back at the start of your next session, in your words.
+
 Then **Last time you said…** (the points that seeded this session — did they move on?),
 **Focus players** (moved on / same / went back, plus a next step), and **Challenges**, where
 you tap a verdict to settle anything still open. Tap the same verdict again to take it back.
@@ -156,6 +289,17 @@ A judged challenge can only be settled here — Do mode has gone by now.
 **Carry into next session** is a checklist the app has worked out: revisit the objective, keep
 focusing on a player, a coaching point you did not get to, a nudge about your intervention
 habit. Untick anything you do not want. **Nothing is written until you tap `Save review`.**
+
+Two of those chips are about checking, and both arrive unticked:
+
+- **`Ask again: …`** — you checked a point and logged something good about it. It comes back as
+  a question to ask rather than a point to say again, because how it looked on the night is a
+  poor guide to whether it stuck. Being asked does more for it than being told twice.
+- **`Check this one: …`** — you have ticked a point as said in three sessions running and never
+  once ticked it as checked. That is a gap in what *you* know, not a claim about the players.
+
+Both land under **Before you go** on next session's phase editor, not as coaching points to
+deliver — because re-saying is the thing they exist to avoid.
 
 ## Match day
 

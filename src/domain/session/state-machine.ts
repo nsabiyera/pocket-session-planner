@@ -9,6 +9,7 @@ import type {
   PlayerId,
 } from '../ids';
 import type { ChallengeEvent, ChallengeStatus } from '../challenge';
+import type { CoachingPointState } from '../coaching-point';
 import type { AdjustmentDirection, PracticeAdjustment, StepLetter } from '../practice';
 import type { MatchResult, MatchUnit } from '../match-day';
 import {
@@ -81,9 +82,26 @@ export type SessionCommand =
     }
   | { readonly kind: 'closeIntervention' }
   | {
-      readonly kind: 'setCoachingPointDelivered';
+      /**
+       * The coaching-point chip, which has three states rather than two since ADR 0009:
+       * `planned → said → checked`. One command rather than a `delivered` and a `checked`
+       * pair, because the two fields have an invariant between them — nothing can be checked
+       * that was not said — and two commands could break it between taps.
+       */
+      readonly kind: 'setCoachingPointState';
       readonly pointId: CoachingPointId;
-      readonly delivered: boolean;
+      readonly state: CoachingPointState;
+    }
+  | {
+      /**
+       * What the player said about their challenge — a quote, recorded on its own rather than
+       * riding `setChallengeStatus`, because it is independent of the ruling. A coach can write
+       * it down before ruling, after ruling, or without ruling at all, and none of those should
+       * disturb a verdict they already gave.
+       */
+      readonly kind: 'setChallengePlayerWord';
+      readonly challengeId: ChallengeId;
+      readonly said: string;
     }
   | {
       readonly kind: 'logChallengeProgress';
@@ -178,14 +196,16 @@ function reduce(
       return logIntervention(session, command, now);
     case 'closeIntervention':
       return closeIntervention(session, now);
-    case 'setCoachingPointDelivered':
-      return setCoachingPointDelivered(session, command.pointId, command.delivered, now);
+    case 'setCoachingPointState':
+      return setCoachingPointState(session, command.pointId, command.state, now);
     case 'logChallengeProgress':
       return logChallengeProgress(session, command, now);
     case 'undoChallengeProgress':
       return undoChallengeProgress(session, command.challengeId);
     case 'setChallengeStatus':
       return setChallengeStatus(session, command, now);
+    case 'setChallengePlayerWord':
+      return setChallengePlayerWord(session, command);
     case 'logPracticeAdjustment':
       return logPracticeAdjustment(session, command, now);
     case 'undoPracticeAdjustment':
@@ -535,19 +555,38 @@ function closeOpenIntervention(run: SessionRunState, now: IsoDateTime): SessionR
   };
 }
 
-function setCoachingPointDelivered(
+/**
+ * `planned → said → checked` on one point.
+ *
+ * **The state decides both fields**, so `checked` can never be true without `delivered` —
+ * the invariant `CoachingPointSchema` refines. `checkedAt` is kept as the moment the coach
+ * *recorded* the check rather than being preserved across a wrap: a coach who cycles back to
+ * `planned` and forward again has checked it again, and the second timestamp is the honest one.
+ */
+function setCoachingPointState(
   session: Session,
   pointId: CoachingPointId,
-  delivered: boolean,
+  state: CoachingPointState,
   now: IsoDateTime,
 ): Result<Session, TransitionError> {
+  const delivered = state !== 'planned';
+  const checked = state === 'checked';
+
   let found = false;
   const phases = session.phases.map((phase) => ({
     ...phase,
     coachingPoints: phase.coachingPoints.map((point) => {
       if (point.id !== pointId) return point;
       found = true;
-      return { ...point, delivered, deliveredAt: delivered ? now : null };
+      return {
+        ...point,
+        delivered,
+        // Kept when it was already delivered, so moving `said → checked` does not restamp
+        // the moment it was said.
+        deliveredAt: delivered ? (point.deliveredAt ?? now) : null,
+        checked,
+        checkedAt: checked ? now : null,
+      };
     }),
   }));
 
@@ -839,6 +878,26 @@ function setChallengeStatus(
   return ok({ ...session, challenges });
 }
 
+/**
+ * The player's own words, stored verbatim.
+ *
+ * **No run required**, following `setChallengeStatus`: a coach can be told what a player
+ * thought at any point, including in the car park with the session already finished.
+ */
+function setChallengePlayerWord(
+  session: Session,
+  command: Extract<SessionCommand, { kind: 'setChallengePlayerWord' }>,
+): Result<Session, TransitionError> {
+  if (!session.challenges.some((challenge) => challenge.id === command.challengeId)) {
+    return fail('not_found', `No challenge ${command.challengeId} in this session.`);
+  }
+
+  const challenges = session.challenges.map((challenge) =>
+    challenge.id === command.challengeId ? { ...challenge, playerSaid: command.said } : challenge,
+  );
+
+  return ok({ ...session, challenges });
+}
 // ---------------------------------------------------------------------------
 // Survival
 // ---------------------------------------------------------------------------

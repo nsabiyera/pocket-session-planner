@@ -16,7 +16,7 @@ import type { MatchResult, MatchUnit } from '@/domain/match-day';
 import type { EffortQuality } from '@/domain/morphocycle';
 import { SessionSchema } from '@/domain/session';
 import type { AdjustmentDirection, StepLetter } from '@/domain/practice';
-import { normaliseCoachingPointText } from '@/domain/coaching-point';
+import { coachingPointsMatch, normaliseCoachingPointText } from '@/domain/coaching-point';
 import {
   CAPABILITY_TAG_CORNER,
   CAPABILITY_TAGS,
@@ -214,9 +214,25 @@ export async function logObservation(
   const tagged = (input.tags ?? [])
     .map((tag) => attributeForTag(tag))
     .find((attribute): attribute is CornerAttribute => attribute !== undefined);
+
+  /*
+    **Recovering the coaching point from the tag**, which is what makes the did-it-stick join
+    possible at all.
+
+    The observation sheet's "This phase" group *is* this phase's coaching points, offered as
+    their own text — so a coach who taps one has already told us which point they mean, and
+    the id was simply being thrown away (`docs/known-issues.md` 3). This is recovery, not
+    inference: the strings are the same strings, compared with the same normalisation the
+    carry-forward dedupe uses.
+
+    Scoped to this phase's points, so two phases carrying the same wording cannot cross over.
+    An explicit `coachingPointId` from a caller still wins.
+  */
   const point = input.coachingPointId
     ? phase.coachingPoints.find((candidate) => candidate.id === input.coachingPointId)
-    : undefined;
+    : phase.coachingPoints.find((candidate) =>
+        (input.tags ?? []).some((tag) => coachingPointsMatch(tag, candidate.text)),
+      );
 
   // A capability tag carries no attribute, so it needs its own corner. Last in the chain:
   // an attribute that maps to the same word (`Positioning`) still decides for itself.
@@ -253,7 +269,8 @@ export async function logObservation(
     rating: input.ratingKind ? OBSERVATION_RATING_VALUE[input.ratingKind] : null,
     tags: input.tags ?? [],
     text: input.text ?? '',
-    coachingPointId: input.coachingPointId ?? null,
+    // Resolved above from the tag when the caller did not name one — see the comment there.
+    coachingPointId: point?.id ?? null,
   });
 
   await ctx.store.observations.put(observation);
@@ -437,6 +454,24 @@ export async function setChallengeStatus(
   });
 }
 
+/**
+ * **What the player said about their challenge** (ADR 0009 phase 7).
+ *
+ * Its own call rather than a second argument to `setChallengeStatus`, because the quote is
+ * independent of the verdict: writing one down must never disturb a ruling the coach already
+ * gave, and a coach can be told what a player thought before ruling, after, or instead.
+ *
+ * Stored verbatim. Nothing in the app reads anything out of it beyond the words.
+ */
+export async function setChallengePlayerWord(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  challengeId: ChallengeId,
+  said: string,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, { kind: 'setChallengePlayerWord', challengeId, said });
+}
+
 /** Everything `/run` needs for one repaint, in one round trip. */
 export interface RunSnapshot {
   session: Session;
@@ -533,6 +568,25 @@ export function observationTagGroups(session: Session, phaseId?: PhaseId): Obser
   }
 
   const used = new Set(pointTexts.map((tag) => tag.toLowerCase()));
+
+  /*
+   * **The predicted misconception, as one tag** (ADR 0009).
+   *
+   * This is the tag that makes a `struggled` observation mean something. *"Struggled"* on its
+   * own is a shrug; *"struggled, and it was the thing we said would happen"* is a diagnosis,
+   * and it is the difference between a card that can quote real evidence and one that says
+   * "well done today".
+   *
+   * Second, directly under this phase's points, because the moment a coach reaches for the
+   * sheet is usually the moment it has just gone wrong. `corner: null` and no attribute, so
+   * the observation stays **unclassified** rather than being filed under a guess — the same
+   * rule an untagged note follows.
+   */
+  const misconception = session.objective.commonMisconception?.trim() ?? '';
+  if (misconception.length > 0 && !used.has(misconception.toLowerCase())) {
+    groups.push({ corner: null, label: 'The mistake you expected', tags: [misconception] });
+    used.add(misconception.toLowerCase());
+  }
 
   /*
    * The FA's six core capabilities, above the corners.

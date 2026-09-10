@@ -38,6 +38,9 @@ import {
   type SeededActionOutcome,
 } from '@/domain/review';
 import type { ChoiceSummary } from '@/domain/engagement';
+import { coachingPointChecks, type CoachingPointChecks } from '@/domain/coaching-point';
+import { followUpSummary, type DeliveredPoint, type FollowUpSummary } from '@/domain/checking';
+import { questioningSummary, type QuestioningSummary } from '@/domain/questioning';
 import { describeRepresentativeness } from '@/domain/practice/match';
 import {
   adjustmentSummary,
@@ -142,6 +145,28 @@ export interface ReviewDraftData {
    * `domain/practice/match.ts`.
    */
   representativeness: string | null;
+  /**
+   * *"5 coaching points delivered. 1 checked."*
+   *
+   * The check-for-understanding line (ADR 0009). Counts of two things the coach did, across
+   * every phase of the session — never a claim about what the players understood, and with no
+   * suggested ratio, because there isn't one.
+   */
+  coachingPointChecks: CoachingPointChecks;
+  /**
+   * *"12 questions this session, to 4 players. Seven were never asked anything."*
+   *
+   * The app's own logged questions, read as questioning for the first time. Scoped hard to
+   * what the record supports - see `domain/questioning.ts` for the three-way spread.
+   */
+  questioning: QuestioningSummary;
+  /**
+   * *"3 of the 5 points you said have something logged against them afterwards."*
+   *
+   * The did-it-stick join, over `deliveredAt` and the coaching point recovered from the tag.
+   * Never says a point did not land: an absent observation is an absence in the record.
+   */
+  followUp: FollowUpSummary;
 }
 
 export async function loadReviewData(
@@ -163,6 +188,10 @@ export async function loadReviewData(
   // free text the parser cannot read simply gets no comparison.
   const squad = await ctx.store.squads.get(session.squadId);
 
+  // The roster, for the questioning spread only. "Seven were never asked" is not a sentence
+  // that can be built from the events alone - it needs to know who was there to be asked.
+  const players = await ctx.store.players.listBySquad(session.squadId);
+
   return ok({
     session,
     observations,
@@ -182,6 +211,14 @@ export async function loadReviewData(
     stepCoverage: stepCoverage(session.run?.practiceAdjustments ?? []),
     choice: choiceSummary(session),
     representativeness: describeRepresentativeness(representativeness(session, squad?.ageGroup)),
+    coachingPointChecks: coachingPointChecks(
+      session.phases.flatMap((phase) => phase.coachingPoints),
+    ),
+    questioning: questioningSummary({
+      events: session.run?.interventionEvents ?? [],
+      rosterIds: players.map((player) => player.id),
+    }),
+    followUp: followUpSummary({ phases: session.phases, observations }),
   });
 }
 
@@ -219,6 +256,8 @@ export async function proposeCarryForward(
       players,
       playerHistory,
       challengeHistory: await settledChallengeHistory(ctx, data.value.session),
+      followUp: data.value.followUp,
+      deliveredPointHistory: await deliveredPointHistory(ctx, data.value.session),
     }),
   );
 }
@@ -256,6 +295,42 @@ async function settledChallengeHistory(
   );
 }
 
+/**
+ * Every coaching point this squad has marked said, across the term, oldest session first.
+ *
+ * The same `by-squad` range scan `settledChallengeHistory` uses, which is why this needs no new
+ * store and no new index — and it is deliberately the same shape, so the streak arithmetic in
+ * `uncheckedStreaks` reads like `challengePointSignals` next door.
+ *
+ * The session under review is included: its chips are the most recent evidence there is, and
+ * excluding them would make the nudge always a week out of date.
+ */
+async function deliveredPointHistory(
+  ctx: ServiceContext,
+  session: Session,
+): Promise<DeliveredPoint[]> {
+  const sessions = await ctx.store.sessions.listBySquad(session.squadId, { limit: 60 });
+  const withCurrent = sessions.some((candidate) => candidate.id === session.id)
+    ? sessions
+    : [...sessions, session];
+
+  return (
+    withCurrent
+      // Oldest first, so a "three sessions running" streak counts back from the right end.
+      .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor))
+      .flatMap((candidate) =>
+        candidate.phases
+          .flatMap((phase) => phase.coachingPoints)
+          .filter((point) => point.delivered)
+          .map((point) => ({
+            sessionId: candidate.id,
+            text: point.text,
+            checked: point.checked,
+          })),
+      )
+  );
+}
+
 export interface SaveReviewInput {
   sessionId: SessionId;
   objectiveOutcome: ObjectiveOutcome;
@@ -267,6 +342,8 @@ export interface SaveReviewInput {
   seededActionOutcomes?: readonly SeededActionOutcome[];
   whatWorked?: readonly string[];
   whatDidnt?: readonly string[];
+  /** The one sentence the coach left the players with. Read back next session. */
+  takeaway?: string;
   note?: string;
   /** The chips the coach left ticked. **Nothing is written until this call.** */
   acceptedProposals: readonly CarryForwardProposal[];
@@ -311,6 +388,7 @@ export async function saveReview(
     seededActionOutcomes: input.seededActionOutcomes ?? [],
     whatWorked: input.whatWorked ?? [],
     whatDidnt: input.whatDidnt ?? [],
+    takeaway: input.takeaway ?? '',
     note: input.note ?? '',
   });
 

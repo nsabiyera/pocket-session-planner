@@ -467,6 +467,17 @@ summary {
   opacity: 0.55;
 }
 
+/*
+  The huddle chip in Do mode. Outlined rather than filled, so it reads as a different *kind* of
+  thing from the player chips it sits beside — those log an observation, this opens something
+  read-only. Colour is not the only cue: it carries its own word and an emoji.
+*/
+.chip--huddle {
+  border-color: var(--signal);
+  color: var(--signal);
+  font-weight: 600;
+}
+
 .chip-count {
   font-size: var(--fs-xs);
   background: var(--sunk);
@@ -1149,6 +1160,34 @@ summary {
   color: var(--ink);
 }
 
+/*
+  The predicted misconception. Quiet by default — it is a reminder, not an alarm.
+
+  **Two lines, then clamped.** Do mode has to fit 667px with no scrolling, so a header that
+  grew with the prose would push the two 96px actions off a small phone. Two lines is enough
+  for every entry in the objective library; one would cut most of them in half, which is worse
+  than not showing it. `MAX_MISCONCEPTION` is what keeps the clamp from ever biting.
+*/
+.run-misconception {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+
+.run-misconception .eyebrow {
+  flex: none;
+}
+
+.run-misconception-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
 .timer {
   display: flex;
   flex-direction: column;
@@ -1243,14 +1282,26 @@ summary {
   min-height: var(--tap);
 }
 
-.point[aria-pressed='true'] {
+/*
+  Three states since ADR 0009: planned, said, checked. `said` strikes through, as it always
+  did. `checked` keeps the strike but drops the muting, so the points the coach actually
+  found out about are the legible ones in a list of struck-out text — the tick count is the
+  quiet signal and the contrast is the loud one.
+*/
+.point[data-state='said'] {
   color: var(--muted);
+  text-decoration: line-through;
+}
+
+.point[data-state='checked'] {
   text-decoration: line-through;
 }
 
 .point-check {
   color: var(--signal);
   font-size: var(--fs-md);
+  /* Two glyphs wide, so the text does not shift when the second tick appears. */
+  min-width: 2.2ch;
 }
 
 .run-focus {
@@ -1275,6 +1326,79 @@ summary {
 
 .intervention-bar {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+  The regression offer (ADR 0009 §3). Two lines in one tap target: what the record says on top,
+  and the coach's own fix underneath in the accented weight, because the fix is the thing being
+  tapped.
+
+  Deliberately **not** `btn--warn`. That tint belongs to the open-intervention bar, where the
+  clock is stopped and something is genuinely wrong. Nothing is wrong here — a predicted
+  mistake turning up is the practice working as designed, and a warning colour would read as a
+  telling-off for a prediction the coach made themselves.
+*/
+.regression-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  border: 1px solid var(--signal);
+  height: auto;
+  padding-block: var(--sp-2);
+}
+
+.regression-bar-said {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.regression-bar-fix {
+  font-weight: 600;
+}
+
+/*
+  Last week's takeaway, on the phase editor. Set in the reading size rather than the report
+  size: it is a sentence the coach is about to say out loud to twelve people, not a number they
+  are scanning.
+*/
+.takeaway-quote {
+  font-size: var(--fs-md);
+  border-left: 3px solid var(--signal);
+}
+
+/* ------------------------------------------------------------ player cards */
+
+/*
+  The huddle cards (ADR 0009 §4) — the only thing in this app rendered to be read *to* somebody
+  rather than by the coach.
+
+  So the type is bigger than a report line and the label is smaller than the words: a coach
+  holding the phone at arm's length in front of twelve players reads the quote, not the
+  eyebrow. Each line stacks label-over-text rather than sitting inline, because a wrapped
+  inline label at 375px puts the first word of the quote on its own line.
+*/
+.player-card-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.player-card-line > span:nth-child(2) {
+  font-size: var(--fs-md);
+}
+
+/*
+  A player's own words (ADR 0009 phase 7). Italic and quoted, so it is unmistakably *theirs*
+  rather than another line of the app's prose — the one thing on the card the coach did not
+  write, and the only place this app holds a sentence a player said.
+*/
+.player-card-quote {
+  font-size: var(--fs-md);
+  font-style: italic;
+  color: var(--ink-soft);
 }
 
 /* ------------------------------------------------------ player challenges */

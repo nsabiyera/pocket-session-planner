@@ -60,6 +60,191 @@ npx serve site -l 3000
 - [ ] The wake lock survives a pocket-check: lock, unlock, and confirm the screen still stays
       awake afterwards.
 
+## Checking for understanding (ADR 0009)
+
+**All seven phases.** The `checked` state and its review line, the predicted misconception, the
+regression offer, the player cards, the questioning and did-it-stick reports, the two
+carry-forward nudges, the takeaway, and the player's own word on a challenge. Every line here is silent below its floor or absent when
+unset, by design, so **a broken one looks exactly like a quiet one**: check the negative cases as
+carefully as the positive ones.
+
+### The mistake you expected (phase 2)
+
+- [ ] Build a session from an objective **chip**. Do mode shows an `Expect` line under the
+      objective, and it is the sentence from that objective rather than a generic one.
+- [ ] **Portrait, 667px, with the `Expect` line showing.** Do mode still fits with zero
+      scrolling outside the coaching-points box. This is the item most likely to fail — the
+      line is clamped to two lines for exactly this reason, and two lines on a small phone is
+      the case to check.
+- [ ] Build a session by **typing** your own objective. There is **no** `Expect` line at all —
+      not an empty one, not a placeholder.
+- [ ] Open the observation sheet. **The mistake you expected** is the second group, directly
+      under `This phase`, with one chip carrying the whole sentence.
+- [ ] Log a `Struggled` with that chip tapped. Open the session in history — the observation
+      carries the misconception verbatim in its tags.
+- [ ] The same sheet on a typed-objective session offers no such group.
+- [ ] Review an objective, accept the `Revisit:` chip, and start the next session. The `Expect`
+      line **comes back with it** — this is the session where the prediction earned its keep.
+- [ ] Open a session planned **before this shipped**. No `Expect` line, no chip, no error.
+
+### And what to do about it (phase 3)
+
+This is the only part of the feature that acts inside the session, so it is the part where
+being wrong costs the coach something. **The failure to look for is a bar that nags.**
+
+- [ ] In a practice phase with a regression written, log a `Struggled` with the misconception
+      chip. The offer bar appears above the two big buttons, carrying **your own** regression
+      text, not a suggestion of the app's.
+- [ ] Tap it. The practice adjustment is recorded, the bar goes, and `Undo` is on the toast.
+- [ ] Log the same thing again in the same phase. **No bar** — you have already responded.
+- [ ] Log it, then make the practice easier from the **phase sheet** instead. The bar goes.
+      Responding by another route still counts as responding.
+- [ ] Log it, then make the practice **harder**. The bar stays.
+- [ ] Move to the next phase. The bar goes, whether you acted on it or not.
+- [ ] Log a `Working` with the misconception chip. **No bar** — a player wrestling with it is
+      where the learning is, and making it easier would take the practice away.
+- [ ] Log a `Struggled` with a different tag. **No bar.**
+- [ ] Do the same in Whole-Part-Whole's second WHOLE game, which ships no regressions on
+      purpose. **No bar**, and nothing explaining its absence.
+- [ ] With the bar showing, portrait at 667px: Do mode still fits. It is two lines tall and it
+      sits where the intervention bar sits, so both showing at once is the case to check.
+- [ ] Ignore the bar for a whole phase. Decide honestly whether it read as a useful reminder or
+      as the app telling you off. If it nagged, it needs a dismiss — there is deliberately
+      none, and this is the item that would change that.
+
+### The intervene sheet, and the two reports it unblocks (phase 5)
+
+Three shipped bugs meant `styleChosen`, `playerIds` and `coachingPointId` were never written by
+any screen, so **every one of these is a first**. There is no historic data behind them: a
+session run before today will show the empty-record wording, and that is correct.
+
+- [ ] **Long-press `✋ Intervene`.** The sheet now has what the manual always claimed: what you
+      did, how you stopped it, who it landed on, who you spoke to, and a note.
+- [ ] Change the method and log it. Finish, and on `/sessions` the `How you coach` panel no
+      longer says *"every one of these took the style from your plan"* — it splits them.
+- [ ] Log one with **only a note** changed. It still counts as inherited, not chosen. A note is
+      not a style.
+- [ ] One-tap `✋ Intervene` with no sheet at all: still one tap, still no form. **This is the
+      thing not to break.** Time it if you have to.
+- [ ] Name two players on a Q&A intervention. Log four questions naming somebody on each. The
+      review says *"4 questions, to N players"* and, if anyone was left out, *"…were never
+      asked anything."*
+- [ ] Now log four questions naming nobody. It says the count and offers the control — and
+      **says nothing at all about who was never asked**, because that would be a claim the
+      record cannot support. This is the honesty case and the one worth reading twice.
+- [ ] Mix them: some named, some not. It says how many you recorded and stops there.
+- [ ] Log three questions only. **No line** — the floor is four.
+- [ ] Tick a coaching point as said, then log an observation with **that point's own tag**. The
+      review says something was logged against it afterwards.
+- [ ] Log the observation **before** ticking the chip. It does not count — a follow-up has to
+      follow.
+- [ ] Tick two points and log nothing. It says *"nothing logged about any of them
+      afterwards"* — and never that they did not stick, or land, or work.
+- [ ] Tick one point only. **No line** — the floor is two, because the value is the ratio.
+
+### The player's own word (phase 7)
+
+The only field in the app that records something a **player** said, and the only one that puts
+a keyboard in a pitch-side flow. **The thing to judge is whether you would ever actually type
+it standing on a pitch** — if not, it belongs only on the review, and this is the item that
+would change that.
+
+- [ ] Open a challenge's `⌄` ruling sheet in Do mode. `What did you say about it?` is below the
+      verdict, not above it. Type a sentence and close the sheet.
+- [ ] Reopen it. The sentence is still there.
+- [ ] **Type with wet or gloved hands, mid-session, with a drill running.** Honestly: did you
+      finish the sentence, or did you give up? Either answer is useful.
+- [ ] Type it, then rule the challenge `Missed`. The quote survives the ruling — writing one
+      must never disturb a verdict, and vice versa.
+- [ ] Rule it first, then type. Same result.
+- [ ] Blur the field without changing anything. Nothing is written — check the session did not
+      get a pointless update.
+- [ ] Open `💬 Tell them`. The quote is on that player's card under **You said**, in quotes and
+      in italics, clearly not the app's own prose.
+- [ ] Read it back to the player. Does it land as a check, or as being quoted at?
+- [ ] On `/review`, the same field is on each challenge row. Type one there for a judged
+      challenge — the one Do mode can no longer settle.
+- [ ] Save the review, then open the session from history. **Challenges** is a new section, and
+      the quote is on it. If it is not findable here it is write-only, which was the whole
+      reason this section exists.
+- [ ] Leave it blank everywhere. No empty quote marks, no placeholder, no gap on the card.
+
+### The loop closes (phase 6)
+
+This needs **two sessions**, and the never-checked nudge needs **three** — so it is the only
+section here you cannot test in one sitting. Use the seed data if you would rather not wait.
+
+- [ ] Review a session, open `What did you leave them with?`, and type one sentence. Save.
+- [ ] Plan the next session. The phase editor shows **Last week you told them** with that
+      sentence, quoted, above `Before you go`.
+- [ ] Leave the field empty on a review. The next session shows **no** section at all — not an
+      empty quote, not a placeholder.
+- [ ] Skip it one week and fill it the week before. It reads back the one you *did* write,
+      rather than going silent. This is the case that would otherwise look broken.
+- [ ] Tick a point as **checked** and log a `Good` against it. On the review, `Ask again: …`
+      appears among the carry-forward chips, **unticked**, and its `?` explains that how it
+      looked on the night is a poor guide to whether it stuck.
+- [ ] Accept it. Next session's phase editor lists it under `Before you go` — **not** as a
+      coaching point chip in Do mode. Re-saying is the thing it exists to avoid.
+- [ ] Tick the same point as **said** and never checked, three sessions running.
+      `Check this one: …` appears on the third review, unticked, saying *"Said in 3 sessions
+      running, and never checked in any of them."*
+- [ ] Check it once. The nudge is gone the following week — a point checked once has been
+      checked.
+- [ ] Put the same point in two phases of one session. It does **not** count as two sessions of
+      streak.
+
+### What to tell them (phase 4)
+
+The first thing this app has ever rendered for somebody other than the coach, so the tests
+that matter are the ones a **player** would fail it on. Do these with the phone at arm's
+length, as if a huddle were in front of you.
+
+- [ ] With a focus player or a challenge set, `💬 Tell them` appears after the focus chips.
+      With neither, it is **absent** — no greyed-out chip, no empty sheet.
+- [ ] Open it mid-huddle. Every line is legible **at arm's length**, and the quote is bigger
+      than its label. If you have to bring the phone closer to read it, the card is the wrong
+      size.
+- [ ] Read one out loud to a player. Does it give them something to do, or does it read as a
+      score? The second is a failure even if every field is correct.
+- [ ] A player with a challenge shows the ask **as you typed it**, with its tally, and a
+      verdict only once you have ruled on it — never the word `Open`.
+- [ ] A player you logged nothing about says *"Nothing logged for Kai today."* and nothing
+      else. It should not read as an apology or a rebuke.
+- [ ] Log a `Good` with **no tag**. It does not appear on the card — *"you were good"* is what
+      the card exists to prevent.
+- [ ] Log a `Struggled` on the misconception chip. It becomes the **Next** line, in preference
+      to anything else struggled.
+- [ ] Log four tags on one observation. The card reads out **one**.
+- [ ] Check nothing on the card is a rating, a count, a corner, a capability or another
+      player's name. This is the one that matters most, and it is a reading test, not a code
+      one.
+- [ ] Twelve players in front of you, two or three cards. Is a sheet the right shape, or did
+      you want to swipe one player at a time? This is the open question the roadmap left, and
+      only a touchline answers it.
+
+### Said it, and checked it (phase 1)
+
+- [ ] Tap a coaching point three times with gloves on. It goes `○ → ✓ → ✓✓` and the text does
+      **not shift sideways** when the second tick appears.
+- [ ] A fourth tap returns it to `○`, and both ticks are gone. This is the mis-tap escape and it
+      must not need a long press.
+- [ ] With a screen reader on, the button announces the point text **and the state in words** —
+      not just a tick.
+- [ ] `✓✓` is legible against `✓` at arm's length in daylight. If you cannot tell them apart
+      from a metre away, the glyph is wrong however good the arithmetic is.
+- [ ] Force-quit mid-phase with one point at `✓✓`. Reopen and resume — it is still `✓✓`.
+- [ ] Finish a session with 5 points said and 1 checked. Review says exactly
+      *"5 coaching points delivered. 1 checked."*
+- [ ] Finish one with points said and **none** checked. It says *"None marked checked."* — not
+      "none checked", and nothing that reads as a telling-off.
+- [ ] Finish one with **no** points ticked at all. The line is **absent**, not zeroed — the
+      *"Didn't get to: …"* proposals cover that case instead.
+- [ ] Open the `?` beside the line. It says the app is counting what you did and does **not**
+      claim anybody understood anything.
+- [ ] Open a session you ran **before this shipped**. It reads as unchecked, parses without
+      error, and nothing in the app calls it a failure.
+
 ## The FA 4 Corner Model
 
 - [ ] Open the observation sheet: tags are grouped under the four corners, and every corner is

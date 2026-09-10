@@ -41,6 +41,21 @@ describe('the rationale registry', () => {
     }
   });
 
+  /**
+   * ADR 0009 §1, enforced rather than remembered. The app records that a check was made; it
+   * never claims a player understood anything, and the `?` disclosures are the easiest place
+   * for that word to creep back in.
+   */
+  it('never tells a coach the app knows what a player understood', () => {
+    for (const id of RATIONALE_IDS) {
+      const { why } = rationaleFor(id);
+      // "understood" is only allowed as part of saying the app cannot see it.
+      if (/understood|understand|comprehen|grasped/i.test(why)) {
+        expect(why, `"${id}" claims understanding`).toMatch(/\bnot\b|\bnever\b|\bno\b|cannot/i);
+      }
+    }
+  });
+
   it('keeps academic jargon out of the coach-facing text', () => {
     // Rule 6 of the roadmap, enforced rather than remembered. "Practice spectrum" and "STEP"
     // are fine; these are the phrases a coach never met on their course.
@@ -95,6 +110,9 @@ describe('the rationale registry', () => {
       'report:moment-coverage',
       'report:corner-balance',
       'report:neglected-corner',
+      'report:coaching-points-checked',
+      'report:questioning',
+      'report:point-follow-up',
       'carry-forward:chain-stuck',
     ];
 

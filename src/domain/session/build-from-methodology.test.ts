@@ -17,6 +17,7 @@ const objective = {
   successCriteria: [],
   sourceActionId: null,
   principleId: null,
+  commonMisconception: null,
 };
 
 const build = (methodology = PLAY_PRACTICE_PLAY, over = {}) =>

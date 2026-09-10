@@ -143,6 +143,37 @@ describe('logIntervention', () => {
     });
   });
 
+  /**
+   * `styleChosen` is the flag the whole chosen-versus-planned split rests on, and until the
+   * long-press sheet had these controls it could never be true — so `coaching-style.ts`
+   * reported every event as the coach's plan read back at them, and told them to use a control
+   * that did not exist (`docs/known-issues.md` 1). Nothing in the suite noticed, because the
+   * domain tests injected the flag directly. These two are the wiring.
+   */
+  it('records that the coach picked the style, when they picked one', async () => {
+    const chosen = unwrap(await logIntervention(ctx, session.id, { method: 'command' }));
+    expect(chosen.run?.interventionEvents[0]?.styleChosen).toBe(true);
+  });
+
+  it('records that the style came from the plan when only a note was added', async () => {
+    // A note is not an axis. The style is still inherited, and saying otherwise would make the
+    // term report a lie about the coach.
+    const noted = unwrap(await logIntervention(ctx, session.id, { note: 'Head up' }));
+    expect(noted.run?.interventionEvents[0]?.styleChosen).toBe(false);
+
+    const bare = unwrap(await logIntervention(ctx, session.id));
+    expect(bare.run?.interventionEvents[1]?.styleChosen).toBe(false);
+  });
+
+  it('records who the coach spoke to, which the questioning report is built on', async () => {
+    const named = unwrap(await logIntervention(ctx, session.id, { playerIds: [kai, maya] }));
+    expect(named.run?.interventionEvents[0]?.playerIds).toEqual([kai, maya]);
+
+    // And an intervention with nobody named stays empty rather than guessing at the audience.
+    const anonymous = unwrap(await logIntervention(ctx, session.id));
+    expect(anonymous.run?.interventionEvents[1]?.playerIds).toEqual([]);
+  });
+
   it('pauses the phase clock for a stop-play mechanic, and measures the stoppage', async () => {
     clock().advanceMinutes(5);
     const stopped = unwrap(await logIntervention(ctx, session.id, { mechanic: 'play_stop_play' }));
@@ -246,6 +277,92 @@ describe('logObservation', () => {
     await ctx.store.sessions.put({ ...session, status: 'completed', run: null });
     const noPhase = await logObservation(ctx, { sessionId: session.id });
     expect(isErr(noPhase) && noPhase.error.kind).toBe('no_current_phase');
+  });
+});
+
+/**
+ * The tag the coach taps in the "This phase" group *is* a coaching point, and its id was being
+ * thrown away — so `Observation.coachingPointId` was null on every record ever written and the
+ * did-it-stick join had nothing to join on (`docs/known-issues.md` 3).
+ */
+describe('recovering the coaching point from the tag', () => {
+  const pointOf = (index = 0) => session.phases.flatMap((phase) => phase.coachingPoints)[index]!;
+
+  it('links the observation to the point whose text the coach tapped', async () => {
+    const point = pointOf();
+    const phase = session.phases.find((candidate) =>
+      candidate.coachingPoints.some((candidatePoint) => candidatePoint.id === point.id),
+    )!;
+
+    const logged = unwrap(
+      await logObservation(ctx, {
+        sessionId: session.id,
+        phaseId: phase.id,
+        playerId: kai,
+        ratingKind: 'working',
+        tags: [point.text],
+      }),
+    );
+
+    expect(logged.coachingPointId).toBe(point.id);
+  });
+
+  it('matches on the same normalisation the carry-forward dedupe uses', async () => {
+    const point = pointOf();
+    const phase = session.phases.find((candidate) =>
+      candidate.coachingPoints.some((candidatePoint) => candidatePoint.id === point.id),
+    )!;
+
+    const logged = unwrap(
+      await logObservation(ctx, {
+        sessionId: session.id,
+        phaseId: phase.id,
+        playerId: kai,
+        ratingKind: 'good',
+        tags: [`  ${point.text.toUpperCase()}! `],
+      }),
+    );
+    expect(logged.coachingPointId).toBe(point.id);
+  });
+
+  it('leaves a capability or corner tag unlinked', async () => {
+    const logged = unwrap(
+      await logObservation(ctx, {
+        sessionId: session.id,
+        playerId: kai,
+        ratingKind: 'good',
+        tags: ['Scanning'],
+      }),
+    );
+    // Not a coaching point, so nothing to link. Filing it under a guess would poison the join.
+    expect(logged.coachingPointId).toBeNull();
+  });
+
+  it('leaves an untagged note unlinked', async () => {
+    const logged = unwrap(
+      await logObservation(ctx, { sessionId: session.id, playerId: kai, ratingKind: 'struggled' }),
+    );
+    expect(logged.coachingPointId).toBeNull();
+  });
+
+  it('lets an explicit id win over the tag', async () => {
+    const first = pointOf(0);
+    const second = pointOf(1);
+    const phase = session.phases.find((candidate) =>
+      candidate.coachingPoints.some((candidatePoint) => candidatePoint.id === first.id),
+    )!;
+
+    const logged = unwrap(
+      await logObservation(ctx, {
+        sessionId: session.id,
+        phaseId: phase.id,
+        playerId: kai,
+        ratingKind: 'working',
+        tags: [second.text],
+        coachingPointId: first.id,
+      }),
+    );
+    expect(logged.coachingPointId).toBe(first.id);
   });
 });
 
@@ -390,13 +507,16 @@ describe('challenges in Do mode', () => {
 });
 
 describe('the corner-grouped tag bank', () => {
-  it('leads with this phase own coaching points, then capabilities, then the corners', () => {
+  it('leads with this phase own coaching points, then the expected mistake, then capabilities, then the corners', () => {
     const withPoints = session.phases.find((p) => p.coachingPoints.length > 0)!;
     const groups = observationTagGroups(session, withPoints.id);
 
     expect(groups[0]).toMatchObject({ corner: null, label: 'This phase' });
-    expect(groups[1]).toMatchObject({ corner: null, label: 'Core capabilities' });
-    expect(groups.slice(2).map((group) => group.corner)).toEqual([
+    // Second, because the moment a coach reaches for this sheet is usually the moment it has
+    // just gone wrong (ADR 0009).
+    expect(groups[1]).toMatchObject({ corner: null, label: 'The mistake you expected' });
+    expect(groups[2]).toMatchObject({ corner: null, label: 'Core capabilities' });
+    expect(groups.slice(3).map((group) => group.corner)).toEqual([
       'technical_tactical',
       'physical',
       'psychological',
@@ -404,14 +524,32 @@ describe('the corner-grouped tag bank', () => {
     ]);
   });
 
+  it('offers the predicted mistake as one tag, verbatim', () => {
+    const groups = observationTagGroups(session);
+    const group = groups.find((candidate) => candidate.label === 'The mistake you expected')!;
+
+    expect(group.tags).toEqual([session.objective.commonMisconception]);
+    // No corner and no attribute: an observation tagged with it stays unclassified rather
+    // than being filed under a guess.
+    expect(group.corner).toBeNull();
+  });
+
+  it('offers no such group for a coach who typed their own objective', () => {
+    // Silence over invention. Nothing here makes up a prediction the coach never wrote.
+    const own = { ...session, objective: { ...session.objective, commonMisconception: null } };
+    expect(observationTagGroups(own).map((group) => group.label)).not.toContain(
+      'The mistake you expected',
+    );
+  });
+
   it('offers all four corners even when the phase has no coaching points', () => {
     const bare = { ...session, phases: session.phases.map((p) => ({ ...p, coachingPoints: [] })) };
     const groups = observationTagGroups(bare);
 
-    // No "This phase" group, but the capabilities and every corner are still one tap away —
-    // which is the point: the empty corner is visible at the moment of logging, not just in
-    // the report.
-    expect(groups).toHaveLength(5);
+    // No "This phase" group, but the expected mistake, the capabilities and every corner are
+    // still one tap away — which is the point: the empty corner is visible at the moment of
+    // logging, not just in the report.
+    expect(groups).toHaveLength(6);
     expect(groups.map((g) => g.label)).toContain('Core capabilities');
     expect(groups.flatMap((g) => g.tags)).toContain('Communication');
     expect(groups.flatMap((g) => g.tags)).toContain('Balance');

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Empty, Loading, Rating, Screen, ScreenHead, formatShortDate } from '../_components/ui';
 import { showToast } from '../_components/toast-host';
 import { Why, WhyTrigger } from '../_components/why';
+import { PlayerWordField } from '../_components/player-word';
 import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
 import {
   loadReviewData,
@@ -13,7 +14,7 @@ import {
   saveReview,
   type ReviewDraftData,
 } from '@/modules/review/review-service';
-import { setChallengeStatus } from '@/modules/run/run-service';
+import { setChallengePlayerWord, setChallengeStatus } from '@/modules/run/run-service';
 import type { CarryForwardProposal } from '@/domain/carry-forward';
 import { CHALLENGE_STATUSES, challengeStatusLabel, type ChallengeStatus } from '@/domain/challenge';
 import { describeChallengeSummary } from '@/domain/session/challenges';
@@ -26,6 +27,13 @@ import { describeCornerBalance } from '@/domain/four-corners/balance';
 import { MinutesReport } from '../_components/minutes-report';
 import { MatchReview } from '../_components/match-review';
 import { describeChoice, hasEnoughForChoice } from '@/domain/engagement';
+import { describeCoachingPointChecks, hasEnoughForCheckLine } from '@/domain/coaching-point';
+import { describeFollowUp, hasEnoughForFollowUp } from '@/domain/checking';
+import {
+  describeQuestioning,
+  describeQuestioningEvidence,
+  hasEnoughForQuestioning,
+} from '@/domain/questioning';
 import { REFLECTION_PROMPTS } from '@/domain/practice/match';
 import { describeAdjustments, describeStepCoverage, hasEnoughForStepView } from '@/domain/practice';
 import {
@@ -76,6 +84,7 @@ export default function ReviewPage() {
   const [seededDone, setSeededDone] = useState<Set<string>>(new Set());
   const [proposals, setProposals] = useState<CarryForwardProposal[]>([]);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
+  const [takeaway, setTakeaway] = useState('');
   const [whatWorked, setWhatWorked] = useState('');
   const [whatDidnt, setWhatDidnt] = useState('');
   const [busy, setBusy] = useState(false);
@@ -159,6 +168,24 @@ export default function ReviewPage() {
   };
 
   /**
+   * The player's own words, written straight through like the ruling beside it.
+   *
+   * Reloads the review data rather than patching page state: `data.challenges` is derived from
+   * the session document, so the honest way to keep the field showing what was stored is to
+   * re-read it.
+   */
+  const saveSaid = async (challengeId: ChallengeId, said: string) => {
+    if (!session) return;
+    const result = await setChallengePlayerWord(getServiceContext(), session.id, challengeId, said);
+    if (isErr(result)) {
+      showToast('Could not save that.', { tone: 'stop' });
+      return;
+    }
+    const reloaded = await loadReviewData(getServiceContext(), session.id);
+    if (!isErr(reloaded)) setData(reloaded.value);
+  };
+
+  /**
    * The ruling the challenge has been waiting for.
    *
    * Written straight through to the session rather than held in page state until `Save
@@ -221,6 +248,7 @@ export default function ReviewPage() {
           outcome: seededDone.has(action.id) ? ('done' as const) : ('still_open' as const),
           note: '',
         })),
+        takeaway: takeaway.trim(),
         whatWorked: splitLines(whatWorked),
         whatDidnt: splitLines(whatDidnt),
         acceptedProposals: proposals.filter((proposal) => accepted.has(proposalKeyOf(proposal))),
@@ -412,6 +440,48 @@ export default function ReviewPage() {
           </div>
 
           {/*
+            *"5 coaching points delivered. 1 checked."* — ADR 0009, and it sits directly under
+            the intervention line because it is the same question about the same taps: not how
+            the players did, but what the coach did. Silent when nothing was ticked as said,
+            because then there is nothing to compare checking against.
+          */}
+          {hasEnoughForCheckLine(data.coachingPointChecks) ? (
+            <div className="banner banner--signal">
+              {describeCoachingPointChecks(data.coachingPointChecks)}
+              <Why id="report:coaching-points-checked" />
+            </div>
+          ) : null}
+
+          {/*
+            **Did it stick** — directly under the said-against-checked line, because it is the
+            same question with the record's answer attached. The wording never says a point
+            failed to land: an absent observation is an absence in the notes, and a coach
+            coaching a point is a coach not logging.
+          */}
+          {hasEnoughForFollowUp(data.followUp) ? (
+            <div className="banner banner--signal">
+              {describeFollowUp(data.followUp)}
+              <Why id="report:point-follow-up" />
+            </div>
+          ) : null}
+
+          {/*
+            The questioning record — the app reading its own `question_and_answer` events as
+            questioning for the first time. Two sentences, and the second is not a footnote:
+            without it the count is the coach's phase plan read back as evidence.
+          */}
+          {hasEnoughForQuestioning(data.questioning) ? (
+            <div className="banner banner--signal">
+              {describeQuestioning(data.questioning)}
+              <Why id="report:questioning" />
+              {(() => {
+                const evidence = describeQuestioningEvidence(data.questioning);
+                return evidence ? <span className="card-meta"> {evidence}</span> : null;
+              })()}
+            </div>
+          ) : null}
+
+          {/*
             The FA 4 Corner coverage for this session. Sits with the intervention report
             because they answer the same kind of question: not "how did the players do" but
             "what did *you* actually look at".
@@ -580,6 +650,17 @@ export default function ReviewPage() {
                     </button>
                   ))}
                 </div>
+
+                {/*
+                  The player's own words (ADR 0009 phase 7), here as well as in Do mode
+                  because a judged challenge can only be settled here — and a coach who was
+                  told something on the pitch and had no free hand can write it down now.
+                */}
+                <PlayerWordField
+                  id={`challenge-said-${challenge.id}`}
+                  said={challenge.playerSaid}
+                  onSave={(said) => saveSaid(challenge.id, said)}
+                />
               </li>
             ))}
           </ul>
@@ -657,6 +738,34 @@ export default function ReviewPage() {
             </li>
           ))}
         </ul>
+      </details>
+
+      {/*
+        **The takeaway** (ADR 0009 phase 6) — the only record of what the coach said to the
+        *players*, where everything else on this screen is the coach talking to themselves. It
+        is read back at the start of the next session, which is what closes the loop on the
+        squad rather than on the plan.
+
+        Its own disclosure rather than buried under `Add notes`, because it is the one field
+        here a coach might deliberately come looking for. Skippable, like all free text.
+      */}
+      <details className="card card--sunk">
+        <summary>What did you leave them with?</summary>
+        <div className="field">
+          <label htmlFor="takeaway">The one thing they walked away with</label>
+          <input
+            id="takeaway"
+            type="text"
+            value={takeaway}
+            placeholder="Head up before you receive"
+            maxLength={200}
+            onChange={(event) => setTakeaway(event.target.value)}
+          />
+          <p className="card-meta">
+            Read back to you at the start of next session, in your words. Nothing is done with it
+            beyond that.
+          </p>
+        </div>
       </details>
 
       {/* Free text last, keyboard only if wanted. */}

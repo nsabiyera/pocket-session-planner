@@ -19,6 +19,7 @@ const objective = {
   successCriteria: [],
   sourceActionId: null,
   principleId: null,
+  commonMisconception: null,
 };
 
 function aMatch(periodCount: 2 | 4 = 2): Session {

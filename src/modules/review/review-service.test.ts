@@ -7,11 +7,12 @@ import {
   proposeCarryForward,
   saveReview,
 } from './review-service';
-import { commitAndStart, startDraft } from '../planning/planning-service';
+import { commitAndStart, lastTakeaway, startDraft } from '../planning/planning-service';
 import { addChallenge } from '../planning/challenges';
 import {
   dispatch,
   logChallengeProgress,
+  logIntervention,
   logObservation,
   setChallengeStatus,
 } from '../run/run-service';
@@ -131,6 +132,117 @@ describe('loadReviewData', () => {
     expect(data.interventions.totalCount).toBe(0);
     // The omission the coach most wants flagged: a focus player nobody watched.
     expect(data.unobservedFocusPlayerIds).toEqual([maya]);
+  });
+
+  it('counts the points said against the points checked, across every phase', async () => {
+    const draft = unwrap(await startDraft(ctx, { squadId, objectiveText: 'Pressing' }));
+    const started = unwrap(await commitAndStart(ctx, draft.id));
+    const points = started.phases.flatMap((phase) => phase.coachingPoints);
+    // Guard the guard: two points is the minimum this case needs to mean anything.
+    expect(points.length).toBeGreaterThanOrEqual(2);
+
+    // Two said, one of them checked — the shape the line in Review exists to show.
+    let session = unwrap(
+      await dispatch(ctx, started.id, {
+        kind: 'setCoachingPointState',
+        pointId: points[0]!.id,
+        state: 'checked',
+      }),
+    );
+    session = unwrap(
+      await dispatch(ctx, session.id, {
+        kind: 'setCoachingPointState',
+        pointId: points[1]!.id,
+        state: 'said',
+      }),
+    );
+    const finished = unwrap(await dispatch(ctx, session.id, { kind: 'finish' }));
+
+    const data = unwrap(await loadReviewData(ctx, finished.id));
+    expect(data.coachingPointChecks.total).toBe(points.length);
+    expect(data.coachingPointChecks.delivered).toBe(2);
+    expect(data.coachingPointChecks.checked).toBe(1);
+  });
+
+  it('reads a session where nothing was ticked as checked, rather than as missing', async () => {
+    const session = await runASession();
+    const data = unwrap(await loadReviewData(ctx, session.id));
+
+    // Which is also how every session written before ADR 0009 reads. The counts are present
+    // and zero; the screen decides whether that is worth a line.
+    expect(data.coachingPointChecks.checked).toBe(0);
+    expect(data.coachingPointChecks.total).toBeGreaterThan(0);
+  });
+
+  /**
+   * End to end, because this is the chain phase 5 had to repair: the sheet writes `playerIds`
+   * and `styleChosen`, the tag recovers `coachingPointId`, and only then do these two reports
+   * have anything to read. Every link was broken before, and every domain test passed anyway.
+   */
+  it('reads the questioning record off the events the coach logged', async () => {
+    const draft = unwrap(await startDraft(ctx, { squadId, objectiveText: 'Pressing' }));
+    const started = unwrap(await commitAndStart(ctx, draft.id));
+
+    // Four questions, three of them naming somebody — enough to clear the floor.
+    for (const players of [[kai], [maya], [kai], []]) {
+      unwrap(
+        await logIntervention(ctx, started.id, {
+          method: 'question_and_answer',
+          ...(players.length > 0 ? { playerIds: players } : {}),
+        }),
+      );
+    }
+    const finished = unwrap(await dispatch(ctx, started.id, { kind: 'finish' }));
+
+    const data = unwrap(await loadReviewData(ctx, finished.id));
+    expect(data.questioning.questions).toBe(4);
+    // The method was overridden on every one, so all four count as chosen.
+    expect(data.questioning.chosen).toBe(4);
+    expect(data.questioning.attributed).toBe(3);
+    expect(data.questioning.playersNamed).toBe(2);
+    // Partial attribution, so the spread must not claim anybody was never asked.
+    expect(data.questioning.fullyAttributed).toBe(false);
+  });
+
+  it('joins the points the coach said to what was logged about them afterwards', async () => {
+    const draft = unwrap(await startDraft(ctx, { squadId, objectiveText: 'Pressing' }));
+    const started = unwrap(await commitAndStart(ctx, draft.id));
+    const phase = started.phases.find((candidate) => candidate.coachingPoints.length > 1)!;
+    const [first, second] = phase.coachingPoints;
+
+    const said = unwrap(
+      await dispatch(ctx, started.id, {
+        kind: 'setCoachingPointState',
+        pointId: first!.id,
+        state: 'said',
+      }),
+    );
+    unwrap(
+      await dispatch(ctx, said.id, {
+        kind: 'setCoachingPointState',
+        pointId: second!.id,
+        state: 'checked',
+      }),
+    );
+
+    // Logged after the chip, tagged with the point's own text — the tag is the join.
+    clock().advanceMinutes(2);
+    unwrap(
+      await logObservation(ctx, {
+        sessionId: started.id,
+        phaseId: phase.id,
+        playerId: kai,
+        ratingKind: 'working',
+        tags: [first!.text],
+      }),
+    );
+    const finished = unwrap(await dispatch(ctx, started.id, { kind: 'finish' }));
+
+    const data = unwrap(await loadReviewData(ctx, finished.id));
+    expect(data.followUp.delivered).toBe(2);
+    expect(data.followUp.followedUp).toBe(1);
+    expect(data.followUp.points[0]).toMatchObject({ text: first!.text, loggedAfter: 1 });
+    expect(data.followUp.points[1]).toMatchObject({ text: second!.text, loggedAfter: 0 });
   });
 
   it('flags the phases that ran over', async () => {
@@ -369,6 +481,72 @@ describe('saveReview', () => {
     const stored = await ctx.store.actions.get(action.id);
     expect(stored?.status).toBe('done');
     expect(stored?.resolutionNote).toBe('done');
+  });
+});
+
+/**
+ * ADR 0009 phase 6. The one record of what the coach said to the *players*, and the only field
+ * on the review pointed at anybody but the coach.
+ */
+describe('the takeaway', () => {
+  it('stores what the coach left the players with, and reads it back next session', async () => {
+    const session = await runASession();
+    unwrap(
+      await saveReview(ctx, {
+        sessionId: session.id,
+        objectiveOutcome: 'met',
+        takeaway: 'Head up before you receive',
+        acceptedProposals: [],
+      }),
+    );
+
+    const stored = await ctx.store.reviews.findBySession(session.id);
+    expect(stored?.takeaway).toBe('Head up before you receive');
+
+    // And it is what the next session's phase editor reads back.
+    expect(await lastTakeaway(ctx, squadId)).toMatchObject({
+      text: 'Head up before you receive',
+    });
+  });
+
+  it('is optional, and reads back as nothing at all rather than as an empty quote', async () => {
+    const session = await runASession();
+    unwrap(
+      await saveReview(ctx, {
+        sessionId: session.id,
+        objectiveOutcome: 'met',
+        acceptedProposals: [],
+      }),
+    );
+
+    expect((await ctx.store.reviews.findBySession(session.id))?.takeaway).toBe('');
+    expect(await lastTakeaway(ctx, squadId)).toBeNull();
+  });
+
+  it('skips back to the last session that had one', async () => {
+    // A coach who skipped the field last week still has something worth reading out from the
+    // week before, and silence there would look exactly like the feature being broken.
+    const first = await runASession('Pressing as a unit');
+    unwrap(
+      await saveReview(ctx, {
+        sessionId: first.id,
+        objectiveOutcome: 'met',
+        takeaway: 'Press the backwards pass',
+        acceptedProposals: [],
+      }),
+    );
+
+    clock().advanceMinutes(60 * 24 * 7);
+    const second = await runASession();
+    unwrap(
+      await saveReview(ctx, {
+        sessionId: second.id,
+        objectiveOutcome: 'met',
+        acceptedProposals: [],
+      }),
+    );
+
+    expect(await lastTakeaway(ctx, squadId)).toMatchObject({ text: 'Press the backwards pass' });
   });
 });
 

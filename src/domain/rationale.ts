@@ -43,6 +43,9 @@ const CHALLENGE_POINT = 'Challenge Point';
 const PRACTICE_SPECTRUM = 'FA practice spectrum';
 const STEP = 'STEP';
 const PLAYER_ENGAGEMENT = 'Player engagement';
+const CHECKING_FOR_UNDERSTANDING = 'Checking for understanding';
+const FIVE_PILLARS = 'FA Five Pillars';
+const RETRIEVAL_PRACTICE = 'Retrieval practice';
 
 const FOUR_CORNER_SOURCE =
   'https://learn.englandfootball.com/articles-and-resources/coaching/resources/2023/What-is-the-4-Corner-Model';
@@ -61,6 +64,10 @@ const FIVE_PILLARS_SOURCE =
 const AUTONOMY_SOURCE = 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8394926/';
 const STEP_SOURCE =
   'https://learn.englandfootball.com/articles-and-resources/coaching/resources/2022/make-coaching-personal-with-the-step-framework';
+const FORMATIVE_ASSESSMENT_SOURCE =
+  'https://kappanonline.org/inside-the-black-box-raising-standards-through-classroom-assessment/';
+const RETRIEVAL_PRACTICE_SOURCE =
+  'https://journals.sagepub.com/doi/10.1111/j.1467-9280.2006.01693.x';
 
 /**
  * The registry.
@@ -124,6 +131,17 @@ const RATIONALES = {
     framework: INTENDED_OUTCOMES,
     why: 'Straight from what you typed under "What didn’t". The app is not interpreting it — it is keeping it somewhere you will meet it again while planning next week.',
     source: PLANNING_MODEL_SOURCE,
+  },
+
+  'checking:re-test': {
+    framework: RETRIEVAL_PRACTICE,
+    why: 'You checked this one and logged something good about it. How it looks on the night is a poor guide to whether it stuck, so it comes back as a question to ask rather than a point to say again.',
+    source: RETRIEVAL_PRACTICE_SOURCE,
+  },
+  'checking:never-checked': {
+    framework: CHECKING_FOR_UNDERSTANDING,
+    why: 'You have ticked this point as said in three sessions running and never once ticked it as checked. That is a gap in what you know, not a claim about the players — nobody can say either way yet.',
+    source: FORMATIVE_ASSESSMENT_SOURCE,
   },
 
   // ------------------------------------------------------ derived report lines
@@ -216,6 +234,21 @@ const RATIONALES = {
     framework: COACH_BEHAVIOUR,
     why: 'What you did across the term, not one night. The five methods are five tools rather than a ranking, so this counts them and stops \u2014 there is no style the app is steering you towards.',
     source: FIVE_PILLARS_SOURCE,
+  },
+  'report:coaching-points-checked': {
+    framework: CHECKING_FOR_UNDERSTANDING,
+    why: 'Two counts of what you did: points you ticked as said, and points you ticked again after asking someone to say it back. There is no right ratio, and neither number says whether anybody understood.',
+    source: FORMATIVE_ASSESSMENT_SOURCE,
+  },
+  'report:questioning': {
+    framework: FIVE_PILLARS,
+    why: 'Every intervention you logged with Q&A as the method, and how many of them recorded who you asked. Naming who it went to is optional, so this counts what you recorded and never what you did not.',
+    source: FIVE_PILLARS_SOURCE,
+  },
+  'report:point-follow-up': {
+    framework: CHECKING_FOR_UNDERSTANDING,
+    why: 'Points you ticked as said, against observations you tagged with the same point afterwards. Nothing logged does not mean it did not land — a coach coaching a point is a coach not writing notes.',
+    source: FORMATIVE_ASSESSMENT_SOURCE,
   },
   'report:style-evidence': {
     framework: COACH_BEHAVIOUR,

@@ -29,6 +29,7 @@ import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store
 import {
   commitAndStart,
   discardDraft,
+  lastTakeaway,
   reorderPhases,
   updateDraft,
   updatePhase,
@@ -73,6 +74,7 @@ export default function PhaseEditorPage() {
   const [editing, setEditing] = useState<SessionPhase | null>(null);
   const [busy, setBusy] = useState(false);
   const [imagesById, setImagesById] = useState<ReadonlyMap<string, PhaseImage>>(new Map());
+  const [takeaway, setTakeaway] = useState<{ text: string; completedAt: string } | null>(null);
 
   /*
    * Every drawing in the plan, in one read.
@@ -101,6 +103,23 @@ export default function PhaseEditorPage() {
     };
     // Depends on `imageKey` (the id list) alone — see the note above.
   }, [imageKey]);
+
+  // The squad's most recent takeaway. Read once when the screen opens: it cannot change while
+  // the coach is on it, and it is one indexed range scan.
+  const squadId = state.activeSession?.squadId;
+  useEffect(() => {
+    if (!squadId) {
+      setTakeaway(null);
+      return;
+    }
+    let cancelled = false;
+    void lastTakeaway(getServiceContext(), squadId).then((row) => {
+      if (!cancelled) setTakeaway(row);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [squadId]);
 
   if (state.status !== 'ready') {
     return (
@@ -208,6 +227,25 @@ export default function PhaseEditorPage() {
         <p className="banner banner--warn">
           Phases add up to {phaseTotal} min, session is {session.plannedDurationMin} min.
         </p>
+      ) : null}
+
+      {/*
+        **What you told them last week** (ADR 0009 phase 6) — the loop closed on the squad
+        rather than on the plan. Above `Before you go` because it is the older fact, and on
+        this screen rather than step 1 of the create flow: this is the last screen before
+        `Start session`, and the twenty-second path must not grow a line it did not have.
+
+        Absent when there is nothing to read back, like every other derived line here.
+      */}
+      {takeaway ? (
+        <section className="stack">
+          <h2>Last week you told them</h2>
+          <p className="card card--sunk takeaway-quote">{takeaway.text}</p>
+          <p className="card-meta">
+            Ask them what they remember before you tell them again — being asked does more for it
+            than being told twice.
+          </p>
+        </section>
       ) : null}
 
       {session.reminders.length > 0 ? (

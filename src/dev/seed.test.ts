@@ -379,6 +379,9 @@ async function runSession(
         nextStep: '',
         note: '',
       })),
+      // The takeaway, so the read-back at the start of the next session has something to
+      // show in seeded data — it is silent when absent, which looks identical to broken.
+      takeaway: `Remember: ${plan.objectiveText.toLowerCase()}`,
       acceptedProposals: proposals.filter((proposal) => proposal.defaultSelected),
     }),
   );
@@ -410,6 +413,7 @@ function unwrapReviewShape(
     seededActionOutcomes: [],
     whatWorked: [] as string[],
     whatDidnt: [] as string[],
+    takeaway: '',
     note: '',
   };
 }
