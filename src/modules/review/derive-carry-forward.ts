@@ -7,6 +7,12 @@ import {
 } from '@/domain/carry-forward';
 import { normaliseCoachingPointText } from '@/domain/coaching-point';
 import {
+  describeUncheckedStreak,
+  uncheckedStreaks,
+  type DeliveredPoint,
+  type FollowUpSummary,
+} from '@/domain/checking';
+import {
   challengePointSignals,
   describeChallengePoint,
   type SettledChallenge,
@@ -61,6 +67,16 @@ export interface DeriveCarryForwardInput {
    * without it, it just cannot make this one judgement.
    */
   challengeHistory?: readonly SettledChallenge[];
+  /**
+   * This session's did-it-stick join, for the re-test rule. Optional like the rest: without it
+   * the derivation is correct and simply makes one fewer judgement.
+   */
+  followUp?: FollowUpSummary;
+  /**
+   * Every coaching point marked said across the term, oldest session first, for the
+   * never-checked streak. Same shape and same reasoning as `challengeHistory`.
+   */
+  deliveredPointHistory?: readonly DeliveredPoint[];
 }
 
 /** First name where we have one, so a chip reads "Keep focusing on Kai". */
@@ -92,6 +108,8 @@ export const CARRY_FORWARD_TRIGGERS = [
   'coaching-point:undelivered',
   'review:what-didnt',
   'challenge:pitched-wrong',
+  'checking:re-test',
+  'checking:never-checked',
 ] as const;
 
 export type CarryForwardTrigger = (typeof CARRY_FORWARD_TRIGGERS)[number];
@@ -115,6 +133,11 @@ const TRIGGER_RANK: Record<CarryForwardTrigger, number> = {
   // Below the named-player proposals but above the generic ones: it names a player *and*
   // a specific ask, but it fires on a term of evidence rather than on tonight.
   'challenge:pitched-wrong': 3.5,
+  // Both quote a specific point, so they beat the generic reminders — and the one that has
+  // gone unchecked for three sessions beats the one that went well, because it is the one the
+  // coach cannot see from inside the habit.
+  'checking:never-checked': 5.5,
+  'checking:re-test': 6.5,
 };
 
 export function deriveCarryForwardProposals(
@@ -129,6 +152,8 @@ export function deriveCarryForwardProposals(
     ...phaseProposals(input),
     ...undeliveredPointProposals(input),
     ...challengePointProposals(input),
+    ...reTestProposals(input),
+    ...uncheckedStreakProposals(input),
     ...whatDidntProposals(input),
   ];
 
@@ -508,6 +533,69 @@ function challengePointProposals(input: DeriveCarryForwardInput): CarryForwardPr
       trigger: 'challenge:pitched-wrong',
     });
   });
+}
+
+/**
+ * **Re-test, don't re-teach** (ADR 0009 phase 6).
+ *
+ * The coach checked a point and logged something good about it afterwards. Retrieval practice
+ * says the useful next move is to *ask* again rather than to say it again — Roediger and
+ * Karpicke found 61% recall after a week for being tested against 40% for being re-taught.
+ *
+ * **The rationale is the Bjork constraint, not a compliment.** It comes back precisely
+ * *because* it looked good on the night: performance during training is an unreliable index of
+ * whether anything stuck, so the honest response to a good check is another check, not a tick.
+ *
+ * **A `reminder`, deliberately not a `coaching_point`.** A coaching point arrives in Do mode as
+ * a chip to tick *said it* — which is re-teaching, the exact thing this rule exists to avoid. A
+ * reminder lands in "Before you go" on the phase editor, where the coach reads it while
+ * planning and decides how to ask.
+ */
+function reTestProposals(input: DeriveCarryForwardInput): CarryForwardProposal[] {
+  if (!input.followUp) return [];
+
+  return input.followUp.points
+    .filter((point) => point.checked && point.ratings.includes('good'))
+    .map((point) =>
+      proposal({
+        kind: 'reminder',
+        title: `Ask again: ${point.text}`,
+        detail:
+          'You checked this and it looked good on the night. Asking again is a better test of whether it stuck than saying it again.',
+        priority: 'normal',
+        payload: { kind: 'reminder', text: `Ask again: ${point.text}` },
+        // Unticked. It is a nudge, and a coach who has moved on to something else is right to.
+        defaultSelected: false,
+        trigger: 'checking:re-test',
+      }),
+    );
+}
+
+/**
+ * **Said three sessions running, never once checked.**
+ *
+ * The complement of the existing chain-depth warning. That one says *you keep saying it*; this
+ * one says *you never found out whether they heard you*, which is the more uncomfortable half
+ * and the reason it arrives unticked and worded as a record rather than a verdict.
+ *
+ * Also a `reminder` rather than a `coaching_point`: the point is already in the plan — the
+ * coach has said it three weeks running — so seeding a fourth copy of it would be the opposite
+ * of the help.
+ */
+function uncheckedStreakProposals(input: DeriveCarryForwardInput): CarryForwardProposal[] {
+  if (!input.deliveredPointHistory) return [];
+
+  return uncheckedStreaks(input.deliveredPointHistory).map((streak) =>
+    proposal({
+      kind: 'reminder',
+      title: `Check this one: ${streak.text}`,
+      detail: describeUncheckedStreak(streak),
+      priority: 'normal',
+      payload: { kind: 'reminder', text: `Check this one: ${streak.text}` },
+      defaultSelected: false,
+      trigger: 'checking:never-checked',
+    }),
+  );
 }
 
 function whatDidntProposals(input: DeriveCarryForwardInput): CarryForwardProposal[] {

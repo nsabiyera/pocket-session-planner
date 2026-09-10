@@ -654,3 +654,29 @@ export async function discardDraft(ctx: ServiceContext, squadId: SquadId): Promi
     await tx.meta.patch({ activeSessionId: null }, at);
   });
 }
+
+/**
+ * **What the coach told the players last time**, for the read-back at the start of the next
+ * session (ADR 0009 phase 6).
+ *
+ * The mirror image of *"Last time you said…"* on `/review`: that one hands the coach back a
+ * promise they made to themselves, this one hands back the promise they made to the squad.
+ * Asking the players to recall it is retrieval practice on the whole group, which is the point.
+ *
+ * The **most recent review that has one**, not simply the most recent review — a coach who
+ * skipped the field last week still has something worth reading out from the week before, and
+ * silence there would look identical to the feature being broken.
+ */
+export async function lastTakeaway(
+  ctx: ServiceContext,
+  squadId: SquadId,
+): Promise<{ text: string; completedAt: IsoDateTime } | null> {
+  const reviews = await ctx.store.reviews.listBySquad(squadId, { limit: 20 });
+
+  const withTakeaway = reviews
+    .filter((review) => review.takeaway.trim().length > 0)
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt));
+
+  const latest = withTakeaway[0];
+  return latest ? { text: latest.takeaway.trim(), completedAt: latest.completedAt } : null;
+}

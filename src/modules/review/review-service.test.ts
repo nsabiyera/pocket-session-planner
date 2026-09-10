@@ -7,7 +7,7 @@ import {
   proposeCarryForward,
   saveReview,
 } from './review-service';
-import { commitAndStart, startDraft } from '../planning/planning-service';
+import { commitAndStart, lastTakeaway, startDraft } from '../planning/planning-service';
 import { addChallenge } from '../planning/challenges';
 import {
   dispatch,
@@ -481,6 +481,72 @@ describe('saveReview', () => {
     const stored = await ctx.store.actions.get(action.id);
     expect(stored?.status).toBe('done');
     expect(stored?.resolutionNote).toBe('done');
+  });
+});
+
+/**
+ * ADR 0009 phase 6. The one record of what the coach said to the *players*, and the only field
+ * on the review pointed at anybody but the coach.
+ */
+describe('the takeaway', () => {
+  it('stores what the coach left the players with, and reads it back next session', async () => {
+    const session = await runASession();
+    unwrap(
+      await saveReview(ctx, {
+        sessionId: session.id,
+        objectiveOutcome: 'met',
+        takeaway: 'Head up before you receive',
+        acceptedProposals: [],
+      }),
+    );
+
+    const stored = await ctx.store.reviews.findBySession(session.id);
+    expect(stored?.takeaway).toBe('Head up before you receive');
+
+    // And it is what the next session's phase editor reads back.
+    expect(await lastTakeaway(ctx, squadId)).toMatchObject({
+      text: 'Head up before you receive',
+    });
+  });
+
+  it('is optional, and reads back as nothing at all rather than as an empty quote', async () => {
+    const session = await runASession();
+    unwrap(
+      await saveReview(ctx, {
+        sessionId: session.id,
+        objectiveOutcome: 'met',
+        acceptedProposals: [],
+      }),
+    );
+
+    expect((await ctx.store.reviews.findBySession(session.id))?.takeaway).toBe('');
+    expect(await lastTakeaway(ctx, squadId)).toBeNull();
+  });
+
+  it('skips back to the last session that had one', async () => {
+    // A coach who skipped the field last week still has something worth reading out from the
+    // week before, and silence there would look exactly like the feature being broken.
+    const first = await runASession('Pressing as a unit');
+    unwrap(
+      await saveReview(ctx, {
+        sessionId: first.id,
+        objectiveOutcome: 'met',
+        takeaway: 'Press the backwards pass',
+        acceptedProposals: [],
+      }),
+    );
+
+    clock().advanceMinutes(60 * 24 * 7);
+    const second = await runASession();
+    unwrap(
+      await saveReview(ctx, {
+        sessionId: second.id,
+        objectiveOutcome: 'met',
+        acceptedProposals: [],
+      }),
+    );
+
+    expect(await lastTakeaway(ctx, squadId)).toMatchObject({ text: 'Press the backwards pass' });
   });
 });
 

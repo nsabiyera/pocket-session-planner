@@ -1359,6 +1359,16 @@ summary {
   font-weight: 600;
 }
 
+/*
+  Last week's takeaway, on the phase editor. Set in the reading size rather than the report
+  size: it is a sentence the coach is about to say out loud to twelve people, not a number they
+  are scanning.
+*/
+.takeaway-quote {
+  font-size: var(--fs-md);
+  border-left: 3px solid var(--signal);
+}
+
 /* ------------------------------------------------------------ player cards */
 
 /*

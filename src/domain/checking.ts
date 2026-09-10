@@ -1,7 +1,7 @@
-import type { CoachingPoint } from './coaching-point';
+import { normaliseCoachingPointText, type CoachingPoint } from './coaching-point';
 import type { Observation, ObservationRatingKind } from './observation';
 import type { PracticeAdjustment } from './practice';
-import type { CoachingPointId, PhaseId } from './ids';
+import type { CoachingPointId, PhaseId, SessionId } from './ids';
 
 /**
  * **The response half of checking for understanding** (ADR 0009 §3).
@@ -212,6 +212,84 @@ export function describeFollowUp(summary: FollowUpSummary): string {
  * *"Didn't get to: …"* proposals instead.
  */
 export const hasEnoughForFollowUp = (summary: FollowUpSummary): boolean => summary.delivered >= 2;
+
+/**
+ * **Said three sessions running, never once checked** (ADR 0009 phase 6).
+ *
+ * The exact complement of the existing *"you have chased this point three sessions running"*
+ * warning. That one says **you keep saying it**; this one says **you never found out whether
+ * they heard you** — and it is the more uncomfortable of the two, which is why it arrives
+ * unticked and phrased as a record.
+ *
+ * Consecutive rather than cumulative, exactly like `challengePointSignals`: a point checked
+ * once has been checked, and a streak that reset should not come back. Counting back from the
+ * most recent session and stopping at the first one where it was checked.
+ */
+export const MIN_SESSIONS_FOR_UNCHECKED_STREAK = 3;
+
+/** One coaching point, as it stood at the end of one session. Oldest session first. */
+export interface DeliveredPoint {
+  readonly sessionId: SessionId;
+  readonly text: string;
+  readonly checked: boolean;
+}
+
+export interface UncheckedStreak {
+  /** The point text as most recently written, shown verbatim in the nudge. */
+  readonly text: string;
+  /** Consecutive sessions it was said and not checked, counting back from the most recent. */
+  readonly sessions: number;
+}
+
+export function uncheckedStreaks(history: readonly DeliveredPoint[]): UncheckedStreak[] {
+  /*
+    Grouped by normalised text, then **collapsed per session**: a point in two phases is one
+    fact about one session, and a coach who put "head up before you receive" in the warm-up and
+    the practice must not clock up two sessions' worth of streak in one night.
+
+    Checked in *either* phase counts as checked. The claim is only ever "you found out", and
+    finding out once is finding out.
+  */
+  const byPoint = new Map<string, { text: string; sessions: Map<SessionId, boolean> }>();
+
+  for (const entry of history) {
+    const key = normaliseCoachingPointText(entry.text);
+    const group = byPoint.get(key) ?? { text: entry.text, sessions: new Map() };
+    // Latest wording wins, so the nudge quotes the point as the coach last wrote it.
+    group.text = entry.text;
+    group.sessions.set(
+      entry.sessionId,
+      (group.sessions.get(entry.sessionId) ?? false) || entry.checked,
+    );
+    byPoint.set(key, group);
+  }
+
+  const streaks: UncheckedStreak[] = [];
+  for (const group of byPoint.values()) {
+    const checkedBySession = [...group.sessions.values()];
+    let sessions = 0;
+    for (let i = checkedBySession.length - 1; i >= 0; i -= 1) {
+      if (checkedBySession[i]) break;
+      sessions += 1;
+    }
+    if (sessions >= MIN_SESSIONS_FOR_UNCHECKED_STREAK) {
+      streaks.push({ text: group.text, sessions });
+    }
+  }
+
+  // Longest streak first: the point that has gone unchecked longest is the one to fix.
+  return streaks.sort((a, b) => b.sessions - a.sessions);
+}
+
+/**
+ * *"Said in 3 sessions running, and never checked in any of them."*
+ *
+ * A statement about the record, and the app draws no conclusion from it. The point may be
+ * perfectly well understood — nobody knows, which is exactly what the sentence says.
+ */
+export function describeUncheckedStreak(streak: UncheckedStreak): string {
+  return `Said in ${streak.sessions} sessions running, and never checked in any of them.`;
+}
 
 /**
  * What the offer bar says.

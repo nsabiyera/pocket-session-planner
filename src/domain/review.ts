@@ -79,6 +79,22 @@ export const SessionReviewSchema = RecordMetaSchema.extend({
   seededActionOutcomes: z.array(SeededActionOutcomeSchema).max(10).default([]),
   whatWorked: z.array(nonEmptyText(200)).max(5).default([]),
   whatDidnt: z.array(nonEmptyText(200)).max(5).default([]),
+  /**
+   * **The takeaway** — the one sentence the coach left the players with (ADR 0009 phase 6).
+   *
+   * Every other field on this document is the coach talking to themselves. This is the only
+   * record of what they said to the squad, and it is read back at the *start* of the next
+   * session: *"Last week you told them: …"*. Symmetric to the existing *"Last time you said…"*,
+   * but pointed at the players — which is what turns a planning loop into a learning loop.
+   *
+   * Stored as a **quote**, never parsed and never aggregated. Nothing reads anything *out* of
+   * it beyond the words, because anything else would be the fabricated evidence
+   * `engagement.ts` refuses.
+   *
+   * Optional, and the last field on the screen. It is the only place in this feature that adds
+   * a keyboard to the flow, so it has to be entirely skippable.
+   */
+  takeaway: optionalText(200).default(''),
   note: optionalText(1000).default(''),
 });
 export type SessionReview = z.infer<typeof SessionReviewSchema>;

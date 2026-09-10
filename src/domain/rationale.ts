@@ -45,6 +45,7 @@ const STEP = 'STEP';
 const PLAYER_ENGAGEMENT = 'Player engagement';
 const CHECKING_FOR_UNDERSTANDING = 'Checking for understanding';
 const FIVE_PILLARS = 'FA Five Pillars';
+const RETRIEVAL_PRACTICE = 'Retrieval practice';
 
 const FOUR_CORNER_SOURCE =
   'https://learn.englandfootball.com/articles-and-resources/coaching/resources/2023/What-is-the-4-Corner-Model';
@@ -65,6 +66,8 @@ const STEP_SOURCE =
   'https://learn.englandfootball.com/articles-and-resources/coaching/resources/2022/make-coaching-personal-with-the-step-framework';
 const FORMATIVE_ASSESSMENT_SOURCE =
   'https://kappanonline.org/inside-the-black-box-raising-standards-through-classroom-assessment/';
+const RETRIEVAL_PRACTICE_SOURCE =
+  'https://journals.sagepub.com/doi/10.1111/j.1467-9280.2006.01693.x';
 
 /**
  * The registry.
@@ -128,6 +131,17 @@ const RATIONALES = {
     framework: INTENDED_OUTCOMES,
     why: 'Straight from what you typed under "What didn’t". The app is not interpreting it — it is keeping it somewhere you will meet it again while planning next week.',
     source: PLANNING_MODEL_SOURCE,
+  },
+
+  'checking:re-test': {
+    framework: RETRIEVAL_PRACTICE,
+    why: 'You checked this one and logged something good about it. How it looks on the night is a poor guide to whether it stuck, so it comes back as a question to ask rather than a point to say again.',
+    source: RETRIEVAL_PRACTICE_SOURCE,
+  },
+  'checking:never-checked': {
+    framework: CHECKING_FOR_UNDERSTANDING,
+    why: 'You have ticked this point as said in three sessions running and never once ticked it as checked. That is a gap in what you know, not a claim about the players — nobody can say either way yet.',
+    source: FORMATIVE_ASSESSMENT_SOURCE,
   },
 
   // ------------------------------------------------------ derived report lines

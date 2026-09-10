@@ -62,10 +62,11 @@ npx serve site -l 3000
 
 ## Checking for understanding (ADR 0009)
 
-Phases 1 to 5 — the `checked` state and its review line, the predicted misconception, the
-regression offer, the player cards, and the questioning and did-it-stick reports. Every line
-here is silent below its floor or absent when unset, by design, so **a broken one looks exactly
-like a quiet one**: check the negative cases as carefully as the positive ones.
+**All six phases.** The `checked` state and its review line, the predicted misconception, the
+regression offer, the player cards, the questioning and did-it-stick reports, and the two
+carry-forward nudges plus the takeaway. Every line here is silent below its floor or absent when
+unset, by design, so **a broken one looks exactly like a quiet one**: check the negative cases as
+carefully as the positive ones.
 
 ### The mistake you expected (phase 2)
 
@@ -140,6 +141,31 @@ session run before today will show the empty-record wording, and that is correct
 - [ ] Tick two points and log nothing. It says *"nothing logged about any of them
       afterwards"* — and never that they did not stick, or land, or work.
 - [ ] Tick one point only. **No line** — the floor is two, because the value is the ratio.
+
+### The loop closes (phase 6)
+
+This needs **two sessions**, and the never-checked nudge needs **three** — so it is the only
+section here you cannot test in one sitting. Use the seed data if you would rather not wait.
+
+- [ ] Review a session, open `What did you leave them with?`, and type one sentence. Save.
+- [ ] Plan the next session. The phase editor shows **Last week you told them** with that
+      sentence, quoted, above `Before you go`.
+- [ ] Leave the field empty on a review. The next session shows **no** section at all — not an
+      empty quote, not a placeholder.
+- [ ] Skip it one week and fill it the week before. It reads back the one you *did* write,
+      rather than going silent. This is the case that would otherwise look broken.
+- [ ] Tick a point as **checked** and log a `Good` against it. On the review, `Ask again: …`
+      appears among the carry-forward chips, **unticked**, and its `?` explains that how it
+      looked on the night is a poor guide to whether it stuck.
+- [ ] Accept it. Next session's phase editor lists it under `Before you go` — **not** as a
+      coaching point chip in Do mode. Re-saying is the thing it exists to avoid.
+- [ ] Tick the same point as **said** and never checked, three sessions running.
+      `Check this one: …` appears on the third review, unticked, saying *"Said in 3 sessions
+      running, and never checked in any of them."*
+- [ ] Check it once. The nudge is gone the following week — a point checked once has been
+      checked.
+- [ ] Put the same point in two phases of one session. It does **not** count as two sessions of
+      streak.
 
 ### What to tell them (phase 4)
 

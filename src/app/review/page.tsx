@@ -83,6 +83,7 @@ export default function ReviewPage() {
   const [seededDone, setSeededDone] = useState<Set<string>>(new Set());
   const [proposals, setProposals] = useState<CarryForwardProposal[]>([]);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
+  const [takeaway, setTakeaway] = useState('');
   const [whatWorked, setWhatWorked] = useState('');
   const [whatDidnt, setWhatDidnt] = useState('');
   const [busy, setBusy] = useState(false);
@@ -228,6 +229,7 @@ export default function ReviewPage() {
           outcome: seededDone.has(action.id) ? ('done' as const) : ('still_open' as const),
           note: '',
         })),
+        takeaway: takeaway.trim(),
         whatWorked: splitLines(whatWorked),
         whatDidnt: splitLines(whatDidnt),
         acceptedProposals: proposals.filter((proposal) => accepted.has(proposalKeyOf(proposal))),
@@ -706,6 +708,34 @@ export default function ReviewPage() {
             </li>
           ))}
         </ul>
+      </details>
+
+      {/*
+        **The takeaway** (ADR 0009 phase 6) — the only record of what the coach said to the
+        *players*, where everything else on this screen is the coach talking to themselves. It
+        is read back at the start of the next session, which is what closes the loop on the
+        squad rather than on the plan.
+
+        Its own disclosure rather than buried under `Add notes`, because it is the one field
+        here a coach might deliberately come looking for. Skippable, like all free text.
+      */}
+      <details className="card card--sunk">
+        <summary>What did you leave them with?</summary>
+        <div className="field">
+          <label htmlFor="takeaway">The one thing they walked away with</label>
+          <input
+            id="takeaway"
+            type="text"
+            value={takeaway}
+            placeholder="Head up before you receive"
+            maxLength={200}
+            onChange={(event) => setTakeaway(event.target.value)}
+          />
+          <p className="card-meta">
+            Read back to you at the start of next session, in your words. Nothing is done with it
+            beyond that.
+          </p>
+        </div>
       </details>
 
       {/* Free text last, keyboard only if wanted. */}

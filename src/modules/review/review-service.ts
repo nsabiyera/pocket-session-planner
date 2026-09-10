@@ -39,7 +39,7 @@ import {
 } from '@/domain/review';
 import type { ChoiceSummary } from '@/domain/engagement';
 import { coachingPointChecks, type CoachingPointChecks } from '@/domain/coaching-point';
-import { followUpSummary, type FollowUpSummary } from '@/domain/checking';
+import { followUpSummary, type DeliveredPoint, type FollowUpSummary } from '@/domain/checking';
 import { questioningSummary, type QuestioningSummary } from '@/domain/questioning';
 import { describeRepresentativeness } from '@/domain/practice/match';
 import {
@@ -256,6 +256,8 @@ export async function proposeCarryForward(
       players,
       playerHistory,
       challengeHistory: await settledChallengeHistory(ctx, data.value.session),
+      followUp: data.value.followUp,
+      deliveredPointHistory: await deliveredPointHistory(ctx, data.value.session),
     }),
   );
 }
@@ -293,6 +295,42 @@ async function settledChallengeHistory(
   );
 }
 
+/**
+ * Every coaching point this squad has marked said, across the term, oldest session first.
+ *
+ * The same `by-squad` range scan `settledChallengeHistory` uses, which is why this needs no new
+ * store and no new index — and it is deliberately the same shape, so the streak arithmetic in
+ * `uncheckedStreaks` reads like `challengePointSignals` next door.
+ *
+ * The session under review is included: its chips are the most recent evidence there is, and
+ * excluding them would make the nudge always a week out of date.
+ */
+async function deliveredPointHistory(
+  ctx: ServiceContext,
+  session: Session,
+): Promise<DeliveredPoint[]> {
+  const sessions = await ctx.store.sessions.listBySquad(session.squadId, { limit: 60 });
+  const withCurrent = sessions.some((candidate) => candidate.id === session.id)
+    ? sessions
+    : [...sessions, session];
+
+  return (
+    withCurrent
+      // Oldest first, so a "three sessions running" streak counts back from the right end.
+      .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor))
+      .flatMap((candidate) =>
+        candidate.phases
+          .flatMap((phase) => phase.coachingPoints)
+          .filter((point) => point.delivered)
+          .map((point) => ({
+            sessionId: candidate.id,
+            text: point.text,
+            checked: point.checked,
+          })),
+      )
+  );
+}
+
 export interface SaveReviewInput {
   sessionId: SessionId;
   objectiveOutcome: ObjectiveOutcome;
@@ -304,6 +342,8 @@ export interface SaveReviewInput {
   seededActionOutcomes?: readonly SeededActionOutcome[];
   whatWorked?: readonly string[];
   whatDidnt?: readonly string[];
+  /** The one sentence the coach left the players with. Read back next session. */
+  takeaway?: string;
   note?: string;
   /** The chips the coach left ticked. **Nothing is written until this call.** */
   acceptedProposals: readonly CarryForwardProposal[];
@@ -348,6 +388,7 @@ export async function saveReview(
     seededActionOutcomes: input.seededActionOutcomes ?? [],
     whatWorked: input.whatWorked ?? [],
     whatDidnt: input.whatDidnt ?? [],
+    takeaway: input.takeaway ?? '',
     note: input.note ?? '',
   });
 

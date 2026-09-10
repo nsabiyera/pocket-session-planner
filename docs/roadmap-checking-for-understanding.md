@@ -1,17 +1,17 @@
 # Roadmap — checking for understanding, and feedback to players
 
-- **Status:** **building, in the order [ADR 0009](adr/0009-checking-for-understanding.md) sets
-  rather than the one below.** Phase 0 is written and accepted. Built so far: the `checked` state
-  and its review line (ADR 0009 phase 1, "Phase 4" below), the predicted misconception — pinned
-  in Do mode and tappable as an observation tag (ADR 0009 phase 2, half of "Phase 5" below), and
-  **the response half, which this document does not have a phase for**: a logged misconception
-  routes to the regression the coach already wrote, inside the session (ADR 0009 phase 3, and
-  §3 of the ADR for why it exists at all), and **the player card** — one sheet in the huddle,
-  a card each for the players the coach was watching (ADR 0009 phase 4, "Phase 1" below), and
-  **the questioning record and did-it-stick reports** — after fixing the three shipped bugs that
-  meant the fields they read were never written (ADR 0009 phase 5, "Phase 2" and "Phase 3"
-  below). The ADR supersedes this document wherever the two disagree — on the phase order, on
-  where the check question lives, on the scoring rule, and on what a phase costs.
+- **Status:** **All six phases done**, in the order
+  [ADR 0009](adr/0009-checking-for-understanding.md) sets rather than the one below. What
+  shipped: `checked` beside `delivered` and its review line; the predicted misconception,
+  pinned in Do mode and tappable as an observation tag; **the response half, which this
+  document has no phase for** — a logged misconception routes to the regression the coach
+  already wrote, inside the session; the player card, as one huddle sheet; the questioning and
+  did-it-stick reports, after fixing the three shipped bugs that meant the fields they read were
+  never written ([`known-issues.md`](known-issues.md) 1–3); and the two carry-forward nudges
+  plus the takeaway. What remains is device and field use — see
+  [`field-test-checklist.md`](field-test-checklist.md), and the note at the end of this file.
+  The ADR supersedes this document wherever the two disagree — on the phase order, on where the
+  check question lives, on the scoring rule, and on what a phase costs.
 - **Date:** 2026-09-10
 - **Reviewed:** [`review-checking-for-understanding.md`](review-checking-for-understanding.md)
   (2026-09-10) — argued for a different phase order, and found that three of the phases called
@@ -327,6 +327,16 @@ verdict on the players.
 
 ### Phase 6 — Carry-forward learns from it
 
+> **Built, both rules as `reminder`s.** The roadmap offered `coaching_point` or `reminder`; it
+> has to be the second for both, and that is the interesting part. A `coaching_point` arrives in
+> Do mode as a chip to tick *said it* — which is re-teaching, the exact thing rule 1 exists to
+> avoid, and pointless for rule 2 where the point is already in the plan. As `reminder`s they
+> land under *"Before you go"* on the phase editor, where the coach reads them while planning
+> and decides how to ask.
+>
+> Rule 2 counts **consecutive sessions, collapsed per session** — a point in two phases of one
+> night is one fact about one night, and checked in either phase counts as checked.
+>
 > **This is the roadmap's only response, and it arrives next Tuesday.** That is the gap
 > [ADR 0009](adr/0009-checking-for-understanding.md) §3 fills with a phase this document has no
 > entry for: a predicted mistake, logged as it happens, routes to the regression the coach
@@ -346,6 +356,17 @@ like the four-corner and challenge-point nudges:
 Last of the building phases because it consumes what 4 and 5 produce.
 
 ### Phase 7 — The player's own word, and the takeaway
+
+> **The takeaway is built; the player's own word is not.** The takeaway is one optional field on
+> the review, stored as a quote and read back on the next session's phase editor as *"Last week
+> you told them"* — the last screen before `Start session`, which is the start of the next
+> session in the app's own flow. It reads back **the most recent review that has one**, not
+> simply the most recent review: a coach who skipped the field last week still has something
+> worth reading out, and silence there would look identical to the feature being broken.
+>
+> The optional quote on a challenge — *"what did they say about it?"* — is **not built**. It is
+> the only remaining piece of this roadmap, and the only one that would add a keyboard to a
+> pitch-side flow.
 
 The honest missing half, and the only place the app gains player-authored data.
 

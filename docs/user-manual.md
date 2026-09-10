@@ -60,6 +60,11 @@ watch today. They get a tappable chip in Do mode, and the review asks about them
 reorder them with `↑` `↓`, set [player challenges](#player-challenges), or `Discard this plan`.
 Then `Start session ▸`.
 
+The phase editor is also where two things from last week are waiting. **Last week you told
+them** quotes your takeaway back at you — ask the players what they remember before you tell
+them again. And **Before you go** lists any reminders you carried forward, including the two
+checking nudges from the review.
+
 > Squad home to a running session should take under twenty seconds and no typing. If it is
 > taking longer, you are working harder than the app intends.
 
@@ -259,6 +264,10 @@ actually got, and a rating out of five.
   receive — nothing before the ball arrives."* A coach who only ever watches the touch cannot
   see that about themselves, and no amount of logging reveals it on its own.
 
+**What did you leave them with?** is one optional line: the single thing you told the players
+as they went. It is the only field on the review pointed at anybody but you, and the app does
+nothing with it except read it back at the start of your next session, in your words.
+
 Then **Last time you said…** (the points that seeded this session — did they move on?),
 **Focus players** (moved on / same / went back, plus a next step), and **Challenges**, where
 you tap a verdict to settle anything still open. Tap the same verdict again to take it back.
@@ -267,6 +276,17 @@ A judged challenge can only be settled here — Do mode has gone by now.
 **Carry into next session** is a checklist the app has worked out: revisit the objective, keep
 focusing on a player, a coaching point you did not get to, a nudge about your intervention
 habit. Untick anything you do not want. **Nothing is written until you tap `Save review`.**
+
+Two of those chips are about checking, and both arrive unticked:
+
+- **`Ask again: …`** — you checked a point and logged something good about it. It comes back as
+  a question to ask rather than a point to say again, because how it looked on the night is a
+  poor guide to whether it stuck. Being asked does more for it than being told twice.
+- **`Check this one: …`** — you have ticked a point as said in three sessions running and never
+  once ticked it as checked. That is a gap in what *you* know, not a claim about the players.
+
+Both land under **Before you go** on next session's phase editor, not as coaching points to
+deliver — because re-saying is the thing they exist to avoid.
 
 ## Match day
 

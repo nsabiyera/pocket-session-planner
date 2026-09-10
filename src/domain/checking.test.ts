@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   describeFollowUp,
+  describeUncheckedStreak,
   followUpSummary,
   hasEnoughForFollowUp,
   regressionOffer,
   REGRESSION_OFFER_MESSAGE,
+  uncheckedStreaks,
 } from './checking';
 import { findObjectiveTemplate } from './objectives';
 import { buildSessionFromMethodology } from './session/build-from-methodology';
@@ -12,7 +14,7 @@ import { mainPracticePhase } from './session/selectors';
 import { PLAY_PRACTICE_PLAY } from './presets';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { aSquad, phaseId, testId, T0 } from '@/test/builders';
-import { asCoachingPointId } from './ids';
+import { asCoachingPointId, asSessionId } from './ids';
 import { isoDateTime } from './primitives';
 import type { CoachingPoint } from './coaching-point';
 import type { Observation } from './observation';
@@ -312,5 +314,109 @@ describe('describing did it stick', () => {
     expect(hasEnoughForFollowUp(summary(0, 0))).toBe(false);
     expect(hasEnoughForFollowUp(summary(1, 1))).toBe(false);
     expect(hasEnoughForFollowUp(summary(2, 0))).toBe(true);
+  });
+});
+
+/**
+ * The complement of the existing chain-depth warning. That one says *you keep saying it*; this
+ * says *you never found out whether they heard you* — and consecutive, not cumulative, because
+ * a point checked once has been checked.
+ */
+describe('said three sessions running, never checked', () => {
+  const said = (session: string, text: string, checked = false) => ({
+    sessionId: asSessionId(testId(session)),
+    text,
+    checked,
+  });
+
+  it('fires at three consecutive sessions and not before', () => {
+    const two = uncheckedStreaks([said('s1', 'Head up'), said('s2', 'Head up')]);
+    expect(two).toEqual([]);
+
+    const three = uncheckedStreaks([
+      said('s1', 'Head up'),
+      said('s2', 'Head up'),
+      said('s3', 'Head up'),
+    ]);
+    expect(three).toEqual([{ text: 'Head up', sessions: 3 }]);
+  });
+
+  it('resets the moment it was checked once', () => {
+    // Checked in the middle, so only two sessions of streak remain at the recent end.
+    const streaks = uncheckedStreaks([
+      said('s1', 'Head up'),
+      said('s2', 'Head up'),
+      said('s3', 'Head up', true),
+      said('s4', 'Head up'),
+      said('s5', 'Head up'),
+    ]);
+    expect(streaks).toEqual([]);
+  });
+
+  it('counts back from the most recent, not across the whole term', () => {
+    const streaks = uncheckedStreaks([
+      said('s1', 'Head up', true),
+      said('s2', 'Head up'),
+      said('s3', 'Head up'),
+      said('s4', 'Head up'),
+    ]);
+    expect(streaks).toEqual([{ text: 'Head up', sessions: 3 }]);
+  });
+
+  it('treats a point in two phases of one session as one session', () => {
+    // Otherwise a coach who puts the same point in the warm-up and the practice would clock up
+    // three sessions of streak in one night.
+    const streaks = uncheckedStreaks([
+      said('s1', 'Head up'),
+      said('s1', 'Head up'),
+      said('s1', 'Head up'),
+    ]);
+    expect(streaks).toEqual([]);
+  });
+
+  it('counts a session as checked when any one phase checked it', () => {
+    const streaks = uncheckedStreaks([
+      said('s1', 'Head up'),
+      said('s2', 'Head up'),
+      said('s3', 'Head up'),
+      said('s3', 'Head up', true),
+    ]);
+    expect(streaks).toEqual([]);
+  });
+
+  it('matches on the same normalisation as the carry-forward dedupe', () => {
+    const streaks = uncheckedStreaks([
+      said('s1', 'Head up before you receive'),
+      said('s2', 'head up before you receive.'),
+      said('s3', 'Head up before you receive!'),
+    ]);
+    expect(streaks).toHaveLength(1);
+    // Quoted as the coach last wrote it.
+    expect(streaks[0]?.text).toBe('Head up before you receive!');
+  });
+
+  it('keeps separate points separate, longest streak first', () => {
+    const streaks = uncheckedStreaks([
+      said('s1', 'Head up'),
+      said('s1', 'Body shape'),
+      said('s2', 'Head up'),
+      said('s2', 'Body shape'),
+      said('s3', 'Head up'),
+      said('s3', 'Body shape'),
+      said('s4', 'Head up'),
+    ]);
+    expect(streaks.map((streak) => streak.text)).toEqual(['Head up', 'Body shape']);
+    expect(streaks[0]?.sessions).toBe(4);
+  });
+
+  it('describes the record and draws no conclusion from it', () => {
+    const line = describeUncheckedStreak({ text: 'Head up', sessions: 3 });
+    expect(line).toBe('Said in 3 sessions running, and never checked in any of them.');
+    // The point may be perfectly well understood. Nobody knows, which is what it says.
+    expect(line).not.toMatch(/understood|stick|ignored|failed|should/i);
+  });
+
+  it('has nothing to say about an empty term', () => {
+    expect(uncheckedStreaks([])).toEqual([]);
   });
 });

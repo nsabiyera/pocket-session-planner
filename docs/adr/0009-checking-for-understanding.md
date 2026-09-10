@@ -200,7 +200,7 @@ phases that only *report*:
 | 3 | A failed check routes to the written regression | No new store, no new field — one derived offer over the existing adjustment path |
 | 4 | The player card | Derivation plus one component and one chip — gated by a floor, not a flag |
 | 5 | Fix the write path, then the questioning and did-it-stick reports | Three bug fixes, one new sheet, two derived reports |
-| 6 | Carry-forward learns from it, and the takeaway | Two rules, two rationales |
+| 6 | Carry-forward learns from it, and the takeaway | Two rules, two rationales, one optional field |
 
 **Phase 5 is where the roadmap was wrong about its own foundations.** It called the questioning
 record and the intervention → observation join "free, from data already logged". They are not:
@@ -287,3 +287,17 @@ ask and adds none until the card.
 - **Follow-up:** the one thing no phase can supply is whether a coach on a wet Tuesday will
   actually ask, hear a blank answer, and then reach for the thing that makes it easier. Phase 3
   goes to a real touchline before Phase 4 is written.
+
+> **All six phases are built** (2026-09-10). Both phase 6 rules ship as `reminder`s rather than
+> `coaching_point`s: a coaching point arrives in Do mode as a chip to tick *said it*, and
+> re-saying is what both rules exist to avoid. They land under *"Before you go"* on the phase
+> editor instead, where the coach is planning rather than coaching.
+>
+> The takeaway is the only field in this whole feature that adds a keyboard to the flow, so it
+> is optional, last on the screen, and stored as a quote that nothing reads anything out of. It
+> is read back on the next session's phase editor — the last screen before `Start session`.
+>
+> **One piece of the roadmap is deliberately not built:** the optional *"what did they say about
+> it?"* quote on a challenge. It is the only place the app would gain player-authored data, and
+> the only remaining item that would put a keyboard in a pitch-side flow. It should go to a
+> touchline behind the rest of this, not in front of it.
