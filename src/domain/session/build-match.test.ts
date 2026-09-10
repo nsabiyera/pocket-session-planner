@@ -12,6 +12,7 @@ const objective = {
   successCriteria: [],
   sourceActionId: null,
   principleId: null,
+  commonMisconception: null,
 };
 
 const fixture = (over: Partial<MatchDetailsInput> = {}): MatchDetailsInput => ({

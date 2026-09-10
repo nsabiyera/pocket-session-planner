@@ -31,6 +31,7 @@ function startedSession(preset = PLAY_PRACTICE_PLAY) {
       successCriteria: [],
       sourceActionId: null,
       principleId: null,
+      commonMisconception: null,
     },
     now: T0,
     ids: new FakeIdGenerator(),
@@ -319,7 +320,7 @@ describe('review inputs', () => {
     const delivered = unwrap(
       applySessionCommand(
         session,
-        { kind: 'setCoachingPointDelivered', pointId: first.id, delivered: true },
+        { kind: 'setCoachingPointState', pointId: first.id, state: 'said' },
         T0,
       ),
     );

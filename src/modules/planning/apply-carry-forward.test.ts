@@ -5,6 +5,7 @@ import { PLAY_PRACTICE_PLAY } from '@/domain/presets';
 import { mainPracticePhase } from '@/domain/session/selectors';
 import { totalPlannedPhaseMin, type Session } from '@/domain/session';
 import { InterventionPlanSchema } from '@/domain/intervention';
+import { findObjectiveTemplate } from '@/domain/objectives';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { anAction, aPhase, aSquad, playerId, T0 } from '@/test/builders';
 import type { CarryForwardAction } from '@/domain/carry-forward';
@@ -17,6 +18,7 @@ function draftFixture(over: Partial<Session> = {}): Session {
       successCriteria: [],
       sourceActionId: null,
       principleId: null,
+      commonMisconception: null,
     },
     now: T0,
     ids: new FakeIdGenerator('aaaa'),
@@ -50,6 +52,28 @@ describe('objective actions', () => {
     expect(session.objective.sourceActionId).toBe(action.id);
     expect(applied).toEqual([action.id]);
     expect(session.seededFromActionIds).toEqual([action.id]);
+  });
+
+  it('brings the predicted misconception back with a revisited objective', () => {
+    // The case where the prediction has already earned its keep once: the objective is
+    // coming round again precisely because it did not land (ADR 0009).
+    const { session } = apply(draftFixture(), [objectiveAction('a1')]);
+    expect(session.objective.commonMisconception).toBe(
+      findObjectiveTemplate('playing-out-from-the-back')?.commonMisconception,
+    );
+  });
+
+  it('carries no misconception for an objective the coach wrote themselves', () => {
+    const own = objectiveAction('a1', {
+      payload: {
+        kind: 'objective',
+        text: 'Third-man runs off the six',
+        successCriteria: [],
+        intent: 'revisit',
+      },
+    });
+    const { session } = apply(draftFixture(), [own]);
+    expect(session.objective.commonMisconception).toBeNull();
   });
 
   it('highest priority then oldest wins; the rest fold in as success criteria', () => {

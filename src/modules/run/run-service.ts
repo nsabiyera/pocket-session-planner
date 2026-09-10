@@ -535,6 +535,25 @@ export function observationTagGroups(session: Session, phaseId?: PhaseId): Obser
   const used = new Set(pointTexts.map((tag) => tag.toLowerCase()));
 
   /*
+   * **The predicted misconception, as one tag** (ADR 0009).
+   *
+   * This is the tag that makes a `struggled` observation mean something. *"Struggled"* on its
+   * own is a shrug; *"struggled, and it was the thing we said would happen"* is a diagnosis,
+   * and it is the difference between a card that can quote real evidence and one that says
+   * "well done today".
+   *
+   * Second, directly under this phase's points, because the moment a coach reaches for the
+   * sheet is usually the moment it has just gone wrong. `corner: null` and no attribute, so
+   * the observation stays **unclassified** rather than being filed under a guess — the same
+   * rule an untagged note follows.
+   */
+  const misconception = session.objective.commonMisconception?.trim() ?? '';
+  if (misconception.length > 0 && !used.has(misconception.toLowerCase())) {
+    groups.push({ corner: null, label: 'The mistake you expected', tags: [misconception] });
+    used.add(misconception.toLowerCase());
+  }
+
+  /*
    * The FA's six core capabilities, above the corners.
    *
    * `corner: null` like this phase's points, because the group is not a corner — the corner

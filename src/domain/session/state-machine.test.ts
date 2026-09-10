@@ -22,6 +22,7 @@ function draftSession(): Session {
       successCriteria: [],
       sourceActionId: null,
       principleId: null,
+      commonMisconception: null,
     },
     now: T0,
     ids: new FakeIdGenerator(),
@@ -311,34 +312,84 @@ describe('interventions', () => {
 });
 
 describe('coaching points', () => {
-  it('marks a point delivered and back again', () => {
+  const pointIn = (session: Session, pointId: string) =>
+    session.phases.flatMap((p) => p.coachingPoints).find((p) => p.id === pointId);
+
+  it('marks a point said and back again', () => {
     const session = runningSession();
     const point = session.phases.flatMap((p) => p.coachingPoints)[0]!;
 
-    const delivered = applyOk(session, {
-      kind: 'setCoachingPointDelivered',
+    const said = applyOk(session, {
+      kind: 'setCoachingPointState',
       pointId: point.id,
-      delivered: true,
+      state: 'said',
     });
-    const found = delivered.phases.flatMap((p) => p.coachingPoints).find((p) => p.id === point.id);
-    expect(found?.delivered).toBe(true);
-    expect(found?.deliveredAt).toBe(T0);
+    expect(pointIn(said, point.id)?.delivered).toBe(true);
+    expect(pointIn(said, point.id)?.deliveredAt).toBe(T0);
+    expect(pointIn(said, point.id)?.checked).toBe(false);
 
-    const undone = applyOk(delivered, {
-      kind: 'setCoachingPointDelivered',
+    const undone = applyOk(said, {
+      kind: 'setCoachingPointState',
       pointId: point.id,
-      delivered: false,
+      state: 'planned',
     });
-    expect(
-      undone.phases.flatMap((p) => p.coachingPoints).find((p) => p.id === point.id)?.deliveredAt,
-    ).toBeNull();
+    expect(pointIn(undone, point.id)?.deliveredAt).toBeNull();
+  });
+
+  /**
+   * The line in Review is arithmetic over `delivered` and `checked`, so a state that set one
+   * without the other would make it a lie. The command owns the pair for exactly this reason.
+   */
+  it('keeps a checked point delivered, and never the other way round', () => {
+    const session = runningSession();
+    const point = session.phases.flatMap((p) => p.coachingPoints)[0]!;
+
+    const checked = applyOk(session, {
+      kind: 'setCoachingPointState',
+      pointId: point.id,
+      state: 'checked',
+    });
+    expect(pointIn(checked, point.id)?.delivered).toBe(true);
+    expect(pointIn(checked, point.id)?.checked).toBe(true);
+    expect(pointIn(checked, point.id)?.checkedAt).toBe(T0);
+
+    // Wrapping back to planned clears both, so a mis-tap costs one more tap and nothing else.
+    const planned = applyOk(checked, {
+      kind: 'setCoachingPointState',
+      pointId: point.id,
+      state: 'planned',
+    });
+    expect(pointIn(planned, point.id)?.delivered).toBe(false);
+    expect(pointIn(planned, point.id)?.checked).toBe(false);
+    expect(pointIn(planned, point.id)?.checkedAt).toBeNull();
+  });
+
+  it('does not restamp when it was said, on the tap that records the check', () => {
+    const session = runningSession();
+    const point = session.phases.flatMap((p) => p.coachingPoints)[0]!;
+
+    const said = applyOk(session, {
+      kind: 'setCoachingPointState',
+      pointId: point.id,
+      state: 'said',
+    });
+    // A later clock reading, as if the coach checked it two minutes after saying it.
+    const later = isoDateTime('2026-03-14T18:32:00.000Z');
+    const checked = applyOk(
+      said,
+      { kind: 'setCoachingPointState', pointId: point.id, state: 'checked' },
+      later,
+    );
+
+    expect(pointIn(checked, point.id)?.deliveredAt).toBe(T0);
+    expect(pointIn(checked, point.id)?.checkedAt).toBe(later);
   });
 
   it('reports a point that is not in this session', () => {
     const result = apply(runningSession(), {
-      kind: 'setCoachingPointDelivered',
+      kind: 'setCoachingPointState',
       pointId: '00000000-0000-4000-8000-0000000000cc' as never,
-      delivered: true,
+      state: 'said',
     });
     expect(isErr(result) && result.error.code).toBe('not_found');
   });

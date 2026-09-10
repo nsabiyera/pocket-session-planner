@@ -26,6 +26,7 @@ import { describeCornerBalance } from '@/domain/four-corners/balance';
 import { MinutesReport } from '../_components/minutes-report';
 import { MatchReview } from '../_components/match-review';
 import { describeChoice, hasEnoughForChoice } from '@/domain/engagement';
+import { describeCoachingPointChecks, hasEnoughForCheckLine } from '@/domain/coaching-point';
 import { REFLECTION_PROMPTS } from '@/domain/practice/match';
 import { describeAdjustments, describeStepCoverage, hasEnoughForStepView } from '@/domain/practice';
 import {
@@ -410,6 +411,19 @@ export default function ReviewPage() {
             {describeInterventionSummary(data.interventions)}
             <Why id="report:intervention" />
           </div>
+
+          {/*
+            *"5 coaching points delivered. 1 checked."* — ADR 0009, and it sits directly under
+            the intervention line because it is the same question about the same taps: not how
+            the players did, but what the coach did. Silent when nothing was ticked as said,
+            because then there is nothing to compare checking against.
+          */}
+          {hasEnoughForCheckLine(data.coachingPointChecks) ? (
+            <div className="banner banner--signal">
+              {describeCoachingPointChecks(data.coachingPointChecks)}
+              <Why id="report:coaching-points-checked" />
+            </div>
+          ) : null}
 
           {/*
             The FA 4 Corner coverage for this session. Sits with the intervention report

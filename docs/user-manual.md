@@ -111,6 +111,46 @@ the drill genuinely was still running.
 - `＋ Note` for a team-wide note.
 - `End` finishes and takes you to the review.
 
+### The mistake you expected
+
+Under the objective, Do mode shows one line: **`Expect` — what usually goes wrong with this
+objective.** *"They think playing out means never going long, so they force a pass that is not
+there."*
+
+It comes from the objective you tapped, so it costs you no typing, and it is written down before
+the session precisely so you meet it at the moment it turns up rather than remembering it on the
+drive home.
+
+**It is also a tag.** When it happens, the observation sheet offers it under **The mistake you
+expected** — one chip, right under this phase's own coaching points. Tapping it turns
+*"struggled"* into *"struggled, and it went wrong the way we said it would"*, which is the
+difference between a note you can act on and a shrug.
+
+If you typed your own objective rather than tapping a chip, there is no line and no chip. The app
+does not invent a prediction you never made.
+
+### Saying it, and checking it
+
+Each coaching point is a button with **three states**, and you tap through them:
+
+| | What it means |
+| --- | --- |
+| `○` | Not said yet |
+| `✓` | **You said it** |
+| `✓✓` | **You said it, and you checked it** — you asked somebody to say it back or show it back |
+
+The second tick is the one worth having. Saying a thing and finding out whether it landed are
+different jobs, and only one of them was ever recorded before. A fourth tap takes the point back
+to `○`, so a mis-tap costs you one more tap and nothing else.
+
+Review then tells you: *"5 coaching points delivered. 1 checked."* There is **no right ratio**
+and the app never suggests one — one point checked properly is a better night than five ticked
+chips. And the app never claims the players understood anything: it counts what you did, because
+that is the only thing it can honestly see.
+
+Sessions you ran before this existed read as unchecked, which is the honest answer for them —
+nobody can now say whether those points were checked.
+
 ### Logging an observation
 
 **Tap a player chip, then `Good` / `Working` / `Struggled`.** Two taps, and it is saved.
@@ -121,6 +161,7 @@ Everything else on the sheet is optional:
   touch.
 - **Core capabilities** — the FA's six, in their own words.
 - **This phase** — your own coaching points for the phase you are in.
+- **The mistake you expected** — the objective's predicted misconception, when it has one.
 - **The four corner groups** — the specific attribute you saw.
 
 Tapping a tag is what makes the reports work. The corner and the capability come along for
@@ -138,6 +179,8 @@ actually got, and a rating out of five.
 - which phases ran over, and by how much;
 - any focus player you logged nothing against — the omission coaches most want flagged;
 - **your challenges**: *"2 of 3 challenges met — 1 partly."*;
+- **said against checked**: *"5 coaching points delivered. 1 checked."* Shown once you have
+  ticked at least one point as said — below that there is nothing to compare;
 - **your intervention record**: how many times you stopped play against how many you planned,
   and your ball-rolling time;
 - **your 4 Corner coverage**: *"9 observations for this session: 8 technical, 1 social —

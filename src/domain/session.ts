@@ -25,6 +25,7 @@ import {
 import { MatchDetailsSchema, refineMatchDetails } from './match-day';
 import { EffortQualitySchema } from './morphocycle';
 import { MethodologySnapshotSchema, PhaseKindSchema } from './methodology';
+import { MAX_MISCONCEPTION } from './objectives';
 import {
   DurationMinSchema,
   IsoDateTimeSchema,
@@ -69,6 +70,21 @@ export const ObjectiveSchema = z.object({
    * who never authors a game model is never asked for one.
    */
   principleId: PrincipleIdSchema.nullable().default(null),
+  /**
+   * **What the coach expected to go wrong** (ADR 0009), snapshotted off the objective library
+   * the same way `successCriteria` is.
+   *
+   * A snapshot rather than a lookup, for the reason every other field here is one: a session
+   * is evidence of what was planned, and a library entry reworded next season must not
+   * rewrite what a coach was working from in March.
+   *
+   * **Null means the coach did not say**, and that is the honest reading for two different
+   * coaches: one who planned before this existed, and one who typed their own objective
+   * rather than tapping a chip. Neither gets an invented prediction — the line and the tag
+   * simply do not appear. Same treatment as `principleId`, and no migration for the same
+   * reason (ADR 0009 §8).
+   */
+  commonMisconception: optionalText(MAX_MISCONCEPTION).nullable().default(null),
 });
 export type Objective = z.infer<typeof ObjectiveSchema>;
 

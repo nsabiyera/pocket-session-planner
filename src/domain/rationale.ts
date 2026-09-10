@@ -43,6 +43,7 @@ const CHALLENGE_POINT = 'Challenge Point';
 const PRACTICE_SPECTRUM = 'FA practice spectrum';
 const STEP = 'STEP';
 const PLAYER_ENGAGEMENT = 'Player engagement';
+const CHECKING_FOR_UNDERSTANDING = 'Checking for understanding';
 
 const FOUR_CORNER_SOURCE =
   'https://learn.englandfootball.com/articles-and-resources/coaching/resources/2023/What-is-the-4-Corner-Model';
@@ -61,6 +62,8 @@ const FIVE_PILLARS_SOURCE =
 const AUTONOMY_SOURCE = 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8394926/';
 const STEP_SOURCE =
   'https://learn.englandfootball.com/articles-and-resources/coaching/resources/2022/make-coaching-personal-with-the-step-framework';
+const FORMATIVE_ASSESSMENT_SOURCE =
+  'https://kappanonline.org/inside-the-black-box-raising-standards-through-classroom-assessment/';
 
 /**
  * The registry.
@@ -216,6 +219,11 @@ const RATIONALES = {
     framework: COACH_BEHAVIOUR,
     why: 'What you did across the term, not one night. The five methods are five tools rather than a ranking, so this counts them and stops \u2014 there is no style the app is steering you towards.',
     source: FIVE_PILLARS_SOURCE,
+  },
+  'report:coaching-points-checked': {
+    framework: CHECKING_FOR_UNDERSTANDING,
+    why: 'Two counts of what you did: points you ticked as said, and points you ticked again after asking someone to say it back. There is no right ratio, and neither number says whether anybody understood.',
+    source: FORMATIVE_ASSESSMENT_SOURCE,
   },
   'report:style-evidence': {
     framework: COACH_BEHAVIOUR,

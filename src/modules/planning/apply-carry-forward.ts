@@ -6,6 +6,7 @@ import {
   type CarryForwardActionId,
   type PhaseId,
 } from '@/domain/ids';
+import { findObjectiveTemplateByText } from '@/domain/objectives';
 import { PRIORITY_ORDER } from '@/domain/primitives';
 import { rescaleSessionPhases } from '@/domain/session/build-from-methodology';
 import { mainPracticePhase } from '@/domain/session/selectors';
@@ -66,6 +67,11 @@ export function applyCarryForwardActions(
               successCriteria: payload.successCriteria.slice(0, 5),
               sourceActionId: action.id,
               principleId: null,
+              // A revisited objective keeps its predicted error, which is the case where the
+              // prediction has already earned its keep once. Found by text, because that is
+              // all a stored action carries — see `findObjectiveTemplateByText`.
+              commonMisconception:
+                findObjectiveTemplateByText(payload.text)?.commonMisconception ?? null,
             },
           };
           applied.push(action.id);

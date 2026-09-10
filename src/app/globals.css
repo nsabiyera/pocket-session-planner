@@ -1149,6 +1149,34 @@ summary {
   color: var(--ink);
 }
 
+/*
+  The predicted misconception. Quiet by default — it is a reminder, not an alarm.
+
+  **Two lines, then clamped.** Do mode has to fit 667px with no scrolling, so a header that
+  grew with the prose would push the two 96px actions off a small phone. Two lines is enough
+  for every entry in the objective library; one would cut most of them in half, which is worse
+  than not showing it. `MAX_MISCONCEPTION` is what keeps the clamp from ever biting.
+*/
+.run-misconception {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+
+.run-misconception .eyebrow {
+  flex: none;
+}
+
+.run-misconception-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
 .timer {
   display: flex;
   flex-direction: column;
@@ -1243,14 +1271,26 @@ summary {
   min-height: var(--tap);
 }
 
-.point[aria-pressed='true'] {
+/*
+  Three states since ADR 0009: planned, said, checked. `said` strikes through, as it always
+  did. `checked` keeps the strike but drops the muting, so the points the coach actually
+  found out about are the legible ones in a list of struck-out text — the tick count is the
+  quiet signal and the contrast is the loud one.
+*/
+.point[data-state='said'] {
   color: var(--muted);
+  text-decoration: line-through;
+}
+
+.point[data-state='checked'] {
   text-decoration: line-through;
 }
 
 .point-check {
   color: var(--signal);
   font-size: var(--fs-md);
+  /* Two glyphs wide, so the text does not shift when the second tick appears. */
+  min-width: 2.2ch;
 }
 
 .run-focus {

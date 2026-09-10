@@ -79,6 +79,23 @@ describe('startDraft', () => {
     expect(practice?.coachingPoints.some((p) => p.source === 'coach')).toBe(true);
   });
 
+  it('brings the predicted misconception with it, so Do mode has something to pin', async () => {
+    const draft = await draftFor();
+    expect(draft.objective.commonMisconception).toBe(
+      'They think playing out means never going long, so they force a pass that is not there.',
+    );
+  });
+
+  it('leaves the misconception null for a coach who typed their own objective', async () => {
+    // No template, so nothing to snapshot. The Do-mode line and the observation tag are both
+    // absent rather than invented — ADR 0009 §1.
+    const draft = await draftFor({
+      objectiveText: 'Third-man runs off the six',
+      objectiveTemplateId: undefined,
+    });
+    expect(draft.objective.commonMisconception).toBeNull();
+  });
+
   it('accepts a free-typed objective with no template', async () => {
     const draft = unwrap(await startDraft(ctx, { squadId, objectiveText: 'Set pieces' }));
     expect(draft.objective.text).toBe('Set pieces');
@@ -224,6 +241,7 @@ describe('updateDraft', () => {
           successCriteria: [],
           sourceActionId: null,
           principleId: null,
+          commonMisconception: null,
         },
       }),
     );
@@ -240,6 +258,7 @@ describe('updateDraft', () => {
           successCriteria: [],
           sourceActionId: null,
           principleId: null,
+          commonMisconception: null,
         },
       }),
     );

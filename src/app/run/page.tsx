@@ -31,6 +31,12 @@ import {
   type ObservationTagGroup,
 } from '@/modules/run/run-service';
 import { CHALLENGE_STATUSES, challengeStatusLabel, type ChallengeStatus } from '@/domain/challenge';
+import {
+  coachingPointGlyph,
+  coachingPointState,
+  coachingPointStateLabel,
+  nextCoachingPointState,
+} from '@/domain/coaching-point';
 import { sessionChallengeProgress, type ChallengeProgress } from '@/domain/session/challenges';
 import { ACTION_MOMENTS, momentShortLabel, type ActionMoment } from '@/domain/capabilities';
 import type { Observation, ObservationRatingKind } from '@/domain/observation';
@@ -353,6 +359,22 @@ export default function RunPage() {
         </p>
 
         <p className="run-objective">{session.objective.text}</p>
+
+        {/*
+          **What you expected to go wrong** (ADR 0009), pinned where you will meet it at the
+          moment it matters — the same argument as the intervention plan line directly above.
+          Writing a prediction down at a desk on Sunday is worth nothing if you cannot see it
+          at 7:40 on a wet Tuesday.
+
+          Absent, not explained, when the coach typed their own objective: an invented
+          prediction would be worse than none.
+        */}
+        {session.objective.commonMisconception ? (
+          <p className="run-misconception">
+            <span className="eyebrow">Expect</span>
+            <span className="run-misconception-text">{session.objective.commonMisconception}</span>
+          </p>
+        ) : null}
       </header>
 
       <TimerDial clock={clock} paused={paused} nextPhaseTitle={upcoming?.title} />
@@ -390,30 +412,43 @@ export default function RunPage() {
           ) : null
         ) : (
           <ul className="stack stack--tight">
-            {phase.coachingPoints.map((point) => (
-              <li key={point.id}>
-                <button
-                  type="button"
-                  className="point"
-                  aria-pressed={point.delivered}
-                  onClick={() =>
-                    void send({
-                      kind: 'setCoachingPointDelivered',
-                      pointId: point.id,
-                      delivered: !point.delivered,
-                    })
-                  }
-                >
-                  <span className="point-check" aria-hidden="true">
-                    {point.delivered ? '✓' : '○'}
-                  </span>
-                  <span>{point.text}</span>
-                  {point.source === 'carry_forward' ? (
-                    <span className="pill pill--carried">carried</span>
-                  ) : null}
-                </button>
-              </li>
-            ))}
+            {phase.coachingPoints.map((point) => {
+              /*
+                Three states, not two: **said it → checked it** (ADR 0009). `delivered`
+                records that the coach said it; the second tap records that they asked
+                somebody to say it back. It is a count of what the coach did — nothing here
+                claims anybody understood anything.
+
+                No `aria-pressed`, which can only carry two states. The glyph is decorative
+                and the state is announced in words instead.
+              */
+              const state = coachingPointState(point);
+              return (
+                <li key={point.id}>
+                  <button
+                    type="button"
+                    className="point"
+                    data-state={state}
+                    onClick={() =>
+                      void send({
+                        kind: 'setCoachingPointState',
+                        pointId: point.id,
+                        state: nextCoachingPointState(state),
+                      })
+                    }
+                  >
+                    <span className="point-check" aria-hidden="true">
+                      {coachingPointGlyph(state)}
+                    </span>
+                    <span>{point.text}</span>
+                    <span className="visually-hidden">— {coachingPointStateLabel(state)}</span>
+                    {point.source === 'carry_forward' ? (
+                      <span className="pill pill--carried">carried</span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

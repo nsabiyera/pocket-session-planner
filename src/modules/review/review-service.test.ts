@@ -133,6 +133,46 @@ describe('loadReviewData', () => {
     expect(data.unobservedFocusPlayerIds).toEqual([maya]);
   });
 
+  it('counts the points said against the points checked, across every phase', async () => {
+    const draft = unwrap(await startDraft(ctx, { squadId, objectiveText: 'Pressing' }));
+    const started = unwrap(await commitAndStart(ctx, draft.id));
+    const points = started.phases.flatMap((phase) => phase.coachingPoints);
+    // Guard the guard: two points is the minimum this case needs to mean anything.
+    expect(points.length).toBeGreaterThanOrEqual(2);
+
+    // Two said, one of them checked — the shape the line in Review exists to show.
+    let session = unwrap(
+      await dispatch(ctx, started.id, {
+        kind: 'setCoachingPointState',
+        pointId: points[0]!.id,
+        state: 'checked',
+      }),
+    );
+    session = unwrap(
+      await dispatch(ctx, session.id, {
+        kind: 'setCoachingPointState',
+        pointId: points[1]!.id,
+        state: 'said',
+      }),
+    );
+    const finished = unwrap(await dispatch(ctx, session.id, { kind: 'finish' }));
+
+    const data = unwrap(await loadReviewData(ctx, finished.id));
+    expect(data.coachingPointChecks.total).toBe(points.length);
+    expect(data.coachingPointChecks.delivered).toBe(2);
+    expect(data.coachingPointChecks.checked).toBe(1);
+  });
+
+  it('reads a session where nothing was ticked as checked, rather than as missing', async () => {
+    const session = await runASession();
+    const data = unwrap(await loadReviewData(ctx, session.id));
+
+    // Which is also how every session written before ADR 0009 reads. The counts are present
+    // and zero; the screen decides whether that is worth a line.
+    expect(data.coachingPointChecks.checked).toBe(0);
+    expect(data.coachingPointChecks.total).toBeGreaterThan(0);
+  });
+
   it('flags the phases that ran over', async () => {
     const draft = unwrap(await startDraft(ctx, { squadId, objectiveText: 'Pressing' }));
     const started = unwrap(await commitAndStart(ctx, draft.id));

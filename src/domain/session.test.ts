@@ -9,6 +9,7 @@ import {
 import {
   aChallenge,
   aChallengeEvent,
+  aCoachingPoint,
   aPhase,
   aSession,
   phaseId,
@@ -299,5 +300,50 @@ describe('practice design on a legacy session', () => {
     // `organisation` is not migrated into the typed fields — see ADR 0004, decision 2.
     expect(session.phases[0]!.organisation).toBe('4v2 rondo, 15x15, two neutrals');
     expect(session.phases[0]!.area).toBeNull();
+  });
+});
+
+/**
+ * ADR 0009 §8: the checking-for-understanding fields are additive with defaults, so they need
+ * no `DB_VERSION` bump and no document migration step. This is the test that keeps that claim
+ * true — the same route `principleId` and the practice-design fields took.
+ */
+describe('checking for understanding on a session written before it existed', () => {
+  const legacyObjective = () => {
+    const objective = { ...aSession().objective } as Record<string, unknown>;
+    delete objective.commonMisconception;
+    return objective;
+  };
+
+  it('parses a session whose objective has no predicted misconception', () => {
+    const parsed = SessionSchema.safeParse({ ...aSession(), objective: legacyObjective() });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('reads the misconception back as "the coach did not say", never as blank prose', () => {
+    const session = SessionSchema.parse({ ...aSession(), objective: legacyObjective() });
+    // Null, not '': the Do-mode line and the observation tag both key off "is there one",
+    // and an empty string would render an eyebrow with nothing after it.
+    expect(session.objective.commonMisconception).toBeNull();
+  });
+
+  it('reads a coaching point delivered before checking existed as unchecked', () => {
+    const point = { ...aCoachingPoint('head-up', { delivered: true }) } as Record<string, unknown>;
+    delete point.checked;
+    delete point.checkedAt;
+
+    const session = SessionSchema.parse({
+      ...aSession(),
+      phases: [
+        { ...aPhase('practice', { order: 0, kind: 'skill_practice' }), coachingPoints: [point] },
+      ],
+    });
+
+    const parsed = session.phases[0]!.coachingPoints[0]!;
+    // It was said — that much is on the record. Whether it was checked, nobody can now say,
+    // and `false` is the honest answer rather than a claim either way.
+    expect(parsed.delivered).toBe(true);
+    expect(parsed.checked).toBe(false);
+    expect(parsed.checkedAt).toBeNull();
   });
 });

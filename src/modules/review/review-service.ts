@@ -38,6 +38,7 @@ import {
   type SeededActionOutcome,
 } from '@/domain/review';
 import type { ChoiceSummary } from '@/domain/engagement';
+import { coachingPointChecks, type CoachingPointChecks } from '@/domain/coaching-point';
 import { describeRepresentativeness } from '@/domain/practice/match';
 import {
   adjustmentSummary,
@@ -142,6 +143,14 @@ export interface ReviewDraftData {
    * `domain/practice/match.ts`.
    */
   representativeness: string | null;
+  /**
+   * *"5 coaching points delivered. 1 checked."*
+   *
+   * The check-for-understanding line (ADR 0009). Counts of two things the coach did, across
+   * every phase of the session — never a claim about what the players understood, and with no
+   * suggested ratio, because there isn't one.
+   */
+  coachingPointChecks: CoachingPointChecks;
 }
 
 export async function loadReviewData(
@@ -182,6 +191,9 @@ export async function loadReviewData(
     stepCoverage: stepCoverage(session.run?.practiceAdjustments ?? []),
     choice: choiceSummary(session),
     representativeness: describeRepresentativeness(representativeness(session, squad?.ageGroup)),
+    coachingPointChecks: coachingPointChecks(
+      session.phases.flatMap((phase) => phase.coachingPoints),
+    ),
   });
 }
 

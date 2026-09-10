@@ -60,6 +60,53 @@ npx serve site -l 3000
 - [ ] The wake lock survives a pocket-check: lock, unlock, and confirm the screen still stays
       awake afterwards.
 
+## Checking for understanding (ADR 0009)
+
+Phases 1 and 2 — the `checked` state, its review line, and the predicted misconception. Every
+line here is silent below its floor or absent when unset, by design, so **a broken one looks
+exactly like a quiet one**: check the negative cases as carefully as the positive ones.
+
+### The mistake you expected (phase 2)
+
+- [ ] Build a session from an objective **chip**. Do mode shows an `Expect` line under the
+      objective, and it is the sentence from that objective rather than a generic one.
+- [ ] **Portrait, 667px, with the `Expect` line showing.** Do mode still fits with zero
+      scrolling outside the coaching-points box. This is the item most likely to fail — the
+      line is clamped to two lines for exactly this reason, and two lines on a small phone is
+      the case to check.
+- [ ] Build a session by **typing** your own objective. There is **no** `Expect` line at all —
+      not an empty one, not a placeholder.
+- [ ] Open the observation sheet. **The mistake you expected** is the second group, directly
+      under `This phase`, with one chip carrying the whole sentence.
+- [ ] Log a `Struggled` with that chip tapped. Open the session in history — the observation
+      carries the misconception verbatim in its tags.
+- [ ] The same sheet on a typed-objective session offers no such group.
+- [ ] Review an objective, accept the `Revisit:` chip, and start the next session. The `Expect`
+      line **comes back with it** — this is the session where the prediction earned its keep.
+- [ ] Open a session planned **before this shipped**. No `Expect` line, no chip, no error.
+
+### Said it, and checked it (phase 1)
+
+- [ ] Tap a coaching point three times with gloves on. It goes `○ → ✓ → ✓✓` and the text does
+      **not shift sideways** when the second tick appears.
+- [ ] A fourth tap returns it to `○`, and both ticks are gone. This is the mis-tap escape and it
+      must not need a long press.
+- [ ] With a screen reader on, the button announces the point text **and the state in words** —
+      not just a tick.
+- [ ] `✓✓` is legible against `✓` at arm's length in daylight. If you cannot tell them apart
+      from a metre away, the glyph is wrong however good the arithmetic is.
+- [ ] Force-quit mid-phase with one point at `✓✓`. Reopen and resume — it is still `✓✓`.
+- [ ] Finish a session with 5 points said and 1 checked. Review says exactly
+      *"5 coaching points delivered. 1 checked."*
+- [ ] Finish one with points said and **none** checked. It says *"None marked checked."* — not
+      "none checked", and nothing that reads as a telling-off.
+- [ ] Finish one with **no** points ticked at all. The line is **absent**, not zeroed — the
+      *"Didn't get to: …"* proposals cover that case instead.
+- [ ] Open the `?` beside the line. It says the app is counting what you did and does **not**
+      claim anybody understood anything.
+- [ ] Open a session you ran **before this shipped**. It reads as unchecked, parses without
+      error, and nothing in the app calls it a failure.
+
 ## The FA 4 Corner Model
 
 - [ ] Open the observation sheet: tags are grouped under the four corners, and every corner is

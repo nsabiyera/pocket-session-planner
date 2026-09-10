@@ -98,6 +98,10 @@ export async function startDraft(
     successCriteria: [...(template?.successCriteria ?? [])],
     sourceActionId: null,
     principleId: null,
+    // Rides in with the objective chip, so the predicted error costs no typing on the path
+    // almost every session takes. A coach who typed their own objective gets null, and the
+    // Do-mode line simply does not appear — silence over invention (ADR 0009 §1).
+    commonMisconception: template?.commonMisconception ?? null,
   };
 
   const session = buildSessionFromMethodology(methodology, {
@@ -155,6 +159,10 @@ export async function startMatchDraft(
     successCriteria: [...(template?.successCriteria ?? [])],
     sourceActionId: null,
     principleId: null,
+    // Rides in with the objective chip, so the predicted error costs no typing on the path
+    // almost every session takes. A coach who typed their own objective gets null, and the
+    // Do-mode line simply does not appear — silence over invention (ADR 0009 §1).
+    commonMisconception: template?.commonMisconception ?? null,
   };
 
   const session = buildMatch({
@@ -224,6 +232,7 @@ export async function addFixtures(
         successCriteria: [],
         sourceActionId: null,
         principleId: null,
+        commonMisconception: null,
       },
       match: details,
       now: at,

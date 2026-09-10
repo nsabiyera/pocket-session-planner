@@ -390,13 +390,16 @@ describe('challenges in Do mode', () => {
 });
 
 describe('the corner-grouped tag bank', () => {
-  it('leads with this phase own coaching points, then capabilities, then the corners', () => {
+  it('leads with this phase own coaching points, then the expected mistake, then capabilities, then the corners', () => {
     const withPoints = session.phases.find((p) => p.coachingPoints.length > 0)!;
     const groups = observationTagGroups(session, withPoints.id);
 
     expect(groups[0]).toMatchObject({ corner: null, label: 'This phase' });
-    expect(groups[1]).toMatchObject({ corner: null, label: 'Core capabilities' });
-    expect(groups.slice(2).map((group) => group.corner)).toEqual([
+    // Second, because the moment a coach reaches for this sheet is usually the moment it has
+    // just gone wrong (ADR 0009).
+    expect(groups[1]).toMatchObject({ corner: null, label: 'The mistake you expected' });
+    expect(groups[2]).toMatchObject({ corner: null, label: 'Core capabilities' });
+    expect(groups.slice(3).map((group) => group.corner)).toEqual([
       'technical_tactical',
       'physical',
       'psychological',
@@ -404,14 +407,32 @@ describe('the corner-grouped tag bank', () => {
     ]);
   });
 
+  it('offers the predicted mistake as one tag, verbatim', () => {
+    const groups = observationTagGroups(session);
+    const group = groups.find((candidate) => candidate.label === 'The mistake you expected')!;
+
+    expect(group.tags).toEqual([session.objective.commonMisconception]);
+    // No corner and no attribute: an observation tagged with it stays unclassified rather
+    // than being filed under a guess.
+    expect(group.corner).toBeNull();
+  });
+
+  it('offers no such group for a coach who typed their own objective', () => {
+    // Silence over invention. Nothing here makes up a prediction the coach never wrote.
+    const own = { ...session, objective: { ...session.objective, commonMisconception: null } };
+    expect(observationTagGroups(own).map((group) => group.label)).not.toContain(
+      'The mistake you expected',
+    );
+  });
+
   it('offers all four corners even when the phase has no coaching points', () => {
     const bare = { ...session, phases: session.phases.map((p) => ({ ...p, coachingPoints: [] })) };
     const groups = observationTagGroups(bare);
 
-    // No "This phase" group, but the capabilities and every corner are still one tap away —
-    // which is the point: the empty corner is visible at the moment of logging, not just in
-    // the report.
-    expect(groups).toHaveLength(5);
+    // No "This phase" group, but the expected mistake, the capabilities and every corner are
+    // still one tap away — which is the point: the empty corner is visible at the moment of
+    // logging, not just in the report.
+    expect(groups).toHaveLength(6);
     expect(groups.map((g) => g.label)).toContain('Core capabilities');
     expect(groups.flatMap((g) => g.tags)).toContain('Communication');
     expect(groups.flatMap((g) => g.tags)).toContain('Balance');

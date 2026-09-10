@@ -1,7 +1,16 @@
 # Roadmap — checking for understanding, and feedback to players
 
-- **Status:** proposed. Nothing built. Phase 0 is an ADR and should be written before any code.
+- **Status:** **building, in the order [ADR 0009](adr/0009-checking-for-understanding.md) sets
+  rather than the one below.** Phase 0 is written and accepted. Built so far: the `checked` state
+  and its review line (ADR 0009 phase 1, "Phase 4" below), and the predicted misconception —
+  pinned in Do mode and tappable as an observation tag (ADR 0009 phase 2, half of "Phase 5"
+  below). The ADR supersedes this document wherever the two disagree — on the phase order, on
+  where the check question lives, on the scoring rule, and on what a phase costs.
 - **Date:** 2026-09-10
+- **Reviewed:** [`review-checking-for-understanding.md`](review-checking-for-understanding.md)
+  (2026-09-10) — argued for a different phase order, and found that three of the phases called
+  free are not, because the fields they read are never written. Settled in
+  [ADR 0009](adr/0009-checking-for-understanding.md).
 - **Asked for:** *"As a coach, I want to check what the players understood before, during and after
   a session, and give each of them feedback on it."*
 - **Audience:** every squad, at every age group. Unlike
@@ -215,6 +224,12 @@ name in the UI must not promise more than that. Same class of decision as
 
 ### Phase 4 — `checked` beside `delivered`
 
+> **Built, and it went first.** See [ADR 0009](adr/0009-checking-for-understanding.md) §7 for why,
+> and §8 for the correction below: **there is no migration.** `DB_VERSION` is bumped only for
+> stores and indexes; an additive field with a default rides `RecordMeta.schemaVersion` and is
+> applied lazily on read, which is the route `principleId` and `styleChosen` both took. The chip
+> also has three states rather than two, because `planned` has to stay reachable for a mis-tap.
+
 The first phase that costs a tap and a migration (`DB_VERSION` 5 → 6, the sessions store).
 
 `CoachingPoint` gains `checked: boolean` and `checkedAt`, beside the existing `delivered` pair. A
@@ -229,6 +244,18 @@ Old sessions read as unchecked, which is the honest value for them — nobody ca
 those points were checked. Precisely the reasoning `styleChosen` records for its own default.
 
 ### Phase 5 — The check question, before and after
+
+> **The misconception half is built, and it went second.** `commonMisconception` is on all
+> fourteen `ObjectiveTemplate`s, snapshotted onto `ObjectiveSchema`, pinned in Do mode and
+> offered as an observation tag — which is the part this section did not anticipate, and the part
+> that makes a `struggled` observation interpretable. See
+> [ADR 0009](adr/0009-checking-for-understanding.md) §5, which was amended to keep the
+> misconception on the objective (content) while the check question goes to the phase (method).
+>
+> Two corrections to what remains below. `understandingCheck` on `SessionReviewSchema` records
+> the before/after **from memory in the car park** — ADR 0009 §2 argues it belongs in Do mode, at
+> the hinge, at one tap. And the `checkQuestion` half still has to reconcile with the five
+> questions already shipped as `defaultCoachingPoints` in three presets.
 
 The only phase that records anything about the players' understanding, and therefore the one most
 tightly governed by ADR 0009.
