@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Empty, Loading, Screen, ScreenHead, formatShortDate } from '../../_components/ui';
 import { showToast } from '../../_components/toast-host';
-import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
+import {
+  getServiceContext,
+  periodizationEnabled,
+  refresh,
+  useAppState,
+} from '@/modules/app/app-store';
 import { addFixtures, listFixtures } from '@/modules/planning/planning-service';
 import {
   FIXTURE_LIST_EXAMPLE,
@@ -171,8 +176,9 @@ export default function FixturesPage() {
         <h2>Coming up</h2>
         {upcoming.length === 0 ? (
           <Empty>
-            No fixtures ahead. The week and the match brief both work from this list, so it is worth
-            putting the season in once.
+            {periodizationEnabled(state)
+              ? 'No fixtures ahead. The week and the match brief both work from this list, so it is worth putting the season in once.'
+              : 'No fixtures ahead. Put the season in once and every match day starts from a fixture rather than from a blank screen.'}
           </Empty>
         ) : (
           upcoming.map((fixture) => <FixtureRow key={fixture.id} fixture={fixture} />)
@@ -188,14 +194,21 @@ export default function FixturesPage() {
         </section>
       ) : null}
 
-      <div className="row row--wrap">
-        <Link href="/plan/week" className="btn">
-          The week
-        </Link>
-        <Link href="/plan/prepare" className="btn">
-          Match brief
-        </Link>
-      </div>
+      {/*
+        The two periodization screens this list feeds (ADR 0008). The fixture list itself is
+        not behind the flag: a run of dated matches is useful to any coach who plans match
+        days, and it is the only way to commit more than one fixture at a time.
+      */}
+      {periodizationEnabled(state) ? (
+        <div className="row row--wrap">
+          <Link href="/plan/week" className="btn">
+            The week
+          </Link>
+          <Link href="/plan/prepare" className="btn">
+            Match brief
+          </Link>
+        </div>
+      ) : null}
 
       <details className="card card--sunk">
         <summary>What a fixture starts as</summary>
@@ -207,8 +220,14 @@ export default function FixturesPage() {
         </p>
         <p className="card-meta">
           Fill the rest in the week of the game: the shape on{' '}
-          <Link href="/plan/match">Match day</Link>, the brief on{' '}
-          <Link href="/plan/prepare">Match brief</Link>.
+          <Link href="/plan/match">Match day</Link>
+          {periodizationEnabled(state) ? (
+            <>
+              , the brief on <Link href="/plan/prepare">Match brief</Link>.
+            </>
+          ) : (
+            '.'
+          )}
         </p>
       </details>
     </Screen>

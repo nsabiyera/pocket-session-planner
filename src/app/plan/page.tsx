@@ -7,7 +7,12 @@ import { Loading, Screen, ScreenHead, Segmented, Stepper } from '../_components/
 import { CarryForwardChips } from '../_components/carry-forward-chips';
 import { PrinciplePicker } from '../_components/principle-picker';
 import { showToast } from '../_components/toast-host';
-import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
+import {
+  getServiceContext,
+  periodizationEnabled,
+  refresh,
+  useAppState,
+} from '@/modules/app/app-store';
 import { startDraft } from '@/modules/planning/planning-service';
 import { setObjectivePrinciple } from '@/modules/planning/game-model-service';
 import { applyActionsToDraft } from '@/modules/review/review-service';
@@ -192,8 +197,12 @@ export default function PlanPage() {
           Only once an objective is chosen, and only for one that belongs to a moment. The
           picker narrows itself to that moment, so this costs a tap rather than a scroll
           through a professional coach's whole model.
+
+          Behind the periodization flag (ADR 0008), because a coach who is not working from a
+          game model has nothing for it to offer — and this is step 1 of the twenty-second
+          create flow, which is the last place in the app that can afford a dead control.
         */}
-        {objectiveText !== '' ? (
+        {objectiveText !== '' && periodizationEnabled(state) ? (
           <PrinciplePicker
             squadId={squad.id}
             moment={objective ? momentOf(objective.theme) : null}

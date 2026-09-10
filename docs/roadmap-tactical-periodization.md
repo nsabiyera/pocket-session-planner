@@ -1,6 +1,8 @@
 # Roadmap — preparing for a match with tactical periodization
 
-- **Status:** **All six phases done.** What remains is device and field use — see the note at the end.
+- **Status:** **All six phases done, and the whole set is now off by default** —
+  `Settings -> Planning` switches it on ([ADR 0008](adr/0008-periodization-behind-a-flag.md),
+  2026-09-10). What remains is device and field use — see the note at the end.
   **Revised 2026-09-07** for a pro / semi-pro audience — see
   [ADR 0007](adr/0007-morphocycle-for-adult-squads.md), which supersedes ADR 0006.
 - **Date:** 2026-09-07
@@ -250,6 +252,14 @@ Worth stating so it is not quietly attempted later:
 
 All six phases are built, tested and deployed. **None of it has been used by a coach**, and the
 gaps that matters most are not in the phases:
+
+- **It is now behind a flag, off by default** ([ADR 0008](adr/0008-periodization-behind-a-flag.md)).
+  The reason is a gap this roadmap did not think to look for: every phase was reviewed against
+  the methodology, and none was reviewed against *the app the user manual describes*. Six
+  correct phases put four undocumented screens, and one control that gates one of them, in
+  front of a volunteer who opened Squad for the roster. That is not a fault in any phase, which
+  is exactly why no phase caught it — and it is worth carrying into the next roadmap: **the
+  question "what does this do to the default install?" belongs in Phase 0, not in review.**
 
 - ~~**There is no fixture list.**~~ **Built.** `/plan/fixtures` takes a pasted season and commits
   each fixture to `planned` rather than into the single draft slot, which is what had made a run

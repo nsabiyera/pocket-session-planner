@@ -219,6 +219,21 @@ export function patchActiveSession(session: Session): void {
   store.setState((current) => ({ ...current, activeSession: session, mirror: null }));
 }
 
+/**
+ * Switch the tactical periodization planning set on or off (ADR 0008).
+ *
+ * A `meta.patch` rather than squad data, so it is one device's answer and never travels in the
+ * export — see `AppMetaSchema.tacticalPeriodization`. Turning it off writes nothing else: no
+ * game model is deleted, no session's `principleId` is cleared, and no stored `Squad.level` is
+ * reset, which is what makes the switch safe to try.
+ */
+export function setTacticalPeriodization(enabled: boolean): Promise<void> {
+  if (!dataStore) return Promise.resolve();
+  return dataStore.meta
+    .patch({ tacticalPeriodization: enabled }, systemClock.nowIso() as never)
+    .then(() => refresh());
+}
+
 export function setActiveSquad(squadId: SquadId): Promise<void> {
   if (!dataStore) return Promise.resolve();
   return dataStore.meta
@@ -253,4 +268,20 @@ export function __resetForTest(): void {
 /** The session `/plan` and `/run` operate on, without threading an id through the URL. */
 export function activeSessionId(state: AppState): SessionId | null {
   return state.activeSession?.id ?? null;
+}
+
+/**
+ * Is the tactical periodization work switched on? (ADR 0008.)
+ *
+ * **One accessor, and nothing reads `meta.tacticalPeriodization` directly** — the same rule
+ * `resolvePhaseIntervention` sets for the intervention plan. Four screens and one component
+ * hang off this, and a flag re-derived in five places is a flag that will disagree with
+ * itself the first time one of them is edited.
+ *
+ * Absent meta answers `false`: a cold start before IndexedDB opens, and any install whose
+ * meta was written before the field existed. Both are the safe answer rather than a
+ * placeholder — the periodization screens are the ones a coach has to ask for.
+ */
+export function periodizationEnabled(state: AppState): boolean {
+  return state.meta?.tacticalPeriodization ?? false;
 }

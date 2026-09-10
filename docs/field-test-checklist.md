@@ -117,6 +117,27 @@ will not get kept, and every number downstream of it is then absent rather than 
 - [ ] Run the same unresolved point through three sessions and confirm the planner warns:
       *"change the practice, not the point."*
 
+## The tactical periodization flag (ADR 0008)
+
+The switched-off state is the default, so it is the one every other section is already
+exercising. These items check the half nobody will remember to look at.
+
+- [ ] On a fresh install, `/squad` leads with the roster: no `Game model`, no `The week`, no
+      `Squad level`. `/plan` step 1 offers no principle picker.
+- [ ] `Settings -> Planning` turns it on. Without a reload, `/squad` and `/plan` both show the
+      periodization controls — one store, one repaint.
+- [ ] Author a game model, then turn the flag off. Turn it back on: the model is still there,
+      word for word. **This is the promise the Settings copy makes.**
+- [ ] With the flag off, open `/plan/week`, `/plan/prepare` and `/squad/game-model` by URL.
+      Each says it is turned off and offers Settings — no blank screen, no crash page.
+- [ ] Install to the home screen with the flag on, add a shortcut or bookmark to `The week`,
+      then turn the flag off. Reopen the shortcut **offline**: the precached route still loads
+      and still explains itself.
+- [ ] Export with the flag on, turn it off, and import the file back. The flag stays off — it
+      is device meta and must not travel.
+- [ ] Turn the flag off on a senior squad and confirm `Squad.level` is untouched: turn it back
+      on and the squad is still `Senior`.
+
 ## Crashes
 
 - [ ] Force a crash on a screen (temporarily throw in a component). Confirm you get the

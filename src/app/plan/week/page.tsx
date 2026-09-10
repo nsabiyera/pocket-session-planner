@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Empty, Loading, Screen, ScreenHead, formatShortDate } from '../../_components/ui';
 import { showToast } from '../../_components/toast-host';
-import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
+import { PeriodizationOff } from '../../_components/periodization-off';
+import {
+  getServiceContext,
+  periodizationEnabled,
+  refresh,
+  useAppState,
+} from '@/modules/app/app-store';
 import { setEffortQuality } from '@/modules/run/run-service';
 import {
   EFFORT_QUALITIES,
@@ -64,7 +70,19 @@ export default function WeekPage() {
     void reload();
   }, [reload]);
 
-  if (state.status !== 'ready' || sessions === null) {
+  if (state.status !== 'ready') {
+    return (
+      <Screen>
+        <Loading />
+      </Screen>
+    );
+  }
+
+  // Before the sessions guard, so a deep link to a switched-off route says so rather than
+  // spinning on a read whose result is about to be thrown away.
+  if (!periodizationEnabled(state)) return <PeriodizationOff title="The week" />;
+
+  if (sessions === null) {
     return (
       <Screen>
         <Loading />

@@ -503,6 +503,7 @@ export function defaultAppMeta(now: IsoDateTime): AppMeta {
     activeSquadId: null,
     storagePersisted: false,
     completedSessionCount: 0,
+    tacticalPeriodization: false,
   };
 }
 

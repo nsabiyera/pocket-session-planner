@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Empty, Loading, Screen, ScreenHead, formatShortDate } from '../../_components/ui';
 import { showToast } from '../../_components/toast-host';
-import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
+import { PeriodizationOff } from '../../_components/periodization-off';
+import {
+  getServiceContext,
+  periodizationEnabled,
+  refresh,
+  useAppState,
+} from '@/modules/app/app-store';
 import { getGameModel } from '@/modules/planning/game-model-service';
 import { setUnitObjective } from '@/modules/run/run-service';
 import { reviewWeek } from '@/domain/game-model/week-review';
@@ -57,7 +63,17 @@ export default function PreparePage() {
     void reload();
   }, [reload]);
 
-  if (state.status !== 'ready' || sessions === null) {
+  if (state.status !== 'ready') {
+    return (
+      <Screen>
+        <Loading />
+      </Screen>
+    );
+  }
+
+  if (!periodizationEnabled(state)) return <PeriodizationOff title="Match brief" />;
+
+  if (sessions === null) {
     return (
       <Screen>
         <Loading />

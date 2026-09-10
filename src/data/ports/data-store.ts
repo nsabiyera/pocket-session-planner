@@ -208,6 +208,24 @@ export const AppMetaSchema = z.object({
   /** Whether `navigator.storage.persist()` has been granted. Surfaced in Settings. */
   storagePersisted: z.boolean().default(false),
   completedSessionCount: z.number().int().min(0).default(0),
+  /**
+   * **The tactical periodization gate** (ADR 0008). Off by default.
+   *
+   * Hides the game model, the principle picker, the week and the match brief — the whole of
+   * `docs/roadmap-tactical-periodization.md` — leaving the Plan → Do → Review app the manual
+   * actually describes. A coach who works this way turns it on in Settings once.
+   *
+   * **Device meta rather than squad data, and deliberately outside the export.** It is not a
+   * fact about the squad — a coach either works this way or does not — and a flag that
+   * travelled in the export file would let importing another coach's season switch a feature
+   * on in your app. `Squad.level` stays where it is: that one is a safeguarding property of
+   * the squad (ADR 0007) and this flag does not replace it.
+   *
+   * Stored meta written before this field existed reads as `undefined`, which every call site
+   * resolves through `periodizationEnabled` to `false` — the same answer as the default, and
+   * the safe one.
+   */
+  tacticalPeriodization: z.boolean().default(false),
 });
 export type AppMeta = z.infer<typeof AppMetaSchema>;
 

@@ -8,13 +8,16 @@ import {
   getServiceContext,
   isDataStoreOpen,
   patchActiveSession,
+  periodizationEnabled,
   refresh,
   setActiveSquad,
+  setTacticalPeriodization,
 } from './app-store';
 import { DatabaseClosedError } from '@/data/idb/idb-data-store';
 import { FakeDataStore } from '@/data/ports/fake-data-store';
 import { commitAndStart, startDraft } from '../planning/planning-service';
 import { addPlayer, createSquad } from '../squad/squad-service';
+import { getGameModel, setIdentity } from '../planning/game-model-service';
 import { FakeClock } from '@/lib/fake-clock';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { unwrap } from '@/lib/result';
@@ -156,5 +159,60 @@ describe('the app store', () => {
     await createSquad(ctx, { name: 'U12 Reds' });
     await refresh();
     expect(activeSessionId(getAppState())).toBeNull();
+  });
+
+  describe('the tactical periodization flag', () => {
+    it('is off for a squad that never asked for it', async () => {
+      await createSquad(ctx, { name: 'U12 Reds' });
+      await refresh();
+      expect(periodizationEnabled(getAppState())).toBe(false);
+    });
+
+    it('is off before the database has opened', () => {
+      // The cold-start frame: `meta` is null and the mirror is painting `Resume`. Four screens
+      // read this, and the honest answer with no meta is the same as the default.
+      expect(periodizationEnabled(getAppState())).toBe(false);
+    });
+
+    it('is off for an install whose meta predates the field', async () => {
+      // Meta is stored and read unparsed, so a record written before this field existed has
+      // `undefined` here rather than `false`. That must resolve to off, not to a truthy blank.
+      await createSquad(ctx, { name: 'U12 Reds' });
+      const stored = await store.meta.get();
+      await store.meta.put({ ...stored!, tacticalPeriodization: undefined as never });
+      await refresh();
+      expect(periodizationEnabled(getAppState())).toBe(false);
+    });
+
+    it('turns on, survives a refresh, and turns back off', async () => {
+      await createSquad(ctx, { name: 'First Team' });
+      await setTacticalPeriodization(true);
+      expect(periodizationEnabled(getAppState())).toBe(true);
+
+      await refresh();
+      expect(periodizationEnabled(getAppState())).toBe(true);
+
+      await setTacticalPeriodization(false);
+      expect(periodizationEnabled(getAppState())).toBe(false);
+    });
+
+    it('deletes nothing on the way off', async () => {
+      // The promise the Settings copy makes. Turning the flag off hides screens; a game model
+      // already authored has to still be there when the coach turns it back on.
+      const squad = await createSquad(ctx, { name: 'First Team' });
+      await setTacticalPeriodization(true);
+      unwrap(await setIdentity(ctx, squad.id, 'We build from the back'));
+
+      await setTacticalPeriodization(false);
+      expect((await getGameModel(ctx, squad.id))?.identity).toBe('We build from the back');
+
+      await setTacticalPeriodization(true);
+      expect((await getGameModel(ctx, squad.id))?.identity).toBe('We build from the back');
+    });
+
+    it('does nothing rather than throwing when the store is not open', async () => {
+      __setDataStoreForTest(null);
+      await expect(setTacticalPeriodization(true)).resolves.toBeUndefined();
+    });
   });
 });

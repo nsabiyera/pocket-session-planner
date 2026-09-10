@@ -16,6 +16,7 @@ device unless you export it.
 - [Players and progress](#players-and-progress)
 - [The two FA models](#the-two-fa-models)
 - [Your data](#your-data)
+- [The extra planning set](#the-extra-planning-set)
 - [When something looks wrong](#when-something-looks-wrong)
 
 ## Before your first session
@@ -239,6 +240,20 @@ Everything is stored on the device, in the browser, and works with no signal.
   replacing it.
 - **Storage.** Browsers can clear site data under pressure. If Settings says storage is not
   protected, `Ask to protect it`.
+
+## The extra planning set
+
+`Settings -> Planning` has one switch, **off** unless you turn it on: **tactical periodization**.
+
+On, the app gains four things — a **game model** (how your team plays, decomposed into
+principles), **the week** (the cycle of sessions running up to a fixture), a **match brief**
+(what each unit is being asked to do on Saturday), and a **principle** to attach to a session's
+objective on the Plan screen. It is a framework for coaches who already work this way, most of
+them at senior level; nothing else in the app needs it, and none of the FA models above depend
+on it.
+
+Off, none of that appears. Turning it off **deletes nothing** — a game model you have already
+written is waiting exactly as you left it if you switch back on.
 
 ## When something looks wrong
 
