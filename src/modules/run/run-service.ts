@@ -454,6 +454,24 @@ export async function setChallengeStatus(
   });
 }
 
+/**
+ * **What the player said about their challenge** (ADR 0009 phase 7).
+ *
+ * Its own call rather than a second argument to `setChallengeStatus`, because the quote is
+ * independent of the verdict: writing one down must never disturb a ruling the coach already
+ * gave, and a coach can be told what a player thought before ruling, after, or instead.
+ *
+ * Stored verbatim. Nothing in the app reads anything out of it beyond the words.
+ */
+export async function setChallengePlayerWord(
+  ctx: ServiceContext,
+  sessionId: SessionId,
+  challengeId: ChallengeId,
+  said: string,
+): Promise<Result<Session, RunError>> {
+  return dispatch(ctx, sessionId, { kind: 'setChallengePlayerWord', challengeId, said });
+}
+
 /** Everything `/run` needs for one repaint, in one round trip. */
 export interface RunSnapshot {
   session: Session;

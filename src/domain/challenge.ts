@@ -103,6 +103,25 @@ export const PlayerChallengeSchema = z
     settledAt: IsoDateTimeSchema.nullable().default(null),
     /** The coach's word on how it went. Optional, and never asked for pitch-side. */
     note: optionalText(300).default(''),
+    /**
+     * **What the player said about it** — the only player-authored data in this app
+     * (ADR 0009 phase 7).
+     *
+     * Every other fact the app holds is a behaviour a coach observed or a thing a coach did.
+     * This is the player's own words, written down because they were said. It is what turns a
+     * verdict into a conversation: *"missed"* is a judgement, *"missed, and he said he could
+     * not see the far side"* is the next session's practice.
+     *
+     * **Distinct from `note`, and the distinction is the point.** `note` is the coach's word on
+     * how it went. This is the player's. Merging them would destroy the only thing that makes
+     * this field worth having.
+     *
+     * **A quote, and nothing else is ever done with it.** Never parsed, never scored, never
+     * counted, never aggregated, and never turned into a sentiment or a wellbeing signal —
+     * anything read *out* of it beyond the words would be exactly the fabricated evidence
+     * `engagement.ts` refuses. It is displayed verbatim or not at all.
+     */
+    playerSaid: optionalText(300).default(''),
     source: ChallengeSourceSchema.default('coach'),
     sourceActionId: CarryForwardActionIdSchema.nullable().default(null),
   })

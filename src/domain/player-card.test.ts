@@ -26,6 +26,7 @@ const aChallengeCard = (over: Partial<CardChallenge> = {}): CardChallenge => ({
   label: '2/3',
   status: 'open',
   verdict: null,
+  said: '',
   ...over,
 });
 
@@ -191,6 +192,20 @@ describe('choosing which observation to read out', () => {
   it('marks an ability observation as not about effort', () => {
     const card = cardFor({ observations: [logged('good', ['Scanning'])] });
     expect(card.wentWell?.aboutEffort).toBe(false);
+  });
+});
+
+describe("the player's own words", () => {
+  it('rides the card verbatim, quotes and all', () => {
+    const card = cardFor({
+      challenge: aChallengeCard({ said: "I couldn't see the far side" }),
+    });
+    // Not summarised, not tidied, not sentence-cased. It is a quote (ADR 0009 phase 7).
+    expect(card.challenge?.said).toBe("I couldn't see the far side");
+  });
+
+  it('is empty when they were not asked, and the card shows nothing', () => {
+    expect(cardFor({ challenge: aChallengeCard() }).challenge?.said).toBe('');
   });
 });
 

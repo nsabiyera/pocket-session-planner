@@ -93,6 +93,17 @@ export type SessionCommand =
       readonly state: CoachingPointState;
     }
   | {
+      /**
+       * What the player said about their challenge — a quote, recorded on its own rather than
+       * riding `setChallengeStatus`, because it is independent of the ruling. A coach can write
+       * it down before ruling, after ruling, or without ruling at all, and none of those should
+       * disturb a verdict they already gave.
+       */
+      readonly kind: 'setChallengePlayerWord';
+      readonly challengeId: ChallengeId;
+      readonly said: string;
+    }
+  | {
       readonly kind: 'logChallengeProgress';
       readonly id: ChallengeEventId;
       readonly challengeId: ChallengeId;
@@ -193,6 +204,8 @@ function reduce(
       return undoChallengeProgress(session, command.challengeId);
     case 'setChallengeStatus':
       return setChallengeStatus(session, command, now);
+    case 'setChallengePlayerWord':
+      return setChallengePlayerWord(session, command);
     case 'logPracticeAdjustment':
       return logPracticeAdjustment(session, command, now);
     case 'undoPracticeAdjustment':
@@ -865,6 +878,26 @@ function setChallengeStatus(
   return ok({ ...session, challenges });
 }
 
+/**
+ * The player's own words, stored verbatim.
+ *
+ * **No run required**, following `setChallengeStatus`: a coach can be told what a player
+ * thought at any point, including in the car park with the session already finished.
+ */
+function setChallengePlayerWord(
+  session: Session,
+  command: Extract<SessionCommand, { kind: 'setChallengePlayerWord' }>,
+): Result<Session, TransitionError> {
+  if (!session.challenges.some((challenge) => challenge.id === command.challengeId)) {
+    return fail('not_found', `No challenge ${command.challengeId} in this session.`);
+  }
+
+  const challenges = session.challenges.map((challenge) =>
+    challenge.id === command.challengeId ? { ...challenge, playerSaid: command.said } : challenge,
+  );
+
+  return ok({ ...session, challenges });
+}
 // ---------------------------------------------------------------------------
 // Survival
 // ---------------------------------------------------------------------------

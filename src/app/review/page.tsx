@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Empty, Loading, Rating, Screen, ScreenHead, formatShortDate } from '../_components/ui';
 import { showToast } from '../_components/toast-host';
 import { Why, WhyTrigger } from '../_components/why';
+import { PlayerWordField } from '../_components/player-word';
 import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
 import {
   loadReviewData,
@@ -13,7 +14,7 @@ import {
   saveReview,
   type ReviewDraftData,
 } from '@/modules/review/review-service';
-import { setChallengeStatus } from '@/modules/run/run-service';
+import { setChallengePlayerWord, setChallengeStatus } from '@/modules/run/run-service';
 import type { CarryForwardProposal } from '@/domain/carry-forward';
 import { CHALLENGE_STATUSES, challengeStatusLabel, type ChallengeStatus } from '@/domain/challenge';
 import { describeChallengeSummary } from '@/domain/session/challenges';
@@ -164,6 +165,24 @@ export default function ReviewPage() {
   const playerName = (playerId: PlayerId): string => {
     const player = state.players.find((candidate) => candidate.id === playerId);
     return player ? shortPlayerName(player, state.players) : 'Someone';
+  };
+
+  /**
+   * The player's own words, written straight through like the ruling beside it.
+   *
+   * Reloads the review data rather than patching page state: `data.challenges` is derived from
+   * the session document, so the honest way to keep the field showing what was stored is to
+   * re-read it.
+   */
+  const saveSaid = async (challengeId: ChallengeId, said: string) => {
+    if (!session) return;
+    const result = await setChallengePlayerWord(getServiceContext(), session.id, challengeId, said);
+    if (isErr(result)) {
+      showToast('Could not save that.', { tone: 'stop' });
+      return;
+    }
+    const reloaded = await loadReviewData(getServiceContext(), session.id);
+    if (!isErr(reloaded)) setData(reloaded.value);
   };
 
   /**
@@ -631,6 +650,17 @@ export default function ReviewPage() {
                     </button>
                   ))}
                 </div>
+
+                {/*
+                  The player's own words (ADR 0009 phase 7), here as well as in Do mode
+                  because a judged challenge can only be settled here — and a coach who was
+                  told something on the pitch and had no free hand can write it down now.
+                */}
+                <PlayerWordField
+                  id={`challenge-said-${challenge.id}`}
+                  said={challenge.playerSaid}
+                  onSave={(said) => saveSaid(challenge.id, said)}
+                />
               </li>
             ))}
           </ul>

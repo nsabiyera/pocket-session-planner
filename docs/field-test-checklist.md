@@ -62,9 +62,9 @@ npx serve site -l 3000
 
 ## Checking for understanding (ADR 0009)
 
-**All six phases.** The `checked` state and its review line, the predicted misconception, the
-regression offer, the player cards, the questioning and did-it-stick reports, and the two
-carry-forward nudges plus the takeaway. Every line here is silent below its floor or absent when
+**All seven phases.** The `checked` state and its review line, the predicted misconception, the
+regression offer, the player cards, the questioning and did-it-stick reports, the two
+carry-forward nudges, the takeaway, and the player's own word on a challenge. Every line here is silent below its floor or absent when
 unset, by design, so **a broken one looks exactly like a quiet one**: check the negative cases as
 carefully as the positive ones.
 
@@ -141,6 +141,33 @@ session run before today will show the empty-record wording, and that is correct
 - [ ] Tick two points and log nothing. It says *"nothing logged about any of them
       afterwards"* — and never that they did not stick, or land, or work.
 - [ ] Tick one point only. **No line** — the floor is two, because the value is the ratio.
+
+### The player's own word (phase 7)
+
+The only field in the app that records something a **player** said, and the only one that puts
+a keyboard in a pitch-side flow. **The thing to judge is whether you would ever actually type
+it standing on a pitch** — if not, it belongs only on the review, and this is the item that
+would change that.
+
+- [ ] Open a challenge's `⌄` ruling sheet in Do mode. `What did you say about it?` is below the
+      verdict, not above it. Type a sentence and close the sheet.
+- [ ] Reopen it. The sentence is still there.
+- [ ] **Type with wet or gloved hands, mid-session, with a drill running.** Honestly: did you
+      finish the sentence, or did you give up? Either answer is useful.
+- [ ] Type it, then rule the challenge `Missed`. The quote survives the ruling — writing one
+      must never disturb a verdict, and vice versa.
+- [ ] Rule it first, then type. Same result.
+- [ ] Blur the field without changing anything. Nothing is written — check the session did not
+      get a pointless update.
+- [ ] Open `💬 Tell them`. The quote is on that player's card under **You said**, in quotes and
+      in italics, clearly not the app's own prose.
+- [ ] Read it back to the player. Does it land as a check, or as being quoted at?
+- [ ] On `/review`, the same field is on each challenge row. Type one there for a judged
+      challenge — the one Do mode can no longer settle.
+- [ ] Save the review, then open the session from history. **Challenges** is a new section, and
+      the quote is on it. If it is not findable here it is write-only, which was the whole
+      reason this section exists.
+- [ ] Leave it blank everywhere. No empty quote marks, no placeholder, no gap on the card.
 
 ### The loop closes (phase 6)
 

@@ -71,6 +71,18 @@ export function HuddleSheet({
                     </p>
                   ) : null}
 
+                  {/*
+                    Their own words, if they were asked. The only line here that is not the
+                    coach's language, and therefore the safest thing on the card: reading a
+                    player their own sentence back is a check rather than a judgement.
+                  */}
+                  {card.challenge?.said ? (
+                    <p className="player-card-line">
+                      <span className="eyebrow">You said</span>
+                      <span className="player-card-quote">&ldquo;{card.challenge.said}&rdquo;</span>
+                    </p>
+                  ) : null}
+
                   {/* How am I going. */}
                   {card.wentWell ? (
                     <p className="player-card-line">

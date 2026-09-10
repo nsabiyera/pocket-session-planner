@@ -1390,6 +1390,17 @@ summary {
   font-size: var(--fs-md);
 }
 
+/*
+  A player's own words (ADR 0009 phase 7). Italic and quoted, so it is unmistakably *theirs*
+  rather than another line of the app's prose — the one thing on the card the coach did not
+  write, and the only place this app holds a sentence a player said.
+*/
+.player-card-quote {
+  font-size: var(--fs-md);
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
 /* ------------------------------------------------------ player challenges */
 
 /*

@@ -23,6 +23,7 @@ import {
   logObservation,
   logPracticeAdjustment,
   observationTagGroups,
+  setChallengePlayerWord,
   setChallengeStatus,
   setPeriodPresence,
   undoChallengeProgress,
@@ -77,6 +78,7 @@ import {
 } from '@/domain/practice';
 import type { SessionPhase } from '@/domain/session';
 import { HuddleSheet } from '../_components/huddle-sheet';
+import { PlayerWordField } from '../_components/player-word';
 import { PhaseImageStrip } from '../_components/phase-images';
 import { loadPhaseImages } from '@/modules/planning/phase-image-service';
 import type { PhaseImage } from '@/domain/phase-image';
@@ -242,6 +244,7 @@ export default function RunPage() {
         label: progress.label,
         status: progress.status,
         verdict: challengeVerdict(progress.status),
+        said: progress.challenge.playerSaid,
       },
     })),
     observations,
@@ -760,6 +763,19 @@ export default function RunPage() {
         onClose={() => setChallengeSheet(null)}
         onRule={rule}
         onCount={countChallenge}
+        onSaySaid={async (challengeId, said) => {
+          const result = await setChallengePlayerWord(
+            getServiceContext(),
+            session.id,
+            challengeId,
+            said,
+          );
+          if (isErr(result)) {
+            showToast('Could not save that.', { tone: 'stop' });
+            return;
+          }
+          patchActiveSession(result.value);
+        }}
       />
 
       <HuddleSheet open={huddleOpen} cards={cards} onClose={() => setHuddleOpen(false)} />
@@ -871,12 +887,14 @@ function ChallengeRulingSheet({
   onClose,
   onRule,
   onCount,
+  onSaySaid,
 }: {
   progress: ChallengeProgress | null;
   nameOf: (progress: ChallengeProgress) => string;
   onClose: () => void;
   onRule: (challengeId: ChallengeId, status: ChallengeStatus) => Promise<void>;
   onCount: (progress: ChallengeProgress) => Promise<void>;
+  onSaySaid: (challengeId: ChallengeId, said: string) => Promise<void>;
 }) {
   const name = progress ? nameOf(progress) : '';
 
@@ -928,6 +946,17 @@ function ChallengeRulingSheet({
               Clear the ruling
             </button>
           ) : null}
+
+          {/*
+            Below the verdict, because the verdict is the two-tap job and this is the optional
+            one. It turns "missed" into "missed, and he said he could not see the far side",
+            which is the difference between a judgement and next week's practice.
+          */}
+          <PlayerWordField
+            id="challenge-player-word"
+            said={progress.challenge.playerSaid}
+            onSave={(said) => onSaySaid(progress.challenge.id, said)}
+          />
         </>
       ) : null}
     </Sheet>

@@ -95,6 +95,15 @@ The `⌄` on a row opens the verdict: **Met / Partly / Missed**, plus `＋1` if 
 count. `Partly` exists because the honest answer to *did Kai make three forward passes* is
 often "he made one, and he was looking for them".
 
+Under the verdict there is one optional field: **What did they say about it?** Their words, not
+yours. It is the only thing in the whole app that records something a *player* said, and it is
+what turns a verdict into a conversation — *"missed"* is a judgement, *"missed, and he said he
+couldn't see the far side"* is next week's practice.
+
+Nothing is ever done with it beyond showing it back to you. It is not scored, not counted, not
+read for mood or confidence — it is a quote. You will see it on their card in the huddle, and on
+the session in your history. Skip it every week and nothing breaks.
+
 Anything you have not ruled on can be settled in the review.
 
 ## Running a session
@@ -177,6 +186,10 @@ Each card is three lines, and they are Hattie and Timperley's three questions in
 | **Your job** | *Where am I going?* — your challenge as you wrote it, with its tally, or why you made them a focus player |
 | **Went well** | *How am I going?* — one thing that worked, in the words of the tag you tapped |
 | **Next** | *Where to next?* — one thing to work on. One, not three |
+
+If you wrote down what they said about their challenge, that appears too — in quotes, under
+**You said**. It is the one line on the card that is not your language, which makes it the
+safest thing on there: reading a player their own sentence back is a check, not a verdict.
 
 **It is all your own words.** A challenge as you typed it, a tag as you tapped it, a next step
 carried over from last week's review. The card cannot produce "well done today" because there is

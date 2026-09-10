@@ -65,6 +65,14 @@ export interface CardChallenge {
   readonly status: ChallengeStatus;
   /** `Met` / `Partly` / `Missed`, or null while it is still open. */
   readonly verdict: string | null;
+  /**
+   * **What the player said about it**, verbatim (ADR 0009 phase 7).
+   *
+   * The only line on this card that is not the coach's own words, which makes it the safest
+   * thing on it: reading a player their own sentence back is a check, not a judgement. Empty
+   * when they were not asked, and the card simply shows nothing.
+   */
+  readonly said: string;
 }
 
 export interface PlayerCard {

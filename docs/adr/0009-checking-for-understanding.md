@@ -297,7 +297,21 @@ ask and adds none until the card.
 > is optional, last on the screen, and stored as a quote that nothing reads anything out of. It
 > is read back on the next session's phase editor — the last screen before `Start session`.
 >
-> **One piece of the roadmap is deliberately not built:** the optional *"what did they say about
-> it?"* quote on a challenge. It is the only place the app would gain player-authored data, and
-> the only remaining item that would put a keyboard in a pitch-side flow. It should go to a
-> touchline behind the rest of this, not in front of it.
+> **Phase 7 followed** (2026-09-10): the optional *"what did they say about it?"* quote on a
+> challenge — the only player-authored data in the app, and the only field in this feature that
+> puts a keyboard in a pitch-side flow. §1 permits it directly: *what the player said or showed,
+> recorded verbatim, never scored.* It is displayed verbatim or not at all, and nothing reads
+> anything out of it — no sentiment, no confidence, no wellbeing signal, which would be exactly
+> the fabricated evidence `engagement.ts` refuses.
+>
+> Kept separate from `PlayerChallenge.note`, the coach's word on how it went. Merging them would
+> destroy the distinction that makes the field worth having, and the two now sit side by side as
+> the coach's account and the player's.
+>
+> It also reaches the player card, which is the one place where showing it is more than record
+> keeping: reading a player their own sentence back is a check rather than a verdict, and it is
+> the only line on that card the coach did not write.
+>
+> The reservation stands, and it is a field-test question rather than a design one: whether a
+> coach will type a sentence standing on a wet pitch. If they will not, the field belongs on the
+> review alone — the capture surface, not the feature, is what would change.

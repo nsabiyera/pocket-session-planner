@@ -7,6 +7,8 @@ import { Empty, Loading, Screen, ScreenHead, formatLongDate } from '../../_compo
 import { Why } from '../../_components/why';
 import { getServiceContext, useAppState } from '@/modules/app/app-store';
 import { asSessionId } from '@/domain/ids';
+import { challengeStatusLabel } from '@/domain/challenge';
+import { sessionChallengeProgress } from '@/domain/session/challenges';
 import { describeInterventionPlan, resolvePhaseIntervention } from '@/domain/intervention';
 import type { Observation } from '@/domain/observation';
 import { phasesInOrder, type Session } from '@/domain/session';
@@ -143,6 +145,53 @@ function SessionDetail() {
           })}
         </ul>
       </section>
+
+      {/*
+        **Challenges, with what the players said about them** (ADR 0009 phase 7).
+
+        This screen had no challenges section at all, which made the quote write-only: typed on
+        the review, gone the moment it was saved. A quote nobody can find later is not a record.
+        Pure rendering — the challenges are already on the session document, so this costs no
+        new query and no new index.
+      */}
+      {session.challenges.length > 0 ? (
+        <section className="stack">
+          <h2>Challenges</h2>
+          <ul className="stack stack--tight">
+            {sessionChallengeProgress(session).map((progress) => {
+              const player = state.players.find(
+                (candidate) => candidate.id === progress.challenge.playerId,
+              );
+              return (
+                <li key={progress.challenge.id} className="card stack stack--tight">
+                  <div className="row row--between">
+                    <span className="card-title">{player?.name ?? 'Unknown player'}</span>
+                    <span className="pill">
+                      {progress.status === 'open'
+                        ? 'Not judged'
+                        : challengeStatusLabel(progress.status)}
+                    </span>
+                  </div>
+                  <span>{progress.challenge.text}</span>
+                  <span className="card-meta tabular">
+                    {progress.challenge.measure === 'judged'
+                      ? 'Judged, not counted'
+                      : `${progress.label} · ${
+                          progress.count === 1 ? '1 sighting' : `${progress.count} sightings`
+                        }`}
+                  </span>
+                  {/* Their own words, verbatim, and nothing derived from them. */}
+                  {progress.challenge.playerSaid ? (
+                    <p className="player-card-quote">
+                      &ldquo;{progress.challenge.playerSaid}&rdquo;
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       {observations.length > 0 ? (
         <section className="stack">

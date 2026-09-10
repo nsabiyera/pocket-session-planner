@@ -1,6 +1,6 @@
 # Roadmap — checking for understanding, and feedback to players
 
-- **Status:** **All six phases done**, in the order
+- **Status:** **Done — all seven phases**, in the order
   [ADR 0009](adr/0009-checking-for-understanding.md) sets rather than the one below. What
   shipped: `checked` beside `delivered` and its review line; the predicted misconception,
   pinned in Do mode and tappable as an observation tag; **the response half, which this
@@ -8,7 +8,8 @@
   already wrote, inside the session; the player card, as one huddle sheet; the questioning and
   did-it-stick reports, after fixing the three shipped bugs that meant the fields they read were
   never written ([`known-issues.md`](known-issues.md) 1–3); and the two carry-forward nudges
-  plus the takeaway. What remains is device and field use — see
+  plus the takeaway; and the player's own word on a challenge, the only player-authored data
+  in the app. What remains is device and field use — see
   [`field-test-checklist.md`](field-test-checklist.md), and the note at the end of this file.
   The ADR supersedes this document wherever the two disagree — on the phase order, on where the
   check question lives, on the scoring rule, and on what a phase costs.
@@ -357,16 +358,27 @@ Last of the building phases because it consumes what 4 and 5 produce.
 
 ### Phase 7 — The player's own word, and the takeaway
 
-> **The takeaway is built; the player's own word is not.** The takeaway is one optional field on
+> **Both halves are built.** The takeaway is one optional field on
 > the review, stored as a quote and read back on the next session's phase editor as *"Last week
 > you told them"* — the last screen before `Start session`, which is the start of the next
 > session in the app's own flow. It reads back **the most recent review that has one**, not
 > simply the most recent review: a coach who skipped the field last week still has something
 > worth reading out, and silence there would look identical to the feature being broken.
 >
-> The optional quote on a challenge — *"what did they say about it?"* — is **not built**. It is
-> the only remaining piece of this roadmap, and the only one that would add a keyboard to a
-> pitch-side flow.
+> The optional quote on a challenge is one field on `PlayerChallenge`, captured wherever a
+> challenge can be ruled on — the Do-mode ruling sheet and the review rows — and **saved on
+> blur, never on keystroke**, because Do mode is write-through and a per-character save would
+> rewrite a multi-KB session document thirty times for one sentence.
+>
+> Two notes. It is deliberately **separate from `PlayerChallenge.note`**, which is the coach's
+> word on how it went: merging them would destroy the only thing that makes this field worth
+> having. And the session detail screen gained a **Challenges** section, because it had none —
+> without it the quote was write-only, typed on the review and gone the moment it was saved,
+> and a quote nobody can find later is not a record.
+>
+> It is still the one field in the app that puts a keyboard in a pitch-side flow, so the
+> field-test question stands: whether a coach would ever actually type it standing on a pitch.
+> If not, it belongs on the review alone.
 
 The honest missing half, and the only place the app gains player-authored data.
 
