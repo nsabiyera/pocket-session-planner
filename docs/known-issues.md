@@ -109,3 +109,31 @@ layer too.
 intervention (a player picker on the long-press sheet, which issue 1 is opening anyway). Leaving
 them declared is the option to avoid: they read as available data, and the
 checking-for-understanding roadmap has already planned two phases on the assumption that they are.
+
+---
+
+## 4. Two more declared-and-never-written, found while building ADR 0009
+
+- **Severity:** low, and one of them is only a documentation problem.
+- **Found:** 2026-09-10
+
+**`ObservationKind.effort`** (`observation.ts:34`), commented *"attitude, not ability"*. Nothing
+produces it: `logObservation` derives `kind` from `OBSERVATION_RATING_KIND`, which maps
+`struggled` and `working` to `development` and `good` to `strength`. There is no path to
+`effort` or to `note` with a rating.
+
+This one has a consumer now. `player-card.ts` prefers an `effort` observation for both card
+lines, because Hattie's split is the whole reason the card is safe to show a player — and that
+preference can never fire on data this app wrote. It is implemented for an imported file and
+named as a blind spot in the module, rather than quietly dropped.
+
+**`SessionPhase.coachPrompts`** (`session.ts:139`). Carried onto the phase by
+`build-from-methodology.ts:149` under the comment *"Carried through so Do mode can show the
+coach their own reminder of what this is for"* — and no screen renders it. Every preset writes
+them, several are genuinely useful (*"Let them tell you what changed."*), and no coach has ever
+seen one.
+
+**Fix.** For `effort`, either give the observation sheet a fourth token or accept that the
+distinction is aspirational and say so where it is declared. For `coachPrompts`, it is one line
+in Do mode next to the `Expect` line that ADR 0009 phase 2 added — the same shape, in the same
+place, and the field is already populated.

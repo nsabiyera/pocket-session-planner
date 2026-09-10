@@ -164,6 +164,26 @@ front of a coach who never asked for them. So this ADR states it up front.
 player-facing artefact, and it is the one item here whose shape is a field-test question rather
 than a design one. Its gate is decided in its own phase, when there is something real to gate.
 
+> **Decided while building phase 4: a floor, not a flag.**
+>
+> The card turned out not to be a screen. It is a read-only sheet behind a deliberate tap
+> inside Do mode, which no coach sees unless a session is running — so ADR 0008's actual
+> problem, undocumented rows on `/squad` and `/plan` for an audience that never asked, does not
+> arise. What gates it instead is the app's own idiom: **the chip that opens it is absent unless
+> there is somebody it could be about** — a focus player, or a player holding a challenge. A
+> session with neither shows nothing at all.
+>
+> Rejected: `AppMeta.playerCard`, off by default. It would put the thing the original request
+> was actually about behind a Settings toggle the coach has to discover, for a surface that
+> costs one chip in a mode they only enter mid-session. Rejected too: a flag defaulted on, which
+> is most of the cost of a flag for almost none of the benefit — a switch nobody will ever
+> touch.
+>
+> The withdrawal path a flag would have bought is cheap without one, because the card is
+> derived: deleting the sheet and the chip removes the feature entirely and leaves no stored
+> document, no migration and no orphaned field behind it. That is the whole argument for
+> deriving it, and it pays for itself here.
+
 No `AppMeta` flag for the set as a whole. A flag would put the thing the coach actually asked for
 behind a Settings toggle they have to find first, and — unlike periodization — this feature has
 no audience narrower than "every squad, at every age group".
@@ -178,7 +198,7 @@ phases that only *report*:
 | 1 | `checked` beside `delivered` | One field pair, one chip state, one review line |
 | 2 | The predicted misconception, in Do mode | One plan-time field, one pinned line, one tag |
 | 3 | A failed check routes to the written regression | No new store, no new field — one derived offer over the existing adjustment path |
-| 4 | The player card | Derivation plus one component, gated |
+| 4 | The player card | Derivation plus one component and one chip — gated by a floor, not a flag |
 | 5 | Fix the write path, then the questioning and did-it-stick reports | See below |
 | 6 | Carry-forward learns from it, and the takeaway | Two rules, two rationales |
 

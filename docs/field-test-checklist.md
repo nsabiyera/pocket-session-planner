@@ -62,10 +62,10 @@ npx serve site -l 3000
 
 ## Checking for understanding (ADR 0009)
 
-Phases 1 to 3 — the `checked` state and its review line, the predicted misconception, and the
-regression offer. Every line here is silent below its floor or absent when unset, by design, so
-**a broken one looks exactly like a quiet one**: check the negative cases as carefully as the
-positive ones.
+Phases 1 to 4 — the `checked` state and its review line, the predicted misconception, the
+regression offer, and the player cards. Every line here is silent below its floor or absent
+when unset, by design, so **a broken one looks exactly like a quiet one**: check the negative
+cases as carefully as the positive ones.
 
 ### The mistake you expected (phase 2)
 
@@ -110,6 +110,35 @@ being wrong costs the coach something. **The failure to look for is a bar that n
 - [ ] Ignore the bar for a whole phase. Decide honestly whether it read as a useful reminder or
       as the app telling you off. If it nagged, it needs a dismiss — there is deliberately
       none, and this is the item that would change that.
+
+### What to tell them (phase 4)
+
+The first thing this app has ever rendered for somebody other than the coach, so the tests
+that matter are the ones a **player** would fail it on. Do these with the phone at arm's
+length, as if a huddle were in front of you.
+
+- [ ] With a focus player or a challenge set, `💬 Tell them` appears after the focus chips.
+      With neither, it is **absent** — no greyed-out chip, no empty sheet.
+- [ ] Open it mid-huddle. Every line is legible **at arm's length**, and the quote is bigger
+      than its label. If you have to bring the phone closer to read it, the card is the wrong
+      size.
+- [ ] Read one out loud to a player. Does it give them something to do, or does it read as a
+      score? The second is a failure even if every field is correct.
+- [ ] A player with a challenge shows the ask **as you typed it**, with its tally, and a
+      verdict only once you have ruled on it — never the word `Open`.
+- [ ] A player you logged nothing about says *"Nothing logged for Kai today."* and nothing
+      else. It should not read as an apology or a rebuke.
+- [ ] Log a `Good` with **no tag**. It does not appear on the card — *"you were good"* is what
+      the card exists to prevent.
+- [ ] Log a `Struggled` on the misconception chip. It becomes the **Next** line, in preference
+      to anything else struggled.
+- [ ] Log four tags on one observation. The card reads out **one**.
+- [ ] Check nothing on the card is a rating, a count, a corner, a capability or another
+      player's name. This is the one that matters most, and it is a reading test, not a code
+      one.
+- [ ] Twelve players in front of you, two or three cards. Is a sheet the right shape, or did
+      you want to swipe one player at a time? This is the open question the roadmap left, and
+      only a touchline answers it.
 
 ### Said it, and checked it (phase 1)
 

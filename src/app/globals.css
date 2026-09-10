@@ -467,6 +467,17 @@ summary {
   opacity: 0.55;
 }
 
+/*
+  The huddle chip in Do mode. Outlined rather than filled, so it reads as a different *kind* of
+  thing from the player chips it sits beside — those log an observation, this opens something
+  read-only. Colour is not the only cue: it carries its own word and an emoji.
+*/
+.chip--huddle {
+  border-color: var(--signal);
+  color: var(--signal);
+  font-weight: 600;
+}
+
 .chip-count {
   font-size: var(--fs-xs);
   background: var(--sunk);
@@ -1346,6 +1357,27 @@ summary {
 
 .regression-bar-fix {
   font-weight: 600;
+}
+
+/* ------------------------------------------------------------ player cards */
+
+/*
+  The huddle cards (ADR 0009 §4) — the only thing in this app rendered to be read *to* somebody
+  rather than by the coach.
+
+  So the type is bigger than a report line and the label is smaller than the words: a coach
+  holding the phone at arm's length in front of twelve players reads the quote, not the
+  eyebrow. Each line stacks label-over-text rather than sitting inline, because a wrapped
+  inline label at 375px puts the first word of the quote on its own line.
+*/
+.player-card-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.player-card-line > span:nth-child(2) {
+  font-size: var(--fs-md);
 }
 
 /* ------------------------------------------------------ player challenges */

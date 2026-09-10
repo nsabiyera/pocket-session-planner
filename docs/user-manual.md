@@ -152,6 +152,35 @@ Some phases ship with no way back on purpose — Whole-Part-Whole's two WHOLE ga
 Constraints-Led free game — because changing those destroys the comparison the session exists to
 make. You get no bar there, which is the right answer rather than a gap.
 
+### What to tell them
+
+At the end, `💬 Tell them` sits after the focus-player chips. It opens one card per player you
+were watching — anyone you made a focus player, or anyone you set a challenge. Two or three
+cards, not twelve, because those are the players the app has anything to say about.
+
+Each card is three lines, and they are Hattie and Timperley's three questions in order:
+
+| Line | The question it answers |
+| --- | --- |
+| **Your job** | *Where am I going?* — your challenge as you wrote it, with its tally, or why you made them a focus player |
+| **Went well** | *How am I going?* — one thing that worked, in the words of the tag you tapped |
+| **Next** | *Where to next?* — one thing to work on. One, not three |
+
+**It is all your own words.** A challenge as you typed it, a tag as you tapped it, a next step
+carried over from last week's review. The card cannot produce "well done today" because there is
+nowhere in it for a sentence like that to come from.
+
+**And it is not a report card.** No rating out of five, no count of observations, no corner, no
+comparison with a teammate — nothing you would not want a ten-year-old reading over your
+shoulder, because they will be.
+
+If you logged nothing about somebody, their card says *"Nothing logged for Kai today."* That is
+the honest answer and it is not a telling-off: a coach who spent the session rescuing a rondo
+logged nothing about anybody.
+
+The chip is absent altogether when you set no challenges and made nobody a focus player. There
+is nothing to switch on — if there is somebody to talk about, it is there.
+
 ### Saying it, and checking it
 
 Each coaching point is a button with **three states**, and you tap through them:

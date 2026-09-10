@@ -6,9 +6,10 @@
   in Do mode and tappable as an observation tag (ADR 0009 phase 2, half of "Phase 5" below), and
   **the response half, which this document does not have a phase for**: a logged misconception
   routes to the regression the coach already wrote, inside the session (ADR 0009 phase 3, and
-  §3 of the ADR for why it exists at all). The ADR supersedes this document wherever the two
-  disagree — on the phase order, on where the check question lives, on the scoring rule, and on
-  what a phase costs.
+  §3 of the ADR for why it exists at all), and **the player card** — one sheet in the huddle,
+  a card each for the players the coach was watching (ADR 0009 phase 4, "Phase 1" below). The
+  ADR supersedes this document wherever the two disagree — on the phase order, on where the
+  check question lives, on the scoring rule, and on what a phase costs.
 - **Date:** 2026-09-10
 - **Reviewed:** [`review-checking-for-understanding.md`](review-checking-for-understanding.md)
   (2026-09-10) — argued for a different phase order, and found that three of the phases called
@@ -168,6 +169,25 @@ code. It must state plainly:
   honesty the README already applies to the four-corner attribute lists.
 
 ### Phase 1 — The player card
+
+> **Built, and it went fourth** — after the misconception, so that the *work on* line had
+> something real to quote. Three corrections this section could not have known:
+>
+> - **The third line is not `FocusPlayerReview.nextStep`.** That is written on `/review`, after
+>   everyone has gone home, and the card is read out on the pitch. At huddle scale *"where to
+>   next"* is the one thing to work on tonight. Last week's next step does reach the card — as
+>   the *first* line, because it is already carried verbatim into this session's focus-player
+>   reason, which is exactly what *"where am I going"* means.
+> - **There is nothing to quote from an observation but its tag.** `Observation.text` is never
+>   written by any UI, so *"quote, never summarise"* is satisfied by the tag the coach tapped
+>   — and by the predicted misconception, which is why phase 2 came first.
+> - **Rule 3's `ObservationKind.effort` preference can never fire.** Nothing in the app has
+>   ever written an `effort` observation. It is implemented for an imported file and named as a
+>   blind spot rather than papered over.
+>
+> The *"twelve cards in two minutes"* worry does not arise: Do mode only logs against focus
+> players, so this is two or three cards. It is one sheet with a card each, which is the shape
+> this document guessed at and left to a touchline.
 
 **The thing the request is actually about, and it needs no new data.** A read-only, derived,
 one-player, one-session view the coach shows or reads out in the last minute:

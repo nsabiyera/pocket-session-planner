@@ -38,6 +38,7 @@ import {
   nextCoachingPointState,
 } from '@/domain/coaching-point';
 import { regressionOffer, REGRESSION_OFFER_MESSAGE } from '@/domain/checking';
+import { challengeVerdict, playerCards } from '@/domain/player-card';
 import { sessionChallengeProgress, type ChallengeProgress } from '@/domain/session/challenges';
 import { ACTION_MOMENTS, momentShortLabel, type ActionMoment } from '@/domain/capabilities';
 import type { Observation, ObservationRatingKind } from '@/domain/observation';
@@ -66,6 +67,7 @@ import {
   type StepLetter,
 } from '@/domain/practice';
 import type { SessionPhase } from '@/domain/session';
+import { HuddleSheet } from '../_components/huddle-sheet';
 import { PhaseImageStrip } from '../_components/phase-images';
 import { loadPhaseImages } from '@/modules/planning/phase-image-service';
 import type { PhaseImage } from '@/domain/phase-image';
@@ -98,6 +100,7 @@ export default function RunPage() {
   const [sheetPlayer, setSheetPlayer] = useState<Player | null>(null);
   const [phaseSheetOpen, setPhaseSheetOpen] = useState(false);
   const [challengeSheet, setChallengeSheet] = useState<ChallengeId | null>(null);
+  const [huddleOpen, setHuddleOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
   const session = state.activeSession;
@@ -199,6 +202,33 @@ export default function RunPage() {
   const challenges = sessionChallengeProgress(session, phase.id).filter(
     (progress) => progress.liveNow,
   );
+
+  /*
+    The huddle cards. Derived on every render and stored nowhere, so they cannot drift from
+    the evidence — and cheap, because Do mode only logs against focus players, so this is two
+    or three cards over a list of observations already in memory.
+  */
+  const cards = playerCards({
+    focusPlayers: session.focusPlayers.map((focus) => ({
+      playerId: focus.playerId,
+      ...(focus.reason !== undefined ? { reason: focus.reason } : {}),
+    })),
+    challenges: sessionChallengeProgress(session).map((progress) => ({
+      playerId: progress.challenge.playerId,
+      card: {
+        text: progress.challenge.text,
+        label: progress.label,
+        status: progress.status,
+        verdict: challengeVerdict(progress.status),
+      },
+    })),
+    observations,
+    misconception: session.objective.commonMisconception,
+    nameOf: (playerId) => {
+      const player = state.players.find((candidate) => candidate.id === playerId);
+      return player ? shortPlayerName(player, state.players) : 'Unknown';
+    },
+  });
 
   // Null almost always, which is the point — see `domain/checking.ts`.
   const offer = regressionOffer({
@@ -513,6 +543,24 @@ export default function RunPage() {
               </button>
             );
           })}
+
+          {/*
+            **What to tell them** — the player cards (ADR 0009 §4).
+
+            Trailing the focus chips rather than joining the four big actions: it is a huddle
+            action, not a mid-drill one, and the action row is the part of Do mode that must
+            never grow. No flag gates it — the chip is simply absent when there is nobody it
+            could be about, which is this app's usual answer to "should this be here".
+          */}
+          {cards.length > 0 ? (
+            <button
+              type="button"
+              className="chip chip--lg chip--huddle"
+              onClick={() => setHuddleOpen(true)}
+            >
+              💬 Tell them
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -690,6 +738,8 @@ export default function RunPage() {
         onRule={rule}
         onCount={countChallenge}
       />
+
+      <HuddleSheet open={huddleOpen} cards={cards} onClose={() => setHuddleOpen(false)} />
 
       <PhaseSheet
         open={phaseSheetOpen}
