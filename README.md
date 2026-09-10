@@ -130,6 +130,8 @@ house conventions in `hodorhub`; the rest are modelling calls this app had to ma
   periodization's tactical core, without the morphocycle *(superseded by 0007)*
 - [ADR 0007](docs/adr/0007-morphocycle-for-adult-squads.md) — the morphocycle, for adult squads,
   with the coach's own pattern
+- [ADR 0008](docs/adr/0008-periodization-behind-a-flag.md) — the whole periodization set
+  behind a default-off flag in Settings
 
 ## Testing
 

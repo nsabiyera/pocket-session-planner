@@ -538,6 +538,7 @@ class IdbMetaRepository implements MetaRepository {
         activeSquadId: null,
         storagePersisted: false,
         completedSessionCount: 0,
+        tacticalPeriodization: false,
       };
       const next: AppMeta = { ...current, ...changes, key: 'app' };
       await store.put(next);

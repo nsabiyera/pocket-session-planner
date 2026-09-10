@@ -6,7 +6,14 @@ import { showToast } from '../_components/toast-host';
 import { InstallRow } from '../_components/install-prompt';
 import { FeedbackBox } from '../_components/feedback-box';
 import { CrashReports } from '../_components/crash-reports';
-import { getServiceContext, refresh, reopen, useAppState } from '@/modules/app/app-store';
+import {
+  getServiceContext,
+  periodizationEnabled,
+  refresh,
+  reopen,
+  setTacticalPeriodization,
+  useAppState,
+} from '@/modules/app/app-store';
 import {
   commitImport,
   exportAll,
@@ -134,6 +141,42 @@ export default function SettingsPage() {
           applyContrast(value);
         }}
       />
+
+      {/*
+        The tactical periodization gate (ADR 0008), and the reason it is here rather than on
+        Squad: it is not a fact about a squad, it is whether this coach works that way at all.
+        Off by default — the four screens it hides are the ones the user manual has never
+        described, and a coach who has not asked for a game model should not have to walk past
+        one on the way to the roster.
+
+        Explicitly not destructive, and the copy says so, because a switch a coach is afraid of
+        is a switch they leave alone.
+      */}
+      <section className="stack">
+        <h2>Planning</h2>
+        <Segmented<'off' | 'on'>
+          legend="Tactical periodization"
+          value={periodizationEnabled(state) ? 'on' : 'off'}
+          options={[
+            { value: 'off', label: 'Off' },
+            { value: 'on', label: 'On' },
+          ]}
+          onChange={async (value) => {
+            const on = value === 'on';
+            await setTacticalPeriodization(on);
+            showToast(
+              on
+                ? 'On — Game model, The week and the Match brief are back.'
+                : 'Off — nothing was deleted.',
+            );
+          }}
+        />
+        <p className="card-meta">
+          {periodizationEnabled(state)
+            ? 'A game model with principles of play, the week before a fixture, and the match brief. Adds a principle to step 1 of Plan.'
+            : 'Adds a game model, principles of play, the week before a fixture and the match brief. Anything you wrote before turning it off is still here.'}
+        </p>
+      </section>
 
       <section className="stack">
         <h2>Storage</h2>

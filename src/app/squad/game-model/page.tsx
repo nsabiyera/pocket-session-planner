@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Empty, Loading, Screen, ScreenHead } from '../../_components/ui';
 import { showToast } from '../../_components/toast-host';
-import { getServiceContext, useAppState } from '@/modules/app/app-store';
+import { PeriodizationOff } from '../../_components/periodization-off';
+import { getServiceContext, periodizationEnabled, useAppState } from '@/modules/app/app-store';
 import {
   addPrinciple,
   editPrinciple,
@@ -64,7 +65,17 @@ export default function GameModelPage() {
     void reload();
   }, [reload]);
 
-  if (state.status !== 'ready' || model === undefined) {
+  if (state.status !== 'ready') {
+    return (
+      <Screen>
+        <Loading />
+      </Screen>
+    );
+  }
+
+  if (!periodizationEnabled(state)) return <PeriodizationOff title="Game model" />;
+
+  if (model === undefined) {
     return (
       <Screen>
         <Loading />

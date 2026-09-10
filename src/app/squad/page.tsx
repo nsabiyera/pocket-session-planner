@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Empty, Loading, Screen, ScreenHead, Segmented, Sheet, Stepper } from '../_components/ui';
 import { showToast } from '../_components/toast-host';
-import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store';
+import {
+  getServiceContext,
+  periodizationEnabled,
+  refresh,
+  useAppState,
+} from '@/modules/app/app-store';
 import { PracticeMixPanel } from '../_components/practice-mix';
 import { practiceMix } from '@/domain/practice/mix';
 import { mainPracticeSpectrums } from '@/domain/session/selectors';
@@ -115,41 +120,54 @@ export default function SquadPage() {
       <PracticeMixPanel mix={practiceMix(mainPracticeSpectrums(state.recentSessions))} />
 
       {/*
-        The game model belongs to the squad rather than to any session, so this is its home.
-        A quiet link: most weeks a coach opens Squad for the roster, and the model is edited
-        in pre-season and then rarely.
-      */}
-      <Link href="/squad/game-model" className="btn btn--block">
-        Game model
-      </Link>
+        Everything from the tactical periodization roadmap, behind its flag (ADR 0008). Off,
+        Squad is the roster and the coach's own practice mix — which is the whole of what the
+        user manual describes.
 
-      <Link href="/plan/week" className="btn btn--block">
-        The week
-      </Link>
-
-      {/*
-        The safeguarding gate from ADR 0007, and the reason it is a squad field rather than a
-        setting: a professional club runs an academy on this same app, and one global switch
-        would put adult load concepts in front of a coach planning for eleven-year-olds.
-        Defaults to youth, and the coach opts in.
+        `Squad level` lives inside the gate rather than beside it: its only job is the
+        safeguarding decision about effort labelling on The week (ADR 0007), so with the week
+        hidden it is a control over nothing. The stored value is untouched either way.
       */}
-      <Segmented<SquadLevel>
-        legend="Squad level"
-        value={squad.level}
-        onChange={async (level) => {
-          await updateSquad(getServiceContext(), squad.id, { level });
-          await refresh();
-          showToast(
-            level === 'senior'
-              ? 'Senior — effort labelling is available on The week.'
-              : 'Youth — no effort labelling.',
-          );
-        }}
-        options={[
-          { value: 'youth', label: SQUAD_LEVEL_LABELS.youth },
-          { value: 'senior', label: SQUAD_LEVEL_LABELS.senior },
-        ]}
-      />
+      {periodizationEnabled(state) ? (
+        <>
+          {/*
+            The game model belongs to the squad rather than to any session, so this is its home.
+            A quiet link: most weeks a coach opens Squad for the roster, and the model is edited
+            in pre-season and then rarely.
+          */}
+          <Link href="/squad/game-model" className="btn btn--block">
+            Game model
+          </Link>
+
+          <Link href="/plan/week" className="btn btn--block">
+            The week
+          </Link>
+
+          {/*
+            The safeguarding gate from ADR 0007, and the reason it is a squad field rather than a
+            setting: a professional club runs an academy on this same app, and one global switch
+            would put adult load concepts in front of a coach planning for eleven-year-olds.
+            Defaults to youth, and the coach opts in.
+          */}
+          <Segmented<SquadLevel>
+            legend="Squad level"
+            value={squad.level}
+            onChange={async (level) => {
+              await updateSquad(getServiceContext(), squad.id, { level });
+              await refresh();
+              showToast(
+                level === 'senior'
+                  ? 'Senior — effort labelling is available on The week.'
+                  : 'Youth — no effort labelling.',
+              );
+            }}
+            options={[
+              { value: 'youth', label: SQUAD_LEVEL_LABELS.youth },
+              { value: 'senior', label: SQUAD_LEVEL_LABELS.senior },
+            ]}
+          />
+        </>
+      ) : null}
 
       <section className="stack">
         <h2>
