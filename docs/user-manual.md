@@ -106,8 +106,15 @@ the drill genuinely was still running.
 - `⏸ Pause` stops the clock. `Next phase ▸` moves on.
 - **`✋ Intervene` is one tap**, pre-filled from your plan, because the common case is you
   doing what you said you would. A stop-play mechanic pauses the phase clock automatically, so
-  ball-rolling time measures itself. Long-press it (right-click on a desktop) for the detail
-  sheet, where you can change the method, aim it at one player, or add a note.
+  ball-rolling time measures itself. **Long-press it** (right-click on a desktop) for the detail
+  sheet: change what you did, how you stopped it and who it landed on, name the players you
+  spoke to, or add a note.
+
+  The long-press is worth knowing about, because two reports are built on it. Changing an axis
+  is what records that you *chose* a style rather than inheriting it from your plan — without
+  that, `How you coach` can only ever show you your own plan read back. And naming who you
+  spoke to is what makes the questioning report possible. Leave a control alone and it keeps
+  the plan's value, which is recorded honestly as inherited rather than chosen.
 - `＋ Note` for a team-wide note.
 - `End` finishes and takes you to the review.
 
@@ -233,6 +240,15 @@ actually got, and a rating out of five.
 - **your challenges**: *"2 of 3 challenges met — 1 partly."*;
 - **said against checked**: *"5 coaching points delivered. 1 checked."* Shown once you have
   ticked at least one point as said — below that there is nothing to compare;
+- **whether anything was logged afterwards**: *"3 of the 5 points you said have something
+  logged against them afterwards."* It works because tapping a coaching point's own tag on the
+  observation sheet links the two. **It never says a point did not land** — nothing logged is a
+  gap in your notes, and a coach busy coaching a point is a coach not writing notes;
+- **your questions**: *"12 questions, to 4 players. Seven players were never asked anything."*
+  That last clause only appears when you named somebody on **every** question. Name them on
+  some and it says how many you recorded; name them on none and it just tells you the control
+  is there. "Never named" and "never asked" are different things and only one of them is a
+  fact;
 - **your intervention record**: how many times you stopped play against how many you planned,
   and your ball-rolling time;
 - **your 4 Corner coverage**: *"9 observations for this session: 8 technical, 1 social —

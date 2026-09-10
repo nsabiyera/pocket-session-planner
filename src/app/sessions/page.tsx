@@ -6,6 +6,7 @@ import { Empty, Loading, Screen, ScreenHead, formatShortDate } from '../_compone
 import { getServiceContext, useAppState } from '@/modules/app/app-store';
 import { coachingStyleInput, sessionStage } from '@/domain/session/selectors';
 import { coachingStyle } from '@/domain/coaching-style';
+import { questioningSummary } from '@/domain/questioning';
 import { describeFixture } from '@/domain/match-day';
 import { CoachingStylePanel } from '../_components/coaching-style';
 import type { Session } from '@/domain/session';
@@ -28,6 +29,8 @@ export default function SessionsPage() {
     };
   }, [state.status, state.squad]);
 
+  const styleInput = coachingStyleInput(sessions);
+
   if (state.status !== 'ready') {
     return (
       <Screen>
@@ -45,7 +48,14 @@ export default function SessionsPage() {
         History is the right home: this is a summary *of* these sessions, and the screen has
         already loaded them. Renders nothing below twelve interventions.
       */}
-      <CoachingStylePanel style={coachingStyle(coachingStyleInput(sessions))} />
+      <CoachingStylePanel
+        style={coachingStyle(styleInput)}
+        questioning={questioningSummary({
+          // The same events the bars are built from, asked a different question.
+          events: styleInput.events,
+          rosterIds: state.players.map((player) => player.id),
+        })}
+      />
 
       {sessions.length === 0 ? (
         <Empty>No sessions yet.</Empty>

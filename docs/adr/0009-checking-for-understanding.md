@@ -199,7 +199,7 @@ phases that only *report*:
 | 2 | The predicted misconception, in Do mode | One plan-time field, one pinned line, one tag |
 | 3 | A failed check routes to the written regression | No new store, no new field — one derived offer over the existing adjustment path |
 | 4 | The player card | Derivation plus one component and one chip — gated by a floor, not a flag |
-| 5 | Fix the write path, then the questioning and did-it-stick reports | See below |
+| 5 | Fix the write path, then the questioning and did-it-stick reports | Three bug fixes, one new sheet, two derived reports |
 | 6 | Carry-forward learns from it, and the takeaway | Two rules, two rationales |
 
 **Phase 5 is where the roadmap was wrong about its own foundations.** It called the questioning
@@ -209,6 +209,22 @@ written by any UI**, and `styleChosen` can never be true because the long-press 
 on was never built. Those are shipped bugs, tracked in
 [`docs/known-issues.md`](../known-issues.md), and they are prerequisites rather than parts of this
 feature.
+
+> **Fixed while building phase 5.** All three, and the reports followed. Two notes worth keeping:
+>
+> - **The did-it-stick join uses `deliveredAt`, not interventions.** The chip the coach already
+>   taps stamps it, and `logObservation` now recovers `coachingPointId` from the tag — the "This
+>   phase" tags *are* that phase's coaching points, so the id was being thrown away rather than
+>   being unavailable. That costs no attribution step, where an intervention-based join would
+>   have cost a control on the sheet.
+> - **The questioning spread had to be weakened.** *"Seven players were never asked anything"* is
+>   only supportable when the coach named somebody on **every** question; naming is optional, so
+>   below that it reports what it recorded and says nothing about the rest. "Never named" and
+>   "never asked" are different things, and only one of them is a fact.
+>
+> The lesson worth carrying: a suite of 1,600 passing tests never noticed any of the three,
+> because every test injected the field the UI was failing to write. Domain coverage does not
+> prove a field is populated, and this feature is the reason we now know that.
 
 ### 8. Most of this needs no migration
 

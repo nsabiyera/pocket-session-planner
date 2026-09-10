@@ -7,15 +7,15 @@ import { getServiceContext, refresh, useAppState } from '@/modules/app/app-store
 import { setIntervention } from '@/modules/planning/planning-service';
 import {
   describeInterventionPlan,
+  INTERVENTION_AUDIENCES,
+  INTERVENTION_MECHANICS,
+  INTERVENTION_METHODS,
   hasPhaseOverride,
   InterventionPlanSchema,
   interventionAudienceLabel,
   interventionMechanicLabel,
   interventionMethodLabel,
   resolvePhaseIntervention,
-  type InterventionAudience,
-  type InterventionMechanic,
-  type InterventionMethod,
   type InterventionPlan,
 } from '@/domain/intervention';
 import { phasesInOrder, type SessionPhase } from '@/domain/session';
@@ -27,27 +27,6 @@ import { phasesInOrder, type SessionPhase } from '@/domain/session';
  * what it has inherited and can override it. Most coaches will never open this screen, which
  * is the point: the methodology has already set all three axes sensibly.
  */
-
-const METHODS: InterventionMethod[] = [
-  'command',
-  'question_and_answer',
-  'observation_feedback',
-  'guided_discovery',
-  'trial_and_error',
-];
-
-const MECHANICS: InterventionMechanic[] = [
-  'in_flow',
-  'play_freeze_play',
-  'play_stop_play',
-  'stop_some_play_on',
-  'individual_aside',
-  'natural_break',
-  'constraint_change',
-  'none',
-];
-
-const AUDIENCES: InterventionAudience[] = ['individual', 'unit', 'team'];
 
 export default function InterventionPage() {
   const state = useAppState();
@@ -94,7 +73,7 @@ export default function InterventionPage() {
       <Segmented
         legend="What you do"
         value={session.intervention.method}
-        options={METHODS.map((method) => ({
+        options={INTERVENTION_METHODS.map((method) => ({
           value: method,
           label: interventionMethodLabel(method),
         }))}
@@ -104,7 +83,7 @@ export default function InterventionPage() {
       <Segmented
         legend="How play is interrupted"
         value={session.intervention.mechanic}
-        options={MECHANICS.map((mechanic) => ({
+        options={INTERVENTION_MECHANICS.map((mechanic) => ({
           value: mechanic,
           label: interventionMechanicLabel(mechanic),
         }))}
@@ -114,7 +93,7 @@ export default function InterventionPage() {
       <Segmented
         legend="Who it lands on"
         value={session.intervention.audience}
-        options={AUDIENCES.map((audience) => ({
+        options={INTERVENTION_AUDIENCES.map((audience) => ({
           value: audience,
           label: interventionAudienceLabel(audience),
         }))}

@@ -1,6 +1,7 @@
-import type { Observation } from './observation';
+import type { CoachingPoint } from './coaching-point';
+import type { Observation, ObservationRatingKind } from './observation';
 import type { PracticeAdjustment } from './practice';
-import type { PhaseId } from './ids';
+import type { CoachingPointId, PhaseId } from './ids';
 
 /**
  * **The response half of checking for understanding** (ADR 0009 §3).
@@ -93,6 +94,124 @@ export function regressionOffer(input: RegressionOfferInput): RegressionOffer | 
 
   return { text: first, others: rest.length };
 }
+
+/**
+ * **Did it stick** — the coaching point to observation join (ADR 0009 phase 5).
+ *
+ * *"You said 'head up before you receive'. You logged it working afterwards."* And the case
+ * that earns the feature: *"You said three points. You logged nothing about any of them."*
+ *
+ * **The wording is the whole feature.** An absent observation is an absence in the *record*,
+ * not evidence the behaviour never appeared — a coach coaching a point is a coach not logging.
+ * So every sentence says *"you logged nothing on it afterwards"* and never *"it didn't
+ * stick"*, and the derivation below deliberately produces no verdict for the UI to dress up
+ * as one. Same class of decision as `describeRepresentativeness` showing no number where it
+ * has no defensible one.
+ *
+ * **It joins on `deliveredAt`, not on interventions.** The roadmap proposed joining
+ * `InterventionEvent.coachingPointId`, which no UI has ever written. The chip the coach
+ * already taps stamps `deliveredAt`, and `logObservation` now recovers `coachingPointId` from
+ * the tag — so this needs no attribution step and no extra tap.
+ */
+export interface PointFollowUp {
+  readonly pointId: CoachingPointId;
+  readonly text: string;
+  readonly checked: boolean;
+  /** Observations tagged to this point, logged **after** it was marked said. */
+  readonly loggedAfter: number;
+  /** The ratings logged against it afterwards, oldest first. Counts, never a verdict. */
+  readonly ratings: readonly ObservationRatingKind[];
+}
+
+export interface FollowUpSummary {
+  /** Points the coach marked said. Points never said are a different report entirely. */
+  readonly delivered: number;
+  /** Of those, the ones with at least one observation logged afterwards. */
+  readonly followedUp: number;
+  /** Every said point, in phase order, with what the record holds about it. */
+  readonly points: readonly PointFollowUp[];
+}
+
+export interface FollowUpInput {
+  /** Phases in order; only the coaching points are read. */
+  readonly phases: readonly {
+    readonly coachingPoints: readonly Pick<
+      CoachingPoint,
+      'id' | 'text' | 'delivered' | 'deliveredAt' | 'checked'
+    >[];
+  }[];
+  readonly observations: readonly Pick<Observation, 'coachingPointId' | 'ratingKind' | 'at'>[];
+}
+
+export function followUpSummary(input: FollowUpInput): FollowUpSummary {
+  const points: PointFollowUp[] = [];
+
+  for (const phase of input.phases) {
+    for (const point of phase.coachingPoints) {
+      if (!point.delivered) continue;
+
+      /*
+        Only observations logged *after* the point was marked said count as following it up.
+        One logged at 3:00 about a point ticked at 7:00 is evidence about something else — and
+        a coach who ticks their chips at the end of a phase would otherwise get a report full
+        of follow-ups that happened before the coaching did.
+
+        A point with no `deliveredAt` (imported, or hand-edited) counts everything, because the
+        alternative is dropping real evidence over a missing timestamp.
+      */
+      const after = input.observations.filter(
+        (observation) =>
+          observation.coachingPointId === point.id &&
+          (point.deliveredAt === null || observation.at >= point.deliveredAt),
+      );
+
+      points.push({
+        pointId: point.id,
+        text: point.text,
+        checked: point.checked,
+        loggedAfter: after.length,
+        ratings: after
+          .map((observation) => observation.ratingKind)
+          .filter((rating): rating is ObservationRatingKind => rating !== null),
+      });
+    }
+  }
+
+  return {
+    delivered: points.length,
+    followedUp: points.filter((point) => point.loggedAfter > 0).length,
+    points,
+  };
+}
+
+/**
+ * *"3 of the 5 points you said have something logged against them afterwards."*
+ *
+ * A count of the record, twice over. The zero case is the sharp one and it is still only a
+ * statement about the record: *"you logged nothing about any of them"* — which may mean the
+ * coach was busy coaching, and the app says so rather than concluding anything.
+ */
+export function describeFollowUp(summary: FollowUpSummary): string {
+  const said = `${summary.delivered} point${summary.delivered === 1 ? '' : 's'} you said`;
+
+  if (summary.followedUp === 0) {
+    const them = summary.delivered === 1 ? 'it' : 'any of them';
+    return `${said}, and nothing logged about ${them} afterwards.`;
+  }
+  if (summary.followedUp === summary.delivered) {
+    return `Every one of the ${said} has something logged against it afterwards.`;
+  }
+  return `${summary.followedUp} of the ${said} have something logged against them afterwards.`;
+}
+
+/**
+ * Whether the line is worth showing.
+ *
+ * **Two said points**, because with one the line is restating a single chip, and because the
+ * whole value is the ratio. A session where nothing was ticked is covered by the
+ * *"Didn't get to: …"* proposals instead.
+ */
+export const hasEnoughForFollowUp = (summary: FollowUpSummary): boolean => summary.delivered >= 2;
 
 /**
  * What the offer bar says.

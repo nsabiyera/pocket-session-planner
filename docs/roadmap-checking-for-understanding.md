@@ -7,9 +7,11 @@
   **the response half, which this document does not have a phase for**: a logged misconception
   routes to the regression the coach already wrote, inside the session (ADR 0009 phase 3, and
   §3 of the ADR for why it exists at all), and **the player card** — one sheet in the huddle,
-  a card each for the players the coach was watching (ADR 0009 phase 4, "Phase 1" below). The
-  ADR supersedes this document wherever the two disagree — on the phase order, on where the
-  check question lives, on the scoring rule, and on what a phase costs.
+  a card each for the players the coach was watching (ADR 0009 phase 4, "Phase 1" below), and
+  **the questioning record and did-it-stick reports** — after fixing the three shipped bugs that
+  meant the fields they read were never written (ADR 0009 phase 5, "Phase 2" and "Phase 3"
+  below). The ADR supersedes this document wherever the two disagree — on the phase order, on
+  where the check question lives, on the scoring rule, and on what a phase costs.
 - **Date:** 2026-09-10
 - **Reviewed:** [`review-checking-for-understanding.md`](review-checking-for-understanding.md)
   (2026-09-10) — argued for a different phase order, and found that three of the phases called
@@ -215,6 +217,19 @@ component.
 
 ### Phase 2 — The questioning record
 
+> **Built, and it was not free.** `InterventionEvent.playerIds` was declared, plumbed and
+> **never written by any screen**, so the headline sentence below could not be computed at all;
+> and `styleChosen` could never be true, because the long-press sheet the honesty split depends
+> on had only a note field. Both were shipped bugs
+> ([`known-issues.md`](known-issues.md) 1–3), and fixing them was most of the phase.
+>
+> One correction to the wording. *"Seven players were never asked anything"* is only true when
+> the coach named somebody on **every** question — naming is optional, so below that it is a
+> claim about the record dressed as a claim about the session. So the spread reports three ways:
+> plainly when attribution is complete, as *"you named who 5 of the 12 went to"* when it is
+> partial, and as the count plus the control when nothing names anybody. **"Never named" and
+> "never asked" are different things and only one of them is a fact.**
+
 Free, from data already logged. Two lines on `/review`, and a term-level version beside
 `coaching-style.ts`:
 
@@ -229,6 +244,17 @@ must split on `styleChosen` exactly as `describeStyleEvidence` already does, and
 which. A floor in the manner of `MIN_INTERVENTIONS_FOR_STYLE`, and silence below it.
 
 ### Phase 3 — Did it stick
+
+> **Built, and it joins on something else.** The proposal here was
+> `InterventionEvent.coachingPointId`, which no UI has ever written and which is not even
+> reachable from the service layer. `CoachingPoint.deliveredAt` is written by the chip the coach
+> already taps, and `logObservation` now recovers `coachingPointId` from the tag — because the
+> "This phase" tags *are* that phase's coaching points, so the id was simply being thrown away.
+> The join therefore costs no attribution step and no extra tap, which the intervention version
+> would have.
+>
+> The wording rule below was followed exactly: *"nothing logged about any of them afterwards"*,
+> and a test asserts the sentence contains none of *stick*, *land*, *fail* or *work*.
 
 The intervention → observation join. Still free, and the first phase that can be *confidently
 wrong*, which is why it comes third rather than first.

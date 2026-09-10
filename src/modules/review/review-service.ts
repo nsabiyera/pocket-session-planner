@@ -39,6 +39,8 @@ import {
 } from '@/domain/review';
 import type { ChoiceSummary } from '@/domain/engagement';
 import { coachingPointChecks, type CoachingPointChecks } from '@/domain/coaching-point';
+import { followUpSummary, type FollowUpSummary } from '@/domain/checking';
+import { questioningSummary, type QuestioningSummary } from '@/domain/questioning';
 import { describeRepresentativeness } from '@/domain/practice/match';
 import {
   adjustmentSummary,
@@ -151,6 +153,20 @@ export interface ReviewDraftData {
    * suggested ratio, because there isn't one.
    */
   coachingPointChecks: CoachingPointChecks;
+  /**
+   * *"12 questions this session, to 4 players. Seven were never asked anything."*
+   *
+   * The app's own logged questions, read as questioning for the first time. Scoped hard to
+   * what the record supports - see `domain/questioning.ts` for the three-way spread.
+   */
+  questioning: QuestioningSummary;
+  /**
+   * *"3 of the 5 points you said have something logged against them afterwards."*
+   *
+   * The did-it-stick join, over `deliveredAt` and the coaching point recovered from the tag.
+   * Never says a point did not land: an absent observation is an absence in the record.
+   */
+  followUp: FollowUpSummary;
 }
 
 export async function loadReviewData(
@@ -171,6 +187,10 @@ export async function loadReviewData(
   // Only for the age group, and only to compare against a match. A squad whose `ageGroup` is
   // free text the parser cannot read simply gets no comparison.
   const squad = await ctx.store.squads.get(session.squadId);
+
+  // The roster, for the questioning spread only. "Seven were never asked" is not a sentence
+  // that can be built from the events alone - it needs to know who was there to be asked.
+  const players = await ctx.store.players.listBySquad(session.squadId);
 
   return ok({
     session,
@@ -194,6 +214,11 @@ export async function loadReviewData(
     coachingPointChecks: coachingPointChecks(
       session.phases.flatMap((phase) => phase.coachingPoints),
     ),
+    questioning: questioningSummary({
+      events: session.run?.interventionEvents ?? [],
+      rosterIds: players.map((player) => player.id),
+    }),
+    followUp: followUpSummary({ phases: session.phases, observations }),
   });
 }
 

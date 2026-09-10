@@ -44,6 +44,7 @@ const PRACTICE_SPECTRUM = 'FA practice spectrum';
 const STEP = 'STEP';
 const PLAYER_ENGAGEMENT = 'Player engagement';
 const CHECKING_FOR_UNDERSTANDING = 'Checking for understanding';
+const FIVE_PILLARS = 'FA Five Pillars';
 
 const FOUR_CORNER_SOURCE =
   'https://learn.englandfootball.com/articles-and-resources/coaching/resources/2023/What-is-the-4-Corner-Model';
@@ -223,6 +224,16 @@ const RATIONALES = {
   'report:coaching-points-checked': {
     framework: CHECKING_FOR_UNDERSTANDING,
     why: 'Two counts of what you did: points you ticked as said, and points you ticked again after asking someone to say it back. There is no right ratio, and neither number says whether anybody understood.',
+    source: FORMATIVE_ASSESSMENT_SOURCE,
+  },
+  'report:questioning': {
+    framework: FIVE_PILLARS,
+    why: 'Every intervention you logged with Q&A as the method, and how many of them recorded who you asked. Naming who it went to is optional, so this counts what you recorded and never what you did not.',
+    source: FIVE_PILLARS_SOURCE,
+  },
+  'report:point-follow-up': {
+    framework: CHECKING_FOR_UNDERSTANDING,
+    why: 'Points you ticked as said, against observations you tagged with the same point afterwards. Nothing logged does not mean it did not land — a coach coaching a point is a coach not writing notes.',
     source: FORMATIVE_ASSESSMENT_SOURCE,
   },
   'report:style-evidence': {

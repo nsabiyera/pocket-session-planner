@@ -62,10 +62,10 @@ npx serve site -l 3000
 
 ## Checking for understanding (ADR 0009)
 
-Phases 1 to 4 — the `checked` state and its review line, the predicted misconception, the
-regression offer, and the player cards. Every line here is silent below its floor or absent
-when unset, by design, so **a broken one looks exactly like a quiet one**: check the negative
-cases as carefully as the positive ones.
+Phases 1 to 5 — the `checked` state and its review line, the predicted misconception, the
+regression offer, the player cards, and the questioning and did-it-stick reports. Every line
+here is silent below its floor or absent when unset, by design, so **a broken one looks exactly
+like a quiet one**: check the negative cases as carefully as the positive ones.
 
 ### The mistake you expected (phase 2)
 
@@ -110,6 +110,36 @@ being wrong costs the coach something. **The failure to look for is a bar that n
 - [ ] Ignore the bar for a whole phase. Decide honestly whether it read as a useful reminder or
       as the app telling you off. If it nagged, it needs a dismiss — there is deliberately
       none, and this is the item that would change that.
+
+### The intervene sheet, and the two reports it unblocks (phase 5)
+
+Three shipped bugs meant `styleChosen`, `playerIds` and `coachingPointId` were never written by
+any screen, so **every one of these is a first**. There is no historic data behind them: a
+session run before today will show the empty-record wording, and that is correct.
+
+- [ ] **Long-press `✋ Intervene`.** The sheet now has what the manual always claimed: what you
+      did, how you stopped it, who it landed on, who you spoke to, and a note.
+- [ ] Change the method and log it. Finish, and on `/sessions` the `How you coach` panel no
+      longer says *"every one of these took the style from your plan"* — it splits them.
+- [ ] Log one with **only a note** changed. It still counts as inherited, not chosen. A note is
+      not a style.
+- [ ] One-tap `✋ Intervene` with no sheet at all: still one tap, still no form. **This is the
+      thing not to break.** Time it if you have to.
+- [ ] Name two players on a Q&A intervention. Log four questions naming somebody on each. The
+      review says *"4 questions, to N players"* and, if anyone was left out, *"…were never
+      asked anything."*
+- [ ] Now log four questions naming nobody. It says the count and offers the control — and
+      **says nothing at all about who was never asked**, because that would be a claim the
+      record cannot support. This is the honesty case and the one worth reading twice.
+- [ ] Mix them: some named, some not. It says how many you recorded and stops there.
+- [ ] Log three questions only. **No line** — the floor is four.
+- [ ] Tick a coaching point as said, then log an observation with **that point's own tag**. The
+      review says something was logged against it afterwards.
+- [ ] Log the observation **before** ticking the chip. It does not count — a follow-up has to
+      follow.
+- [ ] Tick two points and log nothing. It says *"nothing logged about any of them
+      afterwards"* — and never that they did not stick, or land, or work.
+- [ ] Tick one point only. **No line** — the floor is two, because the value is the ratio.
 
 ### What to tell them (phase 4)
 

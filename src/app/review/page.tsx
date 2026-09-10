@@ -27,6 +27,12 @@ import { MinutesReport } from '../_components/minutes-report';
 import { MatchReview } from '../_components/match-review';
 import { describeChoice, hasEnoughForChoice } from '@/domain/engagement';
 import { describeCoachingPointChecks, hasEnoughForCheckLine } from '@/domain/coaching-point';
+import { describeFollowUp, hasEnoughForFollowUp } from '@/domain/checking';
+import {
+  describeQuestioning,
+  describeQuestioningEvidence,
+  hasEnoughForQuestioning,
+} from '@/domain/questioning';
 import { REFLECTION_PROMPTS } from '@/domain/practice/match';
 import { describeAdjustments, describeStepCoverage, hasEnoughForStepView } from '@/domain/practice';
 import {
@@ -422,6 +428,35 @@ export default function ReviewPage() {
             <div className="banner banner--signal">
               {describeCoachingPointChecks(data.coachingPointChecks)}
               <Why id="report:coaching-points-checked" />
+            </div>
+          ) : null}
+
+          {/*
+            **Did it stick** — directly under the said-against-checked line, because it is the
+            same question with the record's answer attached. The wording never says a point
+            failed to land: an absent observation is an absence in the notes, and a coach
+            coaching a point is a coach not logging.
+          */}
+          {hasEnoughForFollowUp(data.followUp) ? (
+            <div className="banner banner--signal">
+              {describeFollowUp(data.followUp)}
+              <Why id="report:point-follow-up" />
+            </div>
+          ) : null}
+
+          {/*
+            The questioning record — the app reading its own `question_and_answer` events as
+            questioning for the first time. Two sentences, and the second is not a footnote:
+            without it the count is the coach's phase plan read back as evidence.
+          */}
+          {hasEnoughForQuestioning(data.questioning) ? (
+            <div className="banner banner--signal">
+              {describeQuestioning(data.questioning)}
+              <Why id="report:questioning" />
+              {(() => {
+                const evidence = describeQuestioningEvidence(data.questioning);
+                return evidence ? <span className="card-meta"> {evidence}</span> : null;
+              })()}
             </div>
           ) : null}
 

@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { regressionOffer, REGRESSION_OFFER_MESSAGE } from './checking';
+import {
+  describeFollowUp,
+  followUpSummary,
+  hasEnoughForFollowUp,
+  regressionOffer,
+  REGRESSION_OFFER_MESSAGE,
+} from './checking';
 import { findObjectiveTemplate } from './objectives';
 import { buildSessionFromMethodology } from './session/build-from-methodology';
 import { mainPracticePhase } from './session/selectors';
 import { PLAY_PRACTICE_PLAY } from './presets';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
-import { aSquad, phaseId, T0 } from '@/test/builders';
+import { aSquad, phaseId, testId, T0 } from '@/test/builders';
+import { asCoachingPointId } from './ids';
+import { isoDateTime } from './primitives';
+import type { CoachingPoint } from './coaching-point';
 import type { Observation } from './observation';
 import type { PracticeAdjustment } from './practice';
 
@@ -173,5 +182,135 @@ describe('matching the tag', () => {
     expect(
       offerFor({ observations: [seen({ tags: ['Decision making', MISCONCEPTION, 'Scanning'] })] }),
     ).not.toBeNull();
+  });
+});
+
+/**
+ * The did-it-stick join. It only works because `logObservation` now recovers the coaching
+ * point from the tag the coach tapped — the write-path fix in `docs/known-issues.md` 3 — and
+ * because the chip stamps `deliveredAt`.
+ */
+describe('did it stick', () => {
+  const point = (
+    label: string,
+    over: Partial<Pick<CoachingPoint, 'delivered' | 'deliveredAt' | 'checked'>> = {},
+  ) => ({
+    id: asCoachingPointId(testId(label)),
+    text: `Point ${label}`,
+    delivered: true,
+    deliveredAt: T0,
+    checked: false,
+    ...over,
+  });
+
+  const at = (minutes: number) =>
+    isoDateTime(new Date(Date.parse(T0) + minutes * 60_000).toISOString());
+
+  const observed = (
+    pointId: string | null,
+    minutes: number,
+    ratingKind: Observation['ratingKind'] = 'working',
+  ) => ({ coachingPointId: pointId as never, ratingKind, at: at(minutes) });
+
+  it('counts what was logged against each point after it was said', () => {
+    const a = point('a');
+    const b = point('b');
+    const summary = followUpSummary({
+      phases: [{ coachingPoints: [a, b] }],
+      observations: [observed(a.id, 2, 'working'), observed(a.id, 5, 'good')],
+    });
+
+    expect(summary.delivered).toBe(2);
+    expect(summary.followedUp).toBe(1);
+    expect(summary.points[0]?.loggedAfter).toBe(2);
+    expect(summary.points[0]?.ratings).toEqual(['working', 'good']);
+    expect(summary.points[1]?.loggedAfter).toBe(0);
+  });
+
+  it('ignores an observation logged before the point was said', () => {
+    // A coach who ticks their chips at the end of a phase would otherwise get a report full of
+    // follow-ups that happened before the coaching did.
+    const a = point('a', { deliveredAt: at(10) });
+    const summary = followUpSummary({
+      phases: [{ coachingPoints: [a] }],
+      observations: [observed(a.id, 3), observed(a.id, 12)],
+    });
+    expect(summary.points[0]?.loggedAfter).toBe(1);
+  });
+
+  it('counts everything for a point with no timestamp at all', () => {
+    // Imported or hand-edited. Dropping real evidence over a missing timestamp is worse.
+    const a = point('a', { deliveredAt: null });
+    const summary = followUpSummary({
+      phases: [{ coachingPoints: [a] }],
+      observations: [observed(a.id, -5), observed(a.id, 5)],
+    });
+    expect(summary.points[0]?.loggedAfter).toBe(2);
+  });
+
+  it('skips points the coach never said — that is a different report', () => {
+    const summary = followUpSummary({
+      phases: [{ coachingPoints: [point('a', { delivered: false, deliveredAt: null })] }],
+      observations: [],
+    });
+    // The "Didn't get to: …" proposals cover those.
+    expect(summary.delivered).toBe(0);
+    expect(summary.points).toEqual([]);
+  });
+
+  it('ignores observations tagged to nothing', () => {
+    const a = point('a');
+    const summary = followUpSummary({
+      phases: [{ coachingPoints: [a] }],
+      observations: [observed(null, 5)],
+    });
+    expect(summary.followedUp).toBe(0);
+  });
+
+  it('walks the phases in order', () => {
+    const summary = followUpSummary({
+      phases: [{ coachingPoints: [point('a')] }, { coachingPoints: [point('b')] }],
+      observations: [],
+    });
+    expect(summary.points.map((entry) => entry.text)).toEqual(['Point a', 'Point b']);
+  });
+});
+
+describe('describing did it stick', () => {
+  const summary = (delivered: number, followedUp: number) => ({
+    delivered,
+    followedUp,
+    points: [],
+  });
+
+  it('reports the ratio', () => {
+    expect(describeFollowUp(summary(5, 3))).toBe(
+      '3 of the 5 points you said have something logged against them afterwards.',
+    );
+  });
+
+  it('says nothing was logged, and never that it did not stick', () => {
+    const line = describeFollowUp(summary(5, 0));
+    expect(line).toBe('5 points you said, and nothing logged about any of them afterwards.');
+    // The whole feature is this sentence. An absent observation is an absence in the record.
+    expect(line).not.toMatch(/stick|land|fail|work|forgot|ignored/i);
+  });
+
+  it('reads well when every point was followed up', () => {
+    expect(describeFollowUp(summary(3, 3))).toBe(
+      'Every one of the 3 points you said has something logged against it afterwards.',
+    );
+  });
+
+  it('gets the singular right', () => {
+    expect(describeFollowUp(summary(1, 0))).toBe(
+      '1 point you said, and nothing logged about it afterwards.',
+    );
+  });
+
+  it('stays silent below two said points', () => {
+    expect(hasEnoughForFollowUp(summary(0, 0))).toBe(false);
+    expect(hasEnoughForFollowUp(summary(1, 1))).toBe(false);
+    expect(hasEnoughForFollowUp(summary(2, 0))).toBe(true);
   });
 });

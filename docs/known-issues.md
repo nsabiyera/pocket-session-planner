@@ -6,11 +6,17 @@ would see, why the suite is green anyway, and the smallest honest fix.
 Turned up by [`review-checking-for-understanding.md`](review-checking-for-understanding.md), which
 depends on two of them.
 
+> **Issues 1 to 3 are fixed** (2026-09-10), by ADR 0009 phase 5, which could not build its two
+> reports until they were. Kept here rather than deleted: the interesting part is not the fix but
+> that a green suite of 1,600 tests never noticed, because every one of them injected the field
+> the UI was failing to write. The **Why the suite is green** notes are the lesson.
+
 ---
 
-## 1. The `✋ Intervene` long-press cannot change the style, so `styleChosen` is always false
+## 1. ~~The `✋ Intervene` long-press cannot change the style, so `styleChosen` is always false~~
 
-- **Severity:** high. It silently disables the app's own honesty mechanism.
+- **Status:** **fixed** 2026-09-10. The sheet now carries method, mechanic and audience.
+- **Severity:** high. It silently disabled the app's own honesty mechanism.
 - **Found:** 2026-09-10
 
 `InterventionEvent.styleChosen` is the flag that separates *what the coach did* from *what the
@@ -52,9 +58,11 @@ them. The one-tap path must stay untouched: it is right that the common case cos
 
 ---
 
-## 2. `describeStyleEvidence` tells the coach to use a control that does not exist
+## 2. ~~`describeStyleEvidence` tells the coach to use a control that does not exist~~
 
-- **Severity:** medium. Visible, and it is advice that cannot be followed.
+- **Status:** **fixed** 2026-09-10, by fixing issue 1 — which is what the entry recommended. The
+  sentence now names a gesture that works, and the user manual is true again.
+- **Severity:** medium. Visible, and it was advice that could not be followed.
 - **Found:** 2026-09-10
 
 Because of issue 1, this branch is the only one a real user can reach:
@@ -82,11 +90,16 @@ permanently zero.
 
 ---
 
-## 3. Two fields are declared, plumbed, and never written
+## 3. ~~Two fields are declared, plumbed, and never written~~
 
-- **Severity:** low as it stands — nothing reads them, so nothing is currently wrong on screen.
-  High as soon as something does, which is the situation
-  [`review-checking-for-understanding.md`](review-checking-for-understanding.md) §2 describes.
+- **Status:** **both fixed** 2026-09-10. `playerIds` is written by the new player picker on the
+  long-press sheet; `coachingPointId` is recovered from the tag the coach taps, because the
+  "This phase" tags *are* the phase's coaching points. The unreachable `coachingPointId` on the
+  `logIntervention` command was left unused rather than plumbed — the did-it-stick join uses
+  `CoachingPoint.deliveredAt` instead, which costs the coach no attribution step at all.
+- **Severity:** was low — nothing read them, so nothing was wrong on screen. High the moment
+  something did, which is exactly what
+  [`review-checking-for-understanding.md`](review-checking-for-understanding.md) §2 predicted.
 - **Found:** 2026-09-10
 
 **`InterventionEvent.playerIds`** (`intervention.ts:102`). Declared, copied by the state machine

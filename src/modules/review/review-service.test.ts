@@ -12,6 +12,7 @@ import { addChallenge } from '../planning/challenges';
 import {
   dispatch,
   logChallengeProgress,
+  logIntervention,
   logObservation,
   setChallengeStatus,
 } from '../run/run-service';
@@ -171,6 +172,77 @@ describe('loadReviewData', () => {
     // and zero; the screen decides whether that is worth a line.
     expect(data.coachingPointChecks.checked).toBe(0);
     expect(data.coachingPointChecks.total).toBeGreaterThan(0);
+  });
+
+  /**
+   * End to end, because this is the chain phase 5 had to repair: the sheet writes `playerIds`
+   * and `styleChosen`, the tag recovers `coachingPointId`, and only then do these two reports
+   * have anything to read. Every link was broken before, and every domain test passed anyway.
+   */
+  it('reads the questioning record off the events the coach logged', async () => {
+    const draft = unwrap(await startDraft(ctx, { squadId, objectiveText: 'Pressing' }));
+    const started = unwrap(await commitAndStart(ctx, draft.id));
+
+    // Four questions, three of them naming somebody — enough to clear the floor.
+    for (const players of [[kai], [maya], [kai], []]) {
+      unwrap(
+        await logIntervention(ctx, started.id, {
+          method: 'question_and_answer',
+          ...(players.length > 0 ? { playerIds: players } : {}),
+        }),
+      );
+    }
+    const finished = unwrap(await dispatch(ctx, started.id, { kind: 'finish' }));
+
+    const data = unwrap(await loadReviewData(ctx, finished.id));
+    expect(data.questioning.questions).toBe(4);
+    // The method was overridden on every one, so all four count as chosen.
+    expect(data.questioning.chosen).toBe(4);
+    expect(data.questioning.attributed).toBe(3);
+    expect(data.questioning.playersNamed).toBe(2);
+    // Partial attribution, so the spread must not claim anybody was never asked.
+    expect(data.questioning.fullyAttributed).toBe(false);
+  });
+
+  it('joins the points the coach said to what was logged about them afterwards', async () => {
+    const draft = unwrap(await startDraft(ctx, { squadId, objectiveText: 'Pressing' }));
+    const started = unwrap(await commitAndStart(ctx, draft.id));
+    const phase = started.phases.find((candidate) => candidate.coachingPoints.length > 1)!;
+    const [first, second] = phase.coachingPoints;
+
+    const said = unwrap(
+      await dispatch(ctx, started.id, {
+        kind: 'setCoachingPointState',
+        pointId: first!.id,
+        state: 'said',
+      }),
+    );
+    unwrap(
+      await dispatch(ctx, said.id, {
+        kind: 'setCoachingPointState',
+        pointId: second!.id,
+        state: 'checked',
+      }),
+    );
+
+    // Logged after the chip, tagged with the point's own text — the tag is the join.
+    clock().advanceMinutes(2);
+    unwrap(
+      await logObservation(ctx, {
+        sessionId: started.id,
+        phaseId: phase.id,
+        playerId: kai,
+        ratingKind: 'working',
+        tags: [first!.text],
+      }),
+    );
+    const finished = unwrap(await dispatch(ctx, started.id, { kind: 'finish' }));
+
+    const data = unwrap(await loadReviewData(ctx, finished.id));
+    expect(data.followUp.delivered).toBe(2);
+    expect(data.followUp.followedUp).toBe(1);
+    expect(data.followUp.points[0]).toMatchObject({ text: first!.text, loggedAfter: 1 });
+    expect(data.followUp.points[1]).toMatchObject({ text: second!.text, loggedAfter: 0 });
   });
 
   it('flags the phases that ran over', async () => {

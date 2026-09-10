@@ -111,6 +111,8 @@ describe('the rationale registry', () => {
       'report:corner-balance',
       'report:neglected-corner',
       'report:coaching-points-checked',
+      'report:questioning',
+      'report:point-follow-up',
       'carry-forward:chain-stuck',
     ];
 

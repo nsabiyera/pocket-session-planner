@@ -54,6 +54,31 @@ export const InterventionAudienceSchema = z.enum(['individual', 'unit', 'team'])
 export type InterventionAudience = z.infer<typeof InterventionAudienceSchema>;
 
 /**
+ * The mechanics and audiences in the order every control lists them — most interruptive
+ * first, then most specific first.
+ *
+ * Here rather than in a screen because **two screens now offer them**: the plan-time detour on
+ * `/plan/intervention`, and the long-press sheet in Do mode. They were a local `const` in the
+ * first of those, which is exactly how two lists that happen to agree start disagreeing.
+ */
+export const INTERVENTION_MECHANICS: readonly InterventionMechanic[] = [
+  'in_flow',
+  'play_freeze_play',
+  'play_stop_play',
+  'stop_some_play_on',
+  'individual_aside',
+  'natural_break',
+  'constraint_change',
+  'none',
+];
+
+export const INTERVENTION_AUDIENCES: readonly InterventionAudience[] = [
+  'individual',
+  'unit',
+  'team',
+];
+
+/**
  * Mechanics that genuinely halt play. Logging one of these **pauses the phase clock**, so
  * `stoppageMs` and therefore ball-rolling time are measured rather than estimated.
  *

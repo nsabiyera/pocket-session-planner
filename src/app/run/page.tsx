@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Empty, Loading, Screen, Sheet } from '../_components/ui';
+import { Empty, Loading, Screen, Segmented, Sheet } from '../_components/ui';
 import { TimerDial } from '../_components/timer-dial';
 import { PeriodPresenceBar } from '../_components/period-presence';
 import { showToast } from '../_components/toast-host';
@@ -53,9 +53,18 @@ import { formatClock, phaseClock, sessionClock } from '@/domain/session/timer';
 import { HEARTBEAT_INTERVAL_MS, isRunStale } from '@/domain/session-run';
 import {
   describeInterventionPlan,
+  interventionAudienceLabel,
   interventionBudget,
+  interventionMechanicLabel,
+  interventionMethodLabel,
+  INTERVENTION_AUDIENCES,
+  INTERVENTION_MECHANICS,
+  INTERVENTION_METHODS,
   mechanicStopsPlay,
   resolvePhaseIntervention,
+  type InterventionAudience,
+  type InterventionMechanic,
+  type InterventionMethod,
 } from '@/domain/intervention';
 import { cornerSlug } from '@/domain/four-corners';
 import {
@@ -74,9 +83,22 @@ import type { PhaseImage } from '@/domain/phase-image';
 import { shortPlayerName, type Player } from '@/domain/player';
 import { haptic } from '@/lib/haptics';
 import { isErr } from '@/lib/result';
-import type { ChallengeId, PhaseId } from '@/domain/ids';
+import type { ChallengeId, PhaseId, PlayerId } from '@/domain/ids';
 import type { Session } from '@/domain/session';
 import type { SessionCommand } from '@/domain/session/state-machine';
+
+/**
+ * What the long-press sheet hands back. **Every field optional on purpose**: an axis the coach
+ * left alone keeps the plan's value and does not count as a style they picked, which is the
+ * distinction `InterventionEvent.styleChosen` exists to record.
+ */
+interface InterventionOverride {
+  method?: InterventionMethod;
+  mechanic?: InterventionMechanic;
+  audience?: InterventionAudience;
+  playerIds?: readonly PlayerId[];
+  note?: string;
+}
 
 /** `19:42` — the wall-clock time the reconciliation sheet offers to end the session at. */
 function formatTimeOfDay(iso: string): string {
@@ -668,6 +690,7 @@ export default function RunPage() {
 
         <InterveneButton
           session={session}
+          players={state.players}
           onLog={async (override) => {
             const result = await logIntervention(getServiceContext(), session.id, override ?? {});
             if (isErr(result)) return;
@@ -913,19 +936,44 @@ function ChallengeRulingSheet({
 
 /**
  * `✋ Intervene`. **One tap**, pre-filled from the phase plan; a long press opens the sheet
- * to change method, mechanic, audience or attach a note.
+ * to change method, mechanic or audience, name who it went to, or attach a note.
+ *
+ * **The sheet is the whole point of two reports, and it was missing.** `styleChosen` is set
+ * only when a command carries an axis, and `playerIds` only when a command carries players —
+ * and until this sheet had those controls, neither could ever be true. So `coaching-style.ts`
+ * reported every event as "your plan read back at you", and told the coach to tap and hold a
+ * button whose sheet offered nothing but a note. See `docs/known-issues.md` 1 and 2.
+ *
+ * The one-tap path is untouched, because the overwhelmingly common case is a coach doing what
+ * they said they would and that must not cost a form.
  */
 function InterveneButton({
   session,
+  players,
   onLog,
 }: {
   session: Session;
-  onLog: (override?: { note?: string }) => Promise<void>;
+  players: readonly Player[];
+  onLog: (override?: InterventionOverride) => Promise<void>;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [note, setNote] = useState('');
+  const [method, setMethod] = useState<InterventionMethod | null>(null);
+  const [mechanic, setMechanic] = useState<InterventionMechanic | null>(null);
+  const [audience, setAudience] = useState<InterventionAudience | null>(null);
+  const [playerIds, setPlayerIds] = useState<readonly PlayerId[]>([]);
+
   const phase = currentPhase(session);
   const plan = phase ? resolvePhaseIntervention(session, phase) : null;
+
+  const close = () => {
+    setSheetOpen(false);
+    setNote('');
+    setMethod(null);
+    setMechanic(null);
+    setAudience(null);
+    setPlayerIds([]);
+  };
 
   return (
     <>
@@ -941,8 +989,74 @@ function InterveneButton({
         ✋ Intervene
       </button>
 
-      <Sheet open={sheetOpen} title="Log an intervention" onClose={() => setSheetOpen(false)}>
+      <Sheet open={sheetOpen} title="Log an intervention" onClose={close}>
+        {/*
+          The plan, so the coach can see what they are overriding — and so leaving a control
+          alone is a visible choice rather than an accident. An axis left untouched keeps the
+          plan's value, and `styleChosen` stays false for it, which is the honest record: they
+          did not pick it, they inherited it.
+        */}
         {plan ? <p className="card-meta">{describeInterventionPlan(plan)}</p> : null}
+
+        <Segmented
+          legend="What you did"
+          options={INTERVENTION_METHODS.map((option) => ({
+            value: option,
+            label: interventionMethodLabel(option),
+          }))}
+          value={method ?? plan?.method ?? 'command'}
+          onChange={setMethod}
+        />
+
+        <Segmented
+          legend="How you stopped it"
+          options={INTERVENTION_MECHANICS.map((option) => ({
+            value: option,
+            label: interventionMechanicLabel(option),
+          }))}
+          value={mechanic ?? plan?.mechanic ?? 'in_flow'}
+          onChange={setMechanic}
+        />
+
+        <Segmented
+          legend="Who it landed on"
+          options={INTERVENTION_AUDIENCES.map((option) => ({
+            value: option,
+            label: interventionAudienceLabel(option),
+          }))}
+          value={audience ?? plan?.audience ?? 'team'}
+          onChange={setAudience}
+        />
+
+        {/*
+          **Who it went to** — the field the questioning report is built on, and the reason
+          *"seven players were never asked anything"* can be said at all. Optional, like every
+          other control here: an intervention with nobody named is a normal intervention, and
+          the report is careful to say it covers only the ones that name somebody.
+        */}
+        <div className="field">
+          <label id="intervention-players-label">Who you spoke to</label>
+          <div className="row row--wrap" role="group" aria-labelledby="intervention-players-label">
+            {players.map((player) => (
+              <button
+                key={player.id}
+                type="button"
+                className="chip chip--lg"
+                aria-pressed={playerIds.includes(player.id)}
+                onClick={() =>
+                  setPlayerIds((current) =>
+                    current.includes(player.id)
+                      ? current.filter((candidate) => candidate !== player.id)
+                      : [...current, player.id],
+                  )
+                }
+              >
+                {shortPlayerName(player, players)}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="field">
           <label htmlFor="intervention-note">Note</label>
           <input
@@ -953,13 +1067,20 @@ function InterveneButton({
             onChange={(event) => setNote(event.target.value)}
           />
         </div>
+
         <button
           type="button"
           className="btn btn--primary btn--lg btn--block"
           onClick={async () => {
-            setSheetOpen(false);
-            await onLog(note.trim().length > 0 ? { note: note.trim() } : undefined);
-            setNote('');
+            const trimmed = note.trim();
+            await onLog({
+              ...(method !== null ? { method } : {}),
+              ...(mechanic !== null ? { mechanic } : {}),
+              ...(audience !== null ? { audience } : {}),
+              ...(playerIds.length > 0 ? { playerIds } : {}),
+              ...(trimmed.length > 0 ? { note: trimmed } : {}),
+            });
+            close();
           }}
         >
           Log it

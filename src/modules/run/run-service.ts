@@ -16,7 +16,7 @@ import type { MatchResult, MatchUnit } from '@/domain/match-day';
 import type { EffortQuality } from '@/domain/morphocycle';
 import { SessionSchema } from '@/domain/session';
 import type { AdjustmentDirection, StepLetter } from '@/domain/practice';
-import { normaliseCoachingPointText } from '@/domain/coaching-point';
+import { coachingPointsMatch, normaliseCoachingPointText } from '@/domain/coaching-point';
 import {
   CAPABILITY_TAG_CORNER,
   CAPABILITY_TAGS,
@@ -214,9 +214,25 @@ export async function logObservation(
   const tagged = (input.tags ?? [])
     .map((tag) => attributeForTag(tag))
     .find((attribute): attribute is CornerAttribute => attribute !== undefined);
+
+  /*
+    **Recovering the coaching point from the tag**, which is what makes the did-it-stick join
+    possible at all.
+
+    The observation sheet's "This phase" group *is* this phase's coaching points, offered as
+    their own text — so a coach who taps one has already told us which point they mean, and
+    the id was simply being thrown away (`docs/known-issues.md` 3). This is recovery, not
+    inference: the strings are the same strings, compared with the same normalisation the
+    carry-forward dedupe uses.
+
+    Scoped to this phase's points, so two phases carrying the same wording cannot cross over.
+    An explicit `coachingPointId` from a caller still wins.
+  */
   const point = input.coachingPointId
     ? phase.coachingPoints.find((candidate) => candidate.id === input.coachingPointId)
-    : undefined;
+    : phase.coachingPoints.find((candidate) =>
+        (input.tags ?? []).some((tag) => coachingPointsMatch(tag, candidate.text)),
+      );
 
   // A capability tag carries no attribute, so it needs its own corner. Last in the chain:
   // an attribute that maps to the same word (`Positioning`) still decides for itself.
@@ -253,7 +269,8 @@ export async function logObservation(
     rating: input.ratingKind ? OBSERVATION_RATING_VALUE[input.ratingKind] : null,
     tags: input.tags ?? [],
     text: input.text ?? '',
-    coachingPointId: input.coachingPointId ?? null,
+    // Resolved above from the tag when the caller did not name one — see the comment there.
+    coachingPointId: point?.id ?? null,
   });
 
   await ctx.store.observations.put(observation);
