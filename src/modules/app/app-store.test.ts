@@ -10,13 +10,12 @@ import {
   patchActiveSession,
   periodizationEnabled,
   refresh,
-  setActiveSquad,
   setTacticalPeriodization,
 } from './app-store';
 import { DatabaseClosedError } from '@/data/idb/idb-data-store';
 import { FakeDataStore } from '@/data/ports/fake-data-store';
 import { commitAndStart, startDraft } from '../planning/planning-service';
-import { addPlayer, createSquad } from '../squad/squad-service';
+import { addPlayer, archiveSquad, createSquad, switchSquad } from '../squad/squad-service';
 import { getGameModel, setIdentity } from '../planning/game-model-service';
 import { FakeClock } from '@/lib/fake-clock';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
@@ -93,11 +92,57 @@ describe('the app store', () => {
     const first = await createSquad(ctx, { name: 'U12 Reds' });
     const second = await createSquad(ctx, { name: 'U13 Blues' });
 
-    await setActiveSquad(second.id);
+    unwrap(await switchSquad(ctx, second.id));
+    await refresh();
     expect(getAppState().squad?.id).toBe(second.id);
 
-    await setActiveSquad(first.id);
+    unwrap(await switchSquad(ctx, first.id));
+    await refresh();
     expect(getAppState().squad?.id).toBe(first.id);
+  });
+
+  it('offers the live squads and hides the archived one', async () => {
+    const first = await createSquad(ctx, { name: 'U12 Reds' });
+    await createSquad(ctx, { name: 'U13 Blues' });
+    unwrap(await archiveSquad(ctx, first.id));
+    await refresh();
+
+    expect(getAppState().squads.map((squad) => squad.name)).toEqual(['U13 Blues']);
+  });
+
+  it('keeps each squad to its own draft, not the other team’s', async () => {
+    // Drafts are one *per squad* (ADR 0003 holds per squad), so a coach with two teams can
+    // have one of each. Handing `/plan` the wrong one under the right header is the whole
+    // reason this is scoped.
+    const first = await createSquad(ctx, { name: 'U12 Reds' });
+    const second = await createSquad(ctx, { name: 'U13 Blues' });
+    const firstDraft = unwrap(await startDraft(ctx, { squadId: first.id, objectiveText: 'Press' }));
+    const secondDraft = unwrap(
+      await startDraft(ctx, { squadId: second.id, objectiveText: 'Switch play' }),
+    );
+
+    unwrap(await switchSquad(ctx, first.id));
+    await refresh();
+    expect(activeSessionId(getAppState())).toBe(firstDraft.id);
+
+    unwrap(await switchSquad(ctx, second.id));
+    await refresh();
+    expect(activeSessionId(getAppState())).toBe(secondDraft.id);
+  });
+
+  it('lets a running session decide which squad the app is about', async () => {
+    // The app must never hide a session the coach is standing in front of, so the run wins
+    // over the stored pointer — and `switchSquad` refuses mid-run for exactly this reason.
+    const first = await createSquad(ctx, { name: 'U12 Reds' });
+    const second = await createSquad(ctx, { name: 'U13 Blues' });
+    const draft = unwrap(await startDraft(ctx, { squadId: first.id, objectiveText: 'Press' }));
+    unwrap(await commitAndStart(ctx, draft.id));
+
+    await store.meta.patch({ activeSquadId: second.id }, T0);
+    await refresh();
+
+    expect(getAppState().squad?.id).toBe(first.id);
+    expect(getAppState().activeSession?.id).toBe(draft.id);
   });
 
   it('notifies subscribers with a new snapshot object each time', async () => {
@@ -140,7 +185,6 @@ describe('the app store', () => {
   it('refresh is a no-op with no store rather than throwing', async () => {
     __setDataStoreForTest(null);
     await expect(refresh()).resolves.toBeUndefined();
-    await expect(setActiveSquad('x' as never)).resolves.toBeUndefined();
   });
 
   it('meets a closed database with silence rather than a crash report', async () => {

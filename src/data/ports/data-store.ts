@@ -68,8 +68,20 @@ export interface ListOptions {
   includeDeleted?: boolean;
 }
 
+/**
+ * `list` options for squads.
+ *
+ * `includeArchived` is a separate flag from `ListOptions.includeDeleted`, and follows the
+ * player repository's precedent, because the two mean different things: a deleted squad is on
+ * its way out, an **archived** squad is last season's team with every session and observation
+ * still attached. The switcher hides them; the export must carry them.
+ */
+export interface SquadListOptions extends ListOptions {
+  includeArchived?: boolean;
+}
+
 export interface SquadRepository extends Repository<SquadId, Squad> {
-  list(options?: ListOptions): Promise<Squad[]>;
+  list(options?: SquadListOptions): Promise<Squad[]>;
 }
 
 export interface PlayerRepository extends Repository<PlayerId, Player> {
@@ -113,8 +125,16 @@ export interface SessionRepository extends Repository<SessionId, Session> {
   /**
    * The one draft, the one active run, or the one session awaiting review — whichever
    * exists. This is what makes the singleton routes of ADR 0003 work.
+   *
+   * **A run in progress is returned whoever it is with**, `squadId` or not: the coach has one
+   * session in flight, and an app that hid the session they are standing in front of because
+   * a pointer said another team would be worse than useless.
+   *
+   * `squadId` narrows only the *quiet* candidates — the drafts and the planned sessions —
+   * because ADR 0003's one-draft rule holds per squad, not per device. A coach with the U12s
+   * and the U14s has one of each, and each screen must be handed its own.
    */
-  findActive(): Promise<Session | undefined>;
+  findActive(squadId?: SquadId): Promise<Session | undefined>;
   findDraft(squadId: SquadId): Promise<Session | undefined>;
   findAwaitingReview(squadId: SquadId): Promise<Session | undefined>;
   listRecentCompleted(squadId: SquadId, limit: number): Promise<Session[]>;

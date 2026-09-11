@@ -6,7 +6,7 @@ import { commitAndStart, startDraft } from '../planning/planning-service';
 import { addChallenge } from '../planning/challenges';
 import { dispatch, logObservation } from '../run/run-service';
 import { proposeCarryForward, saveReview } from '../review/review-service';
-import { addPlayer, createSquad } from '../squad/squad-service';
+import { addPlayer, archiveSquad, createSquad } from '../squad/squad-service';
 import { cloneMethodology } from '@/domain/methodology-clone';
 import { PLAY_PRACTICE_PLAY } from '@/domain/presets';
 import { FakeDataStore } from '@/data/ports/fake-data-store';
@@ -179,6 +179,18 @@ describe('exportAll', () => {
 
     expect((await exportAll(ctx)).counts.squads).toBe(2);
     expect((await exportAll(ctx, { squadId })).counts.squads).toBe(1);
+  });
+
+  it('carries an archived squad, which is the one a coach would mourn', async () => {
+    // Archiving last season's U12s hides them from the switcher. The export file is the only
+    // backup there is, so hiding them there too would quietly lose a whole season.
+    await seed(ctx);
+    const old = await createSquad(ctx, { name: 'U13 Blues' });
+    unwrap(await archiveSquad(ctx, old.id));
+
+    const envelope = await exportAll(ctx);
+    expect(envelope.counts.squads).toBe(2);
+    expect(envelope.data.squads.map((squad) => squad.name)).toContain('U13 Blues');
   });
 
   it('is JSON-serialisable, because that is the only thing it will ever be', async () => {

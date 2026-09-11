@@ -32,7 +32,9 @@ export type AppStatus = 'idle' | 'loading' | 'ready' | 'error';
 export interface AppState {
   readonly status: AppStatus;
   readonly error: string | null;
+  /** The squads a coach is currently coaching. Archived ones are read on demand, in Settings. */
   readonly squads: readonly Squad[];
+  /** The one the whole app is about. Changed in Settings via `switchSquad` (ADR 0010). */
   readonly squad: Squad | null;
   readonly players: readonly Player[];
   /** The one draft, planned or in-progress session. See ADR 0003. */
@@ -155,9 +157,42 @@ export async function refresh(): Promise<void> {
 
 async function read(dataStore: PocketDataStore): Promise<void> {
   const meta = await dataStore.meta.get();
-  const squads = await dataStore.squads.list();
+
+  /*
+   * Read the archived squads too, then split.
+   *
+   * `state.squads` is the live list — it is what the switcher offers, and an archived team
+   * must not be switchable from anywhere. But the crash reporter needs *every* squad name it
+   * must never publish, last season's included, and that is worth more than the second read
+   * avoiding it would cost.
+   */
+  const allSquads = await dataStore.squads.list({ includeArchived: true });
+  const squads = allSquads.filter((candidate) => candidate.archivedAt === undefined);
+
+  /*
+   * A run in progress outranks the stored pointer.
+   *
+   * `findActive()` is deliberately device-wide — *"the coach has one session in flight,
+   * whoever it is with"* — so a running session decides which squad the app is about, and
+   * every screen lines up behind the session the coach is standing in front of. This is the
+   * other half of `switchSquad`'s refusal (ADR 0010): the switch is blocked mid-run precisely
+   * because this line would override it a moment later.
+   */
+  const active = await dataStore.sessions.findActive();
+  const running = active?.status === 'in_progress' ? active : undefined;
   const preferredId = (meta?.activeSquadId ?? null) as SquadId | null;
-  const squad = squads.find((candidate) => candidate.id === preferredId) ?? squads[0] ?? null;
+
+  /*
+   * A running session is resolved against `allSquads`, not the live list, so the squad and
+   * the session can never disagree. A run on an archived squad should not be reachable —
+   * archiving refuses mid-run — but an imported file can assert any pair of facts it likes,
+   * and every screen below here assumes `activeSession` belongs to `squad`.
+   */
+  const squad =
+    (running ? allSquads.find((candidate) => candidate.id === running.squadId) : undefined) ??
+    squads.find((candidate) => candidate.id === preferredId) ??
+    squads[0] ??
+    null;
 
   if (!squad) {
     store.setState({
@@ -169,10 +204,21 @@ async function read(dataStore: PocketDataStore): Promise<void> {
     return;
   }
 
+  /*
+   * The active session, scoped to this squad — which matters the moment a coach has two.
+   *
+   * Drafts are one *per squad* (ADR 0003 holds per squad, not per device), so a coach with the
+   * U12s and the U14s can legitimately have a half-composed session for each. Handing `/plan`
+   * the other team's draft, under a header naming this one, would let them edit the wrong
+   * session and never notice.
+   *
+   * A run needs no second read: it was already found above, and it is the reason `squad` is
+   * what it is.
+   */
   const [players, activeSession, reviewSession, recentSessions, openActions, catalog] =
     await Promise.all([
       dataStore.players.listBySquad(squad.id),
-      dataStore.sessions.findActive(),
+      running ?? dataStore.sessions.findActive(squad.id),
       dataStore.sessions.findAwaitingReview(squad.id),
       dataStore.sessions.listRecentCompleted(squad.id, 10),
       dataStore.actions.listOpen(squad.id),
@@ -188,7 +234,7 @@ async function read(dataStore: PocketDataStore): Promise<void> {
    */
   rememberNamesToRedact([
     ...players.map((player) => player.name),
-    ...squads.map((candidate) => candidate.name),
+    ...allSquads.map((candidate) => candidate.name),
   ]);
 
   store.setState((current) => ({
@@ -231,13 +277,6 @@ export function setTacticalPeriodization(enabled: boolean): Promise<void> {
   if (!dataStore) return Promise.resolve();
   return dataStore.meta
     .patch({ tacticalPeriodization: enabled }, systemClock.nowIso() as never)
-    .then(() => refresh());
-}
-
-export function setActiveSquad(squadId: SquadId): Promise<void> {
-  if (!dataStore) return Promise.resolve();
-  return dataStore.meta
-    .patch({ activeSquadId: squadId }, systemClock.nowIso() as never)
     .then(() => refresh());
 }
 

@@ -4,6 +4,7 @@ import { cloneMethodology } from '@/domain/methodology-clone';
 import { PLAY_PRACTICE_PLAY } from '@/domain/presets';
 import { CURRENT_SCHEMA_VERSION, isoDateTime, type IsoDateTime } from '@/domain/primitives';
 import { GameModelSchema } from '@/domain/game-model';
+import type { Session } from '@/domain/session';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import {
   aPlayer,
@@ -97,6 +98,17 @@ export function describeDataStoreContract(
         expect((await store.squads.list({ includeDeleted: true }))[0]?.deletedAt).toBe(later(5));
         // Still fetchable by id — an undo has to be able to find it.
         expect((await store.squads.get(squad.id))?.deletedAt).toBe(later(5));
+      });
+
+      it('an archived squad leaves the list but stays fetchable both ways', async () => {
+        // Archived is not deleted: last season's team keeps every session and observation,
+        // so it drops out of the switcher and the export still has to carry it.
+        const squad = aSquad({ archivedAt: later(5) });
+        await store.squads.put(squad);
+
+        expect(await store.squads.list()).toEqual([]);
+        expect(await store.squads.list({ includeArchived: true })).toEqual([squad]);
+        expect((await store.squads.get(squad.id))?.archivedAt).toBe(later(5));
       });
 
       it('soft deleting an absent row does nothing rather than throwing', async () => {
@@ -278,8 +290,9 @@ export function describeDataStoreContract(
         expect(await store.sessions.listByStatus(SQUAD_ID, 'abandoned')).toEqual([]);
       });
 
-      it('findActive prefers an in-progress run over a stale draft', async () => {
-        const running = aSession({
+      /** A session mid-run. Three tests need one, and the run state is too big to retype. */
+      const aRunningSession = (over: Partial<Session> = {}): Session =>
+        aSession({
           id: asSessionId(testId('running')),
           status: 'in_progress',
           updatedAt: later(1),
@@ -304,13 +317,46 @@ export function describeDataStoreContract(
             challengeEvents: [],
             practiceAdjustments: [],
           },
+          ...over,
         });
+
+      it('findActive prefers an in-progress run over a stale draft', async () => {
+        const running = aRunningSession();
         await store.sessions.putMany([
           aSession({ id: asSessionId(testId('draft')), status: 'draft', updatedAt: later(90) }),
           running,
         ]);
 
         expect((await store.sessions.findActive())?.id).toBe(running.id);
+      });
+
+      it('findActive narrows drafts to one squad, so two teams keep one each', async () => {
+        const other = asSquadId(testId('squad2'));
+        await store.squads.putMany([aSquad(), aSquad({ id: other, name: 'U14 Greens' })]);
+        await store.sessions.putMany([
+          aSession({ id: asSessionId(testId('ours')), status: 'draft', updatedAt: later(1) }),
+          aSession({
+            id: asSessionId(testId('theirs')),
+            squadId: other,
+            status: 'draft',
+            // Newer, so an unscoped call would answer with it — which is the bug being
+            // guarded: `/plan` must never be handed the other team's draft.
+            updatedAt: later(90),
+          }),
+        ]);
+
+        expect((await store.sessions.findActive(SQUAD_ID))?.id).toBe(asSessionId(testId('ours')));
+        expect((await store.sessions.findActive(other))?.id).toBe(asSessionId(testId('theirs')));
+        expect((await store.sessions.findActive())?.id).toBe(asSessionId(testId('theirs')));
+      });
+
+      it('findActive returns a run in progress even for another squad', async () => {
+        // The coach has one session in flight, whoever it is with. Hiding it because a pointer
+        // named a different team would be the one unforgivable failure on a touchline.
+        const other = asSquadId(testId('squad2'));
+        await store.sessions.put(aRunningSession({ squadId: other }));
+
+        expect((await store.sessions.findActive(SQUAD_ID))?.squadId).toBe(other);
       });
 
       it('findActive returns undefined when everything is finished', async () => {
