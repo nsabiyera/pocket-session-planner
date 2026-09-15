@@ -22,6 +22,7 @@ function draftSession(): Session {
       successCriteria: [],
       sourceActionId: null,
       principleId: null,
+      tacticalProblem: null,
       commonMisconception: null,
     },
     now: T0,

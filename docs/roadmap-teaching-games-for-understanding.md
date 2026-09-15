@@ -1,6 +1,6 @@
 # Roadmap — Teaching Games for Understanding, as a spine the app can evidence
 
-- **Status:** **Phases 0 and 1 built** (2026-09-15). Phases 2–6 proposed. Phase 1 went first,
+- **Status:** **Phases 0, 1 and 2 built** (2026-09-15). Phases 3–6 proposed. Phase 1 went first,
   ahead of Phase 0, because none of the seven amendments touch it: they all concern fields in
   phases 2–6, and Phase 1 adds no field.
 - **Date:** 2026-09-15
@@ -288,6 +288,29 @@ the capability line at `review/page.tsx:502`.
    techniques. `practice/mix.ts` made this argument already and it applies here unchanged.
 
 ### Phase 2 — One field: the tactical problem
+
+> **Built.** `tacticalProblem` on all fourteen library entries, `MAX_TACTICAL_PROBLEM = 120`,
+> snapshotted onto `ObjectiveSchema`, carried by both chip paths in `planning-service.ts`,
+> recovered by text on a revisited objective, and one pinned `Problem` line in Do mode above
+> `Expect`. No migration, no new tap, ten tests. Three things the build settled:
+>
+> - **Every entry is a question**, and there is a test for it. That was not in the plan and it
+>   should have been: ADR 0011 §5 offers this string to the coach as a prompt, so a problem
+>   written as a statement would have to be rewritten before it could be asked. *"They press us
+>   high. How do we get the ball past their first line without giving it away?"*
+> - **The cap is 120 rather than the misconception's 160, and a screen decided it.** These are
+>   now the only two blocks in the Do-mode header that grow with the prose, and that header has
+>   to leave the two 96px actions on a 667px phone. The CSS comment names this line as the one
+>   to cut if the field test fails, because it is the newer of the two and the objective text
+>   directly above already states the problem in short form.
+> - **`apply-carry-forward` got one lookup instead of two.** It was calling
+>   `findObjectiveTemplateByText` inline for the misconception; a second inline call for the
+>   problem would have done the same work twice, so the template is now resolved once into a
+>   `revisited` local.
+>
+> A twelfth test earns its place: the problem and the misconception must not be equal for any
+> entry. They are different halves — the situation, and what will go wrong in it — and an entry
+> where they matched would mean one of the two was wasted.
 
 `ObjectiveTemplate.tacticalProblem`, on all fourteen entries, snapshotted onto `ObjectiveSchema`
 beside `commonMisconception` — additive, defaulted, **no migration**, by the route ADR 0009 §8

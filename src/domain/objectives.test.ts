@@ -4,6 +4,7 @@ import {
   findObjectiveTemplateByText,
   objectiveUsageFrom,
   MAX_MISCONCEPTION,
+  MAX_TACTICAL_PROBLEM,
   OBJECTIVE_LIBRARY,
   OBJECTIVE_THEMES,
   momentOf,
@@ -47,6 +48,60 @@ describe('the objective library', () => {
    * interpretable. It ships with all fourteen so the default path stays typing-free, and the
    * guards below are the honesty rules rather than mere presence checks.
    */
+  /**
+   * ADR 0011 §1: the game problem is what a TGfU session starts from, and the field the rest
+   * of that ADR hangs off. The guards here are the same shape as the misconception's below —
+   * honesty rules, not presence checks — plus one the misconception does not need: it has to
+   * be a question, because §5 asks it out loud without rewriting it.
+   */
+  describe('the game problem', () => {
+    it('ships with every objective, so the default path costs no typing', () => {
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem.trim().length, objective.id).toBeGreaterThan(20);
+        expect(objective.tacticalProblem.length, objective.id).toBeLessThanOrEqual(
+          MAX_TACTICAL_PROBLEM,
+        );
+      }
+    });
+
+    it('is a question, in all fourteen', () => {
+      // Not a stylistic rule. ADR 0011 §5 offers this string to the coach as a prompt, and a
+      // problem written as a statement would have to be rewritten before it could be asked.
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem.trim(), objective.id).toMatch(/\?$/);
+      }
+    });
+
+    it('describes the situation, never the child', () => {
+      const person = /lazy|stupid|careless|thick|slow|weak|useless|cannot be bothered|no good/i;
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem, objective.id).not.toMatch(person);
+      }
+    });
+
+    it('poses a problem rather than claiming anything about understanding', () => {
+      // ADR 0009 §1 again, and it binds every string this feature adds.
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem, objective.id).not.toMatch(
+          /understood|comprehen|grasped|learned/i,
+        );
+      }
+    });
+
+    it('is distinct per objective — a shared problem would pose nothing', () => {
+      const all = OBJECTIVE_LIBRARY.map((objective) => objective.tacticalProblem);
+      expect(new Set(all).size).toBe(all.length);
+    });
+
+    it('is not the misconception said twice', () => {
+      // They are different halves: the problem is the situation, the misconception is what
+      // will go wrong in it. An entry where they matched would mean one of them was wasted.
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem, objective.id).not.toBe(objective.commonMisconception);
+      }
+    });
+  });
+
   describe('the predicted misconception', () => {
     it('ships with every objective, so the default path costs no typing', () => {
       for (const objective of OBJECTIVE_LIBRARY) {
@@ -115,6 +170,7 @@ describe('orderObjectives', () => {
     successCriteria: ['x'],
     coachingPoints: ['a', 'b', 'c', 'd'],
     commonMisconception: 'They do the wrong thing, in the way we expected.',
+    tacticalProblem: 'The situation keeps arising. How do we solve it?',
     preferredPhaseKind: 'skill_practice',
     primaryCorner: 'technical_tactical',
   });

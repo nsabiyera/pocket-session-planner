@@ -426,6 +426,22 @@ export default function RunPage() {
         <p className="run-objective">{session.objective.text}</p>
 
         {/*
+          **The game problem** (ADR 0011 §1), above the predicted error because that is the
+          order the two happen in: this is what the session is for, and `Expect` is what will
+          go wrong on the way to it. Pinned for the same reason as the line below.
+
+          **Two pinned lines is the ceiling.** A third would be a header a coach stops reading,
+          and this header is already the tightest thing on the screen at 667px — which is why
+          `MAX_TACTICAL_PROBLEM` is 120 rather than the misconception's 160.
+        */}
+        {session.objective.tacticalProblem ? (
+          <p className="run-problem">
+            <span className="eyebrow">Problem</span>
+            <span className="run-problem-text">{session.objective.tacticalProblem}</span>
+          </p>
+        ) : null}
+
+        {/*
           **What you expected to go wrong** (ADR 0009), pinned where you will meet it at the
           moment it matters — the same argument as the intervention plan line directly above.
           Writing a prediction down at a desk on Sunday is worth nothing if you cannot see it

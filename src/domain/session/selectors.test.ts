@@ -31,6 +31,7 @@ function startedSession(preset = PLAY_PRACTICE_PLAY) {
       successCriteria: [],
       sourceActionId: null,
       principleId: null,
+      tacticalProblem: null,
       commonMisconception: null,
     },
     now: T0,

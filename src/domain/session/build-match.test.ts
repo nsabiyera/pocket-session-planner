@@ -12,6 +12,7 @@ const objective = {
   successCriteria: [],
   sourceActionId: null,
   principleId: null,
+  tacticalProblem: null,
   commonMisconception: null,
 };
 

@@ -1161,6 +1161,36 @@ summary {
 }
 
 /*
+  The game problem (ADR 0011 §1). Deliberately styled as the misconception's twin — same
+  eyebrow, same size, same clamp — because the two are halves of one thought, and a second
+  visual treatment would read as a second kind of information.
+
+  These two blocks are the only part of the Do-mode header that grows with the prose, and the
+  header has to leave the two 96px actions on a 667px screen. If the field test fails on that,
+  **this is the line to cut**: it is the newer of the two, and the objective text directly
+  above already names the problem in short form.
+*/
+.run-problem {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+
+.run-problem .eyebrow {
+  flex: none;
+}
+
+.run-problem-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/*
   The predicted misconception. Quiet by default — it is a reminder, not an alarm.
 
   **Two lines, then clamped.** Do mode has to fit 667px with no scrolling, so a header that

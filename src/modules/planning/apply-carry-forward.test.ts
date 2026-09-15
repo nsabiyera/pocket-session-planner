@@ -18,6 +18,7 @@ function draftFixture(over: Partial<Session> = {}): Session {
       successCriteria: [],
       sourceActionId: null,
       principleId: null,
+      tacticalProblem: null,
       commonMisconception: null,
     },
     now: T0,
@@ -52,6 +53,28 @@ describe('objective actions', () => {
     expect(session.objective.sourceActionId).toBe(action.id);
     expect(applied).toEqual([action.id]);
     expect(session.seededFromActionIds).toEqual([action.id]);
+  });
+
+  it('brings the game problem back with a revisited objective', () => {
+    // Recovered by text, because a stored action carries the objective's words and not a
+    // library id. The same lookup the misconception uses, and now one call rather than two.
+    const { session } = apply(draftFixture(), [objectiveAction('a1')]);
+    expect(session.objective.tacticalProblem).toBe(
+      findObjectiveTemplate('playing-out-from-the-back')?.tacticalProblem,
+    );
+  });
+
+  it('carries no game problem for an objective the coach wrote themselves', () => {
+    const own = objectiveAction('a1', {
+      payload: {
+        kind: 'objective',
+        text: 'Third-man runs off the six',
+        successCriteria: [],
+        intent: 'revisit',
+      },
+    });
+    const { session } = apply(draftFixture(), [own]);
+    expect(session.objective.tacticalProblem).toBeNull();
   });
 
   it('brings the predicted misconception back with a revisited objective', () => {

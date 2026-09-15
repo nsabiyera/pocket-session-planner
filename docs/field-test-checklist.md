@@ -247,6 +247,29 @@ length, as if a huddle were in front of you.
 
 ## Teaching Games for Understanding (ADR 0011)
 
+### The game problem, pinned (phase 2)
+
+- [ ] **Portrait, 667px, with both the `Problem` and `Expect` lines showing.** Do mode still
+      reaches the two 96px actions with no scrolling. **This is the item most likely to fail in
+      the whole checklist** — it was already the tightest thing on the screen with one pinned
+      line, and there are now two. If it fails, the fix is written down: cut the `Problem` line,
+      not the `Expect` one.
+- [ ] Both lines are legible at arm's length in daylight. They are `--fs-xs` and quiet by
+      design, but a reminder you have to squint at during a game is a reminder you ignore.
+- [ ] Build a session from an objective **chip**. The `Problem` line is above `Expect`, and it
+      is a question.
+- [ ] Build one by **typing** your own objective. There is **no** `Problem` line at all — not an
+      empty one, not a placeholder — and no `Expect` line either.
+- [ ] A problem long enough to wrap clamps at two lines rather than pushing the header down.
+- [ ] Review an objective, accept the `Revisit:` chip, start the next session. The `Problem`
+      line **comes back with it**, same as `Expect`.
+- [ ] Open a session planned **before this shipped**. No `Problem` line, no error, no blank row.
+- [ ] A **match** day session has no `Problem` line: the objective there is the fixture, and
+      there is no template behind it to snapshot one from.
+- [ ] **The judgement call.** Read both lines during a real session. If the `Problem` line tells
+      you nothing the objective text above it did not already, say so — it is one field and one
+      revert, and phases 3 to 6 all hang off it.
+
 ### The execution, and the rest of the action (phase 1)
 
 Derived from observations already being logged, so **there is historic data behind this one** —

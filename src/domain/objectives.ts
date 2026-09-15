@@ -38,6 +38,27 @@ export interface ObjectiveTemplate {
    * sheet and, through it, the record.
    */
   readonly commonMisconception: string;
+  /**
+   * **The game problem this objective poses** (ADR 0011 §1).
+   *
+   * Teaching Games for Understanding starts a session from a problem the players have to solve
+   * rather than a technique they have to rehearse. This is that problem, in one sentence, and
+   * it is the field the rest of ADR 0011 hangs off: §5 derives its questions from it, and the
+   * roadmap's later phases join observations back to it.
+   *
+   * **A question, in all fourteen entries**, and not as a stylistic tic. A problem written as
+   * a question is one a coach can ask out loud without rewriting it, which is what lets §5
+   * offer prompts rather than templates — and it is how TGfU poses one in the first place.
+   *
+   * **On the objective rather than the phase**, the same argument `commonMisconception` makes
+   * one field up: only the thing being trained knows what problem it is, and a methodology
+   * that does not know the objective cannot honestly guess.
+   *
+   * **Situation, never person.** It describes what is happening on the pitch, so there is no
+   * entry here that a player could read as being about them — the same discipline the
+   * misconception keeps, and it matters for the same reason.
+   */
+  readonly tacticalProblem: string;
   /** Where the points belong when carry-forward has to place them. */
   readonly preferredPhaseKind: PhaseKind;
   /**
@@ -57,6 +78,16 @@ export interface ObjectiveTemplate {
  * taps when the error turns up.
  */
 export const MAX_MISCONCEPTION = 160;
+
+/**
+ * Shorter than {@link MAX_MISCONCEPTION}, and the reason is a screen rather than a sentence.
+ *
+ * The game problem is a **second** pinned line in Do mode, beside the `Expect` line, and those
+ * two blocks are the only part of that header which grows with the prose. It has to leave the
+ * two 96px actions on a 667px phone. 120 characters is two clamped lines of `--fs-xs` at 375px,
+ * which is the budget — see `.run-problem` in `globals.css`.
+ */
+export const MAX_TACTICAL_PROBLEM = 120;
 
 /**
  * What an objective is about: one of the four moments, or the player rather than the team.
@@ -99,6 +130,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Head up before you receive',
       'If it is not on, go long and win the second ball',
     ],
+    tacticalProblem:
+      'They press us high. How do we get the ball past their first line without giving it away?',
     commonMisconception:
       'They think playing out means never going long, so they force a pass that is not there.',
     preferredPhaseKind: 'phase_of_play',
@@ -115,6 +148,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Receive on the back foot to face forward',
       'One player in behind every time we go wide',
     ],
+    tacticalProblem:
+      'They are compact and narrow. How do we make the pitch big enough to play through?',
     commonMisconception:
       'They come inside to get the ball instead of staying wide and waiting for it to travel.',
     preferredPhaseKind: 'small_sided_game',
@@ -134,6 +169,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Third player runs before the second pass',
       'Disguise the pass with your body shape',
     ],
+    tacticalProblem:
+      'Three of us in a tight space with a defender in it. How do we get out the other side?',
     commonMisconception:
       'They stand square to the ball to offer support, rather than angling off it.',
     preferredPhaseKind: 'skill_practice',
@@ -150,6 +187,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Follow the shot in',
       'Take the first-time option when it is on',
     ],
+    tacticalProblem:
+      'We are in the box and the chance is gone in a second. How do we take it before it goes?',
     commonMisconception:
       'They think power beats placement, so everything gets hit as hard as possible.',
     preferredPhaseKind: 'skill_practice',
@@ -166,6 +205,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Open your body to see more of the pitch',
       'Say what you saw before you played it',
     ],
+    tacticalProblem:
+      'The picture changes while the ball travels. How do we know what it looks like before we get it?',
     commonMisconception:
       'They look up as the ball arrives rather than before it, and think that counts as scanning.',
     preferredPhaseKind: 'skill_practice',
@@ -182,6 +223,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Cushion it, do not stop it dead',
       'Touch and go in one movement',
     ],
+    tacticalProblem:
+      'The ball arrives with a defender close behind. Where does the first touch have to go?',
     commonMisconception:
       'They think a good first touch is a dead one, stopping the ball under their feet.',
     preferredPhaseKind: 'technical',
@@ -198,6 +241,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Commit the defender before you go',
       'It is fine to lose it — go again',
     ],
+    tacticalProblem: 'One defender, one of us, and space behind them. How do we get past?',
     commonMisconception:
       'They think losing it is the mistake, so they pass backwards rather than go.',
     preferredPhaseKind: 'skill_practice',
@@ -214,6 +258,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Squeeze up behind the presser',
       'If the first press is beaten, drop together',
     ],
+    tacticalProblem:
+      'They have the ball in their own half. How do we win it back together rather than one at a time?',
     commonMisconception:
       'They think pressing is the nearest player sprinting, with nobody squeezing up behind.',
     preferredPhaseKind: 'phase_of_play',
@@ -230,6 +276,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Small steps, do not cross your feet',
       'Win it when their touch is heavy',
     ],
+    tacticalProblem: 'They are running at us with the ball. How do we stop them without diving in?',
     commonMisconception:
       'They think defending means winning the ball, so they dive in at the first chance.',
     preferredPhaseKind: 'skill_practice',
@@ -246,6 +293,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Far side tucks in when the ball is wide',
       'Talk — the ones behind can see it',
     ],
+    tacticalProblem:
+      'The ball is wide and there is space between our lines. How do we stay hard to play through?',
     commonMisconception:
       'They think compact means everyone near the ball, so the far side follows it across.',
     preferredPhaseKind: 'phase_of_play',
@@ -263,6 +312,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Two players commit, the rest hold the shape',
       'Finish the attack — do not slow it down',
     ],
+    tacticalProblem:
+      'We have just won it and they are out of shape. How do we punish that before it closes?',
     commonMisconception:
       'They run towards the player on the ball to offer a pass, instead of running beyond.',
     preferredPhaseKind: 'small_sided_game',
@@ -280,6 +331,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Block the forward pass first',
       'Do not stand and watch the loss',
     ],
+    tacticalProblem:
+      'We have just lost it and we are wide open. How do we make the next five seconds ours?',
     commonMisconception:
       'They stop to appeal or watch the loss, instead of pressing in the first second.',
     preferredPhaseKind: 'small_sided_game',
@@ -296,6 +349,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'The player who can see it is the player who talks',
       'Encourage after a mistake, not before',
     ],
+    tacticalProblem:
+      'Half of us can see the danger and half cannot. How do we get what we see to who needs it?',
     commonMisconception:
       'They think talking means encouragement, not information given before the ball arrives.',
     preferredPhaseKind: 'small_sided_game',
@@ -312,6 +367,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
       'Recognise the moment — do not force it',
       'One touch to escape, two to settle',
     ],
+    tacticalProblem:
+      'The forward pass is not on, and we still want to go forward. How do we decide what to do?',
     commonMisconception:
       'They think forward is always better, so the pass goes in whether it is on or not.',
     preferredPhaseKind: 'small_sided_game',
