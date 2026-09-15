@@ -1,13 +1,14 @@
 # Roadmap — Teaching Games for Understanding, as a spine the app can evidence
 
-- **Status:** **Phase 1 built** (2026-09-15). Phase 0 and phases 2–6 proposed — and Phase 1 went
-  first without waiting on Phase 0 because none of the seven amendments touch it: they all
-  concern fields in phases 2–6, and Phase 1 adds no field.
+- **Status:** **Phases 0 and 1 built** (2026-09-15). Phases 2–6 proposed. Phase 1 went first,
+  ahead of Phase 0, because none of the seven amendments touch it: they all concern fields in
+  phases 2–6, and Phase 1 adds no field.
 - **Date:** 2026-09-15
 - **Decided in:** [ADR 0011](adr/0011-teaching-games-for-understanding.md) (Accepted,
-  2026-09-15), which this document sequences. **The ADR and this roadmap disagree in seven
-  places**, all of them about cost rather than direction, and all of them collected in Phase 0
-  so they are settled or rejected before any code. Where they are not amended, the ADR wins.
+  2026-09-15, **amended 2026-09-15**), which this document sequences. The two disagreed in seven
+  places, all about cost rather than direction; Phase 0 collected them and **all seven are now
+  recorded in the ADR** as notes beside the decisions they change, with the accepted text kept.
+  Where the ADR is not amended, the ADR wins.
 - **Reviewed:** [`review-teaching-games-for-understanding.md`](review-teaching-games-for-understanding.md)
   (2026-09-15) — mapped the app against the six stages, found stages 1, 5 and 6 already served
   and stages 2–4 constrained by ADR 0009 §1.
@@ -192,6 +193,22 @@ phases ended up in. The free ones ship first, because they can be wrong at no co
 budget, and because the first one is worth having whatever happens to the rest.
 
 ### Phase 0 — Amend ADR 0011
+
+> **Done.** All seven are in the ADR, and none was rejected. Two things about *how*, both of
+> which follow this repo's habits rather than the obvious route:
+>
+> - **The accepted text is kept, and each amendment sits beside the decision it changes** as a
+>   note, rather than the Decision section being rewritten. Editing it in place would have read
+>   more cleanly and destroyed the record of what was actually accepted — the same instinct that
+>   keeps ADR 0006 next to ADR 0007 and keeps fixed entries in `known-issues.md`. A reader who
+>   stops at §2 still meets the amendment to §2.
+> - **Amendments 6 and 7 became new sections rather than notes**, because both asked the ADR to
+>   *state* something it did not say at all: §8 what a coach sees on day one, and §9 the render
+>   rule. Nothing was amended about §5 or §6, which needed nothing.
+>
+> One correction to the list below: the ADR's **Implementation sequence** needed a note too, and
+> it is not one of the seven. It began at the first new field, with no stage in front of it —
+> the roadmap's ordering by cost supersedes it, and Phase 1 is the stage it was missing.
 
 Seven amendments, each argued above. The ADR is Accepted, so this is the phase where they are
 settled or rejected rather than quietly implemented differently:
