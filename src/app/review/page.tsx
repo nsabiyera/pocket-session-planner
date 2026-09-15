@@ -38,7 +38,9 @@ import { REFLECTION_PROMPTS } from '@/domain/practice/match';
 import { describeAdjustments, describeStepCoverage, hasEnoughForStepView } from '@/domain/practice';
 import {
   describeCapabilityCoverage,
+  describeExecutionSplit,
   describeMomentCoverage,
+  executionSplit,
   hasEnoughForCapabilityView,
   hasEnoughForMomentView,
 } from '@/domain/capabilities/coverage';
@@ -498,10 +500,24 @@ export default function ReviewPage() {
             coach learns to ignore the app.
           */}
           {hasEnoughForCapabilityView(data.capabilityCoverage) ? (
-            <div className="banner banner--signal">
-              {describeCapabilityCoverage(data.capabilityCoverage, 'this session')}
-              <Why id="report:capability-coverage" />
-            </div>
+            <>
+              <div className="banner banner--signal">
+                {describeCapabilityCoverage(data.capabilityCoverage, 'this session')}
+                <Why id="report:capability-coverage" />
+              </div>
+
+              {/*
+                The same six, regrouped once: the execution against the rest of the action.
+                Behind the *same* gate deliberately — it is a coarser cut of the line above,
+                so it needs no floor of its own, and it reads as that line's second sentence
+                rather than as a second report. See `coverage.ts` on why it never says
+                "tactical".
+              */}
+              <div className="banner banner--signal">
+                {describeExecutionSplit(executionSplit(data.capabilityCoverage))}
+                <Why id="report:execution-split" />
+              </div>
+            </>
           ) : null}
 
           {/*

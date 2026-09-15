@@ -1,6 +1,8 @@
 # Roadmap — Teaching Games for Understanding, as a spine the app can evidence
 
-- **Status:** Proposed. Nothing here is built.
+- **Status:** **Phase 1 built** (2026-09-15). Phase 0 and phases 2–6 proposed — and Phase 1 went
+  first without waiting on Phase 0 because none of the seven amendments touch it: they all
+  concern fields in phases 2–6, and Phase 1 adds no field.
 - **Date:** 2026-09-15
 - **Decided in:** [ADR 0011](adr/0011-teaching-games-for-understanding.md) (Accepted,
   2026-09-15), which this document sequences. **The ADR and this roadmap disagree in seven
@@ -221,6 +223,28 @@ Phase 0 also fixes the vocabulary once: **problem**, **option**, **appeared**. N
 not *correct*, not *transferred*.
 
 ### Phase 1 — Execution, against everything else
+
+> **Built, and it was free as promised.** `executionSplit` and `describeExecutionSplit` in
+> `capabilities/coverage.ts`, one banner on `/review` behind the existing gate, one rationale
+> entry, ten tests. No schema, no migration, no tap, no service change — `ReviewDraftData`
+> already carried `capabilityCoverage`. Three corrections this section could not have known:
+>
+> - **The promised sentence was wrong on its second half.** *"2 were about what he did before
+>   the ball came"* is the `ActionMoment` axis, not the capability one — `movement` and
+>   `deception` both happen on the ball, so that wording would have described a different
+>   field. It ships as *"the other 2 were about the rest of the action"*, which is what the
+>   five capabilities actually are.
+> - **No `subject` parameter**, unlike both its siblings. The line always renders directly
+>   under `describeCapabilityCoverage`, which has already said *"for this session"* and counted
+>   them, so carrying the subject twice made one thought read as two reports.
+> - **No `hasEnoughForExecutionSplit`, and that is deliberate** rather than an omission. Both
+>   banners sit inside one `hasEnoughForCapabilityView` gate: the split is strictly coarser, so
+>   a floor good enough for six buckets is ample for two, and a second threshold would be a
+>   knob with nothing to tune.
+>
+> One thing the build made sharper than the plan: the denominator is `coverage.classified`,
+> never `coverage.total`. Dividing by everything logged would report the app's own sparse
+> attribute mapping back to the coach as *their* blind spot, and there is a test for it.
 
 **Free. No schema, no migration, no tap.** The only TGfU instrument the app can ship without
 asking a coach for anything, and it goes first because it tells you whether the rest is aimed at

@@ -107,6 +107,7 @@ describe('the rationale registry', () => {
       'report:intervention',
       'report:corner-coverage',
       'report:capability-coverage',
+      'report:execution-split',
       'report:moment-coverage',
       'report:corner-balance',
       'report:neglected-corner',

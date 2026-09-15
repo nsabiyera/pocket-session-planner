@@ -163,6 +163,93 @@ export function describeCapabilityCoverage(coverage: CapabilityCoverage, subject
   return sentence;
 }
 
+// ---------------------------------------------------------------------------
+// The execution, and the rest of the action
+// ---------------------------------------------------------------------------
+
+/**
+ * **Was I watching the execution, or everything that led to it?**
+ *
+ * Teaching Games for Understanding (Bunker & Thorpe, 1982) makes one claim about *coaching
+ * behaviour* rather than about players: a coach watches the technique and misses the scan, the
+ * timing and the position that made it possible. Five of the FA's six core capabilities are
+ * what-to-do — scanning, timing, movement, positioning, deception — and `techniques` is
+ * how-to-do-it, so that claim is answerable from observations the coach is already logging.
+ *
+ * **No field, no tap, no migration.** It is a regrouping of `capabilityCoverage`, which is why
+ * it is the first thing the app builds from that model and the only part of it that costs
+ * nothing. See `docs/roadmap-teaching-games-for-understanding.md`, Phase 1.
+ *
+ * ---
+ *
+ * **Three rules, and the first one decides the wording.**
+ *
+ * 1. **Never "technical versus tactical".** Capability *Movement* is football movement —
+ *    shielding, the late run, evading a challenge — which a coach could fairly file on either
+ *    side of that line. What is defensible is `techniques` against the other five, said as
+ *    *the execution* against *the rest of the action*, and nothing stronger. The words
+ *    *tactical*, *decision* and *understanding* do not appear in any sentence below: the app
+ *    can see which capability a tag mapped to, and it cannot see a decision (ADR 0009 §1).
+ * 2. **This is an addition, and {@link describeCapabilityCoverage} stays the primary line.**
+ *    A coach left with only the two-way split has lost the report that named the specific
+ *    blind spot. It deliberately shares that line's floor — {@link hasEnoughForCapabilityView}
+ *    — rather than introducing a second threshold: the split is strictly coarser, so a gate
+ *    good enough for six buckets is more than good enough for two.
+ * 3. **No target ratio, ever.** A Command / Direct session on a set-piece routine *should* be
+ *    all execution. `practice/mix.ts` made this argument for the practice mix and it applies
+ *    here unchanged — the sentence counts and stops.
+ */
+
+/** The one capability that is how-to-do-it. The other five are what-to-do. */
+const EXECUTION_CAPABILITY: CoreCapability = 'techniques';
+
+export interface ExecutionSplit {
+  /** Observations that landed on `techniques`. */
+  readonly execution: number;
+  /** Observations that landed on any of the other five. */
+  readonly around: number;
+  /**
+   * The denominator, and it is `coverage.classified` — **never `coverage.total`**. An
+   * observation this lens cannot place is not evidence about what the coach was watching, and
+   * dividing by it would quietly report the app's own sparse mapping as a coach's blind spot.
+   */
+  readonly classified: number;
+}
+
+export function executionSplit(coverage: CapabilityCoverage): ExecutionSplit {
+  const execution = coverage.countByCapability[EXECUTION_CAPABILITY];
+  return {
+    execution,
+    around: coverage.classified - execution,
+    classified: coverage.classified,
+  };
+}
+
+/**
+ * *"7 of the 9 were about the execution; the other 2 were about the rest of the action."*
+ *
+ * **No `subject` parameter**, unlike its two siblings. This line always renders directly under
+ * {@link describeCapabilityCoverage}, which has already named whose observations these are and
+ * counted them — so repeating *"for this session"* would make one thought read as two reports.
+ *
+ * Null when nothing is classified, rather than a sentence about zero: silence beats a guess,
+ * the same choice `describePracticeArea` and `describeSessionShape` both make.
+ */
+export function describeExecutionSplit(split: ExecutionSplit): string | null {
+  if (split.classified === 0) return null;
+
+  if (split.classified === 1) {
+    return split.execution === 1
+      ? 'The only one was about the execution.'
+      : 'The only one was about the rest of the action, not the execution.';
+  }
+
+  if (split.around === 0) return `All ${split.classified} were about the execution.`;
+  if (split.execution === 0) return `None of the ${split.classified} were about the execution.`;
+
+  return `${split.execution} of the ${split.classified} were about the execution; the other ${split.around} were about the rest of the action.`;
+}
+
 /**
  * The other axis: **when** in the action the coach was watching.
  *

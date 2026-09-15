@@ -245,6 +245,37 @@ length, as if a huddle were in front of you.
 - [ ] Open a session you ran **before this shipped**. It reads as unchecked, parses without
       error, and nothing in the app calls it a failure.
 
+## Teaching Games for Understanding (ADR 0011)
+
+### The execution, and the rest of the action (phase 1)
+
+Derived from observations already being logged, so **there is historic data behind this one** —
+unlike the ADR 0009 phases above, a session reviewed before today will show the line correctly.
+
+- [ ] Review a session with **fewer than eight** classifiable observations. There is **no**
+      execution line and no capability line either — not an empty one, not a placeholder.
+- [ ] Review a session with eight or more. **Both** lines appear, capability tally first,
+      execution split directly under it. Neither ever shows without the other.
+- [ ] The split line does **not** repeat *"for this session"*. It reads as the second sentence
+      of the line above it, not as a second report.
+- [ ] Log mostly technique tags. The line says *"N of the M were about the execution; the other
+      K were about the rest of the action."*
+- [ ] Log **only** technique tags — *"All M were about the execution."* No suggestion attached,
+      no nudge to watch something else. This is the wording to check hardest: a set-piece
+      session should be all execution and the app must not imply otherwise.
+- [ ] Log **no** technique tags — *"None of the M were about the execution."* Equally unjudged.
+- [ ] The sentence never contains *tactical*, *decision*, *understanding* or *technical*. There
+      is a test for this, but read it on the screen once anyway.
+- [ ] Log several observations with tags this lens cannot place (`Teamwork`, `Leadership`). They
+      do **not** inflate either side of the split — the denominator is what the lens could read,
+      and the capability line above is where the unreadable ones are accounted for.
+- [ ] Tap the `?` on the split line. It says the two-way grouping is this app's, not the FA's.
+- [ ] **Portrait, 667px.** `/review` has two more banners than it did. It still reaches the
+      `Save review` button without the report block pushing it off the screen.
+- [ ] **The one that decides phase 2.** Read the line after a real session and ask whether it
+      told you something you did not know. If it did not, the expensive phases are aimed at a
+      problem you do not have, and stopping here is the honest answer.
+
 ## The FA 4 Corner Model
 
 - [ ] Open the observation sheet: tags are grouped under the four corners, and every corner is

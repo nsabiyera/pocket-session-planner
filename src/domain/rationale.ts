@@ -165,6 +165,11 @@ const RATIONALES = {
     why: 'Which of the FA’s six your observations map onto. The FA publishes the six, not a crosswalk to this app’s attribute list — that mapping is ours, and deliberately sparse.',
     source: CAPABILITIES_SOURCE,
   },
+  'report:execution-split': {
+    framework: CAPABILITIES,
+    why: 'Five of the FA’s six describe what a player does around the ball; Techniques is the execution itself. Grouping them in two is ours, not the FA’s, and there is no right balance — a set-piece session should be all execution.',
+    source: CAPABILITIES_SOURCE,
+  },
   'report:moment-coverage': {
     framework: CAPABILITIES,
     why: 'Whether you were watching before, as, or after the player received the ball. Only observations where you set the moment count, and setting it is optional — so an empty view is a choice.',
