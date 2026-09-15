@@ -26,6 +26,7 @@ export const CONSTRAINTS_LED: MethodologyPreset = MethodologyPresetSchema.parse(
   phaseTemplates: [
     {
       id: 'cla-arrival',
+      defaultTargets: 'none',
       order: 0,
       defaultConstraints: [{ letter: 'task', text: 'Head up between touches' }],
       defaultSpectrum: 'overloaded',
@@ -41,6 +42,7 @@ export const CONSTRAINTS_LED: MethodologyPreset = MethodologyPresetSchema.parse(
     },
     {
       id: 'cla-game-a',
+      defaultTargets: 'two_goals',
       order: 1,
       defaultConstraints: [{ letter: 'task', text: 'Two touches maximum' }],
       defaultSpectrum: 'matched_up',
@@ -77,6 +79,7 @@ export const CONSTRAINTS_LED: MethodologyPreset = MethodologyPresetSchema.parse(
     },
     {
       id: 'cla-game-b',
+      defaultTargets: 'two_goals',
       order: 3,
       defaultConstraints: [{ letter: 'task', text: 'A first-time finish counts double' }],
       defaultSpectrum: 'matched_up',
@@ -98,6 +101,7 @@ export const CONSTRAINTS_LED: MethodologyPreset = MethodologyPresetSchema.parse(
     },
     {
       id: 'cla-free-game',
+      defaultTargets: 'two_goals',
       order: 4,
       defaultConstraints: [],
       defaultSpectrum: 'matched_up',

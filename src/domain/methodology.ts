@@ -6,6 +6,7 @@ import {
   MAX_ADJUSTMENTS_PER_PHASE,
   MAX_CONSTRAINTS_PER_PHASE,
   PhaseConstraintSchema,
+  PhaseTargetsSchema,
   PracticeSpectrumSchema,
 } from './practice';
 import {
@@ -85,6 +86,19 @@ export const MethodologyPhaseTemplateSchema = z.object({
    * interference, and only the methodology that wrote them knows which.
    */
   defaultSpectrum: PracticeSpectrumSchema.nullable().default(null),
+  /**
+   * Seeds `SessionPhase.targets`, so direction costs zero taps on the default path too.
+   *
+   * **Null here is weaker than `defaultSpectrum`'s null**, and the difference matters. There,
+   * null means *this template is not a practice*. Here it means only *this methodology has no
+   * opinion*: Play-Practice-Play's PRACTICE is an overload, and whether the coach runs it to
+   * a goal or as a rondo is genuinely theirs to decide, so the preset says nothing rather
+   * than guessing on their behalf.
+   *
+   * Seeded only where the methodology actually dictates it — the games it insists are games,
+   * and the unopposed blocks where there is nothing to play towards by construction.
+   */
+  defaultTargets: PhaseTargetsSchema.nullable().default(null),
   /**
    * Ways to make this practice harder or easier, seeding `SessionPhase.progressions` and
    * `.regressions`.

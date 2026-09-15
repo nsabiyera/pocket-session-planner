@@ -79,7 +79,43 @@ describe('describeRepresentativeness', () => {
     spectrum: Parameters<typeof describeRepresentativeness>[0]['spectrum'],
     practiceArea: number | null,
     band: AgeBand | null,
-  ) => describeRepresentativeness({ spectrum, practiceArea, band });
+    // Optional and last, so every test written before direction existed still reads as the
+    // session where the coach did not say.
+    targets: Parameters<typeof describeRepresentativeness>[0]['targets'] = null,
+  ) => describeRepresentativeness({ spectrum, practiceArea, targets, band });
+
+  it('says what they were playing towards, when the coach said', () => {
+    expect(of('matched_up', 37.5, 'u12', 'two_goals')).toBe(
+      'You finished on a matched-up practice at 38 m² a player, to two goals. ' +
+        'A U12 match is 9v9 on a recommended 73 × 46 m — about 187 m² a player.',
+    );
+  });
+
+  it('distinguishes a possession box from a game at the same size', () => {
+    // The whole reason the field exists: these two were the same record, and the match
+    // comparison read them on identical terms.
+    const box = of('matched_up', 37.5, 'u12', 'none');
+    const game = of('matched_up', 37.5, 'u12', 'two_goals');
+    expect(box).toContain('with nothing to score in');
+    expect(game).toContain('to two goals');
+    expect(box).not.toBe(game);
+  });
+
+  it('qualifies whichever opening clause there is', () => {
+    expect(of('matched_up', null, null, 'one_goal')).toBe(
+      'You finished on a matched-up practice, to one goal.',
+    );
+    expect(of(null, 37.5, null, 'lines')).toBe(
+      'Your last practice ran at 38 m² a player, to lines or zones. ' +
+        'Set the squad’s age group to compare it with a match.',
+    );
+  });
+
+  it('never earns a sentence of its own', () => {
+    // Direction with no spectrum and no area says nothing about how the practice compared
+    // with a match, so the silence is unchanged rather than half a sentence.
+    expect(of(null, null, 'u12', 'two_goals')).toBeNull();
+  });
 
   it('puts the practice and the match side by side', () => {
     expect(of('overloaded', 37.5, 'u12')).toBe(

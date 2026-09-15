@@ -247,6 +247,31 @@ length, as if a huddle were in front of you.
 
 ## Teaching Games for Understanding (ADR 0011)
 
+### Direction and targets (phase 3)
+
+- [ ] Open a phase from a **Play-Practice-Play** plan. The `What are they playing towards?` row
+      sits directly under the spectrum, and both PLAY phases already read **Two goals** without
+      you tapping anything.
+- [ ] **Four chips across at 375px**, on one row, no wrapping mid-label and no chip under 44px.
+- [ ] Tap the pressed chip again. It clears back to `Not set.` — the same take-it-back gesture
+      the spectrum and the challenge verdicts use.
+- [ ] Open the **PRACTICE** phase of that same plan. It is **not set**, and that is correct: the
+      methodology has no view on whether your overload runs to a goal or as a rondo.
+- [ ] **Do mode shows none of this.** Check the phase card and the header — direction appears
+      nowhere while the session runs, by design.
+- [ ] Plan a session ending on a matched-up game at a known grid with a group size, run it, and
+      review. The representativeness line reads *"…at N m² a player, **to two goals**"*.
+- [ ] Set the last practice to **No target** instead and review again. The same line reads
+      *"…with nothing to score in"*. These two sessions used to be the same record — that
+      difference is the whole phase.
+- [ ] Leave direction unset and review. The line reads exactly as it did before phase 3, with no
+      trailing comma and no gap.
+- [ ] A session with direction set but **no** spectrum and **no** grid shows **no**
+      representativeness line at all, rather than half a sentence.
+- [ ] Tap the `?` beside the chip row. It says the four are not ranked.
+- [ ] Open a session planned **before this shipped** in history. No direction, no error.
+- [ ] Export, re-import onto a second device, and check a seeded phase still reads **Two goals**.
+
 ### The game problem, pinned (phase 2)
 
 - [ ] **Portrait, 667px, with both the `Problem` and `Expect` lines showing.** Do mode still

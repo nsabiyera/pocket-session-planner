@@ -84,6 +84,80 @@ export const spectrumDescription = (spectrum: PracticeSpectrum): string =>
 export const spectrumRank = (spectrum: PracticeSpectrum): number =>
   PRACTICE_SPECTRUM.indexOf(spectrum);
 
+// ---------------------------------------------------------------------------
+// Direction and targets
+// ---------------------------------------------------------------------------
+
+/**
+ * **What the players are playing towards** (ADR 0011 §2).
+ *
+ * The hole this fills is in `describeRepresentativeness`, and it was the one place in the app
+ * where a derived sentence claimed more than the record supported. A 4v4 possession box at
+ * 20 × 20 and a 4v4 to two goals at 20 × 20 were the *same record*, and the match comparison
+ * read both on identical terms — so `matched_up` was carrying the entire claim that a practice
+ * resembled the game, when direction is most of what makes an invasion game one.
+ *
+ * **Four values, and deliberately no ordering.** The practice spectrum is ordered because the
+ * FA publishes it in an order and because `describeSessionShape` is built on that; nothing
+ * here ranks. Whether one goal is more game-like than a line to dribble over depends entirely
+ * on the problem being posed, and it is not a comparison this app has standing to make.
+ * {@link PHASE_TARGETS} is a render order for a chip row, **not a scale**, and nothing derives
+ * a rank from its index.
+ *
+ * **Not the conditions, and not the numbers.** How you score sits in `PhaseConstraint` under
+ * the Task letter, where a coach's own words belong; how many play sits in `groupSize`. This
+ * answers only *what is there to play towards*, which is the part a schema can compare across
+ * sessions (ADR 0011 §2 as amended).
+ */
+export const PhaseTargetsSchema = z.enum(['two_goals', 'one_goal', 'lines', 'none']);
+export type PhaseTargets = z.infer<typeof PhaseTargetsSchema>;
+
+/** Render order for a four-across chip row. **Not a scale** — see the note above. */
+export const PHASE_TARGETS: readonly PhaseTargets[] = ['two_goals', 'one_goal', 'lines', 'none'];
+
+const TARGETS_LABELS: Record<PhaseTargets, string> = {
+  two_goals: 'Two goals',
+  one_goal: 'One goal',
+  lines: 'Lines or zones',
+  none: 'No target',
+};
+
+/** For a four-across chip row on a 375px screen, where the full label will not fit. */
+const TARGETS_SHORT_LABELS: Record<PhaseTargets, string> = {
+  two_goals: 'Two goals',
+  one_goal: 'One goal',
+  lines: 'Lines',
+  none: 'None',
+};
+
+const TARGETS_DESCRIPTIONS: Record<PhaseTargets, string> = {
+  two_goals: 'Both teams with something to attack and something to defend. The game.',
+  one_goal: 'One target, one direction — attack against defence, finishing, a phase of play.',
+  lines: 'An end zone to enter, a line to dribble over, a target player to find.',
+  none: 'Keep the ball. No direction to play in and nothing to score in — a rondo.',
+};
+
+export const targetsLabel = (targets: PhaseTargets): string => TARGETS_LABELS[targets];
+
+export const targetsShortLabel = (targets: PhaseTargets): string => TARGETS_SHORT_LABELS[targets];
+
+export const targetsDescription = (targets: PhaseTargets): string => TARGETS_DESCRIPTIONS[targets];
+
+/**
+ * The same four, phrased to sit inside a sentence: *"…at 38 m² a player, to two goals."*
+ *
+ * The button labels do not read as prose, and the match comparison is the one place this value
+ * has to. Same split, for the same reason, as `momentPhrase` in `capabilities.ts`.
+ */
+const TARGETS_PHRASES: Record<PhaseTargets, string> = {
+  two_goals: 'to two goals',
+  one_goal: 'to one goal',
+  lines: 'to lines or zones',
+  none: 'with nothing to score in',
+};
+
+export const targetsPhrase = (targets: PhaseTargets): string => TARGETS_PHRASES[targets];
+
 /**
  * The grid, as a coach paces it out.
  *

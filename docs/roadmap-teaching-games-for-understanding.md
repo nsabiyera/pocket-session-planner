@@ -1,6 +1,6 @@
 # Roadmap — Teaching Games for Understanding, as a spine the app can evidence
 
-- **Status:** **Phases 0, 1 and 2 built** (2026-09-15). Phases 3–6 proposed. Phase 1 went first,
+- **Status:** **Phases 0 to 3 built** (2026-09-15). Phases 4–6 proposed. Phase 1 went first,
   ahead of Phase 0, because none of the seven amendments touch it: they all concern fields in
   phases 2–6, and Phase 1 adds no field.
 - **Date:** 2026-09-15
@@ -331,6 +331,34 @@ the same reason: an invented problem is worse than none.
 This is the field the next three phases hang off, which is why it comes before the expensive ones.
 
 ### Phase 3 — Direction and targets
+
+> **Built, and it closed the claim it was written for.** `PhaseTargetsSchema` in `practice.ts`
+> with labels, short labels, descriptions and a sentence phrase; `SessionPhase.targets` and
+> `MethodologyPhaseTemplate.defaultTargets`, both nullable, both additive, no migration; carried
+> by `build-from-methodology`; a chip row in the phase editor; one clause in
+> `describeRepresentativeness`. 27 tests. Four things worth recording:
+>
+> - **The four values are deliberately unordered, and that is a real difference from the
+>   spectrum.** `PRACTICE_SPECTRUM` is ordered because the FA publishes it in an order and
+>   `describeSessionShape` is built on that ordering. Nothing ranks here: whether one goal is
+>   more game-like than a line to dribble over depends on the problem being posed. `PHASE_TARGETS`
+>   is a render order for a chip row, and a test says so out loud so nobody adds a `targetsRank`.
+> - **Null on the template means something weaker than null on `defaultSpectrum`.** There, null
+>   means *this template is not a practice*. Here it means only *this methodology has no
+>   opinion* — Play-Practice-Play's PRACTICE is an overload, and whether the coach runs it to a
+>   goal or as a rondo is genuinely theirs. Ten templates across the five presets are seeded;
+>   the rest say nothing, and a test pins `ppp-practice` at null for that reason.
+> - **Direction never earns a sentence of its own.** It rides on the end of whichever opening
+>   clause the representativeness line already had, and the silence guard is unchanged: *"you
+>   finished on a practice to two goals"* with no spectrum and no area says nothing about how
+>   the practice compared with a match. A test holds that.
+> - **A match period gets null, not `two_goals`.** A match plainly is played to two goals, but a
+>   period is not a practice design — which is exactly why `spectrum` is null there already, and
+>   the same reasoning applies unchanged.
+>
+> The test that matters most for what comes next: the two Whole-Part-Whole games are asserted to
+> agree on both spectrum and targets out of the box. If the presets disagreed on direction, the
+> Phase 4 comparison would be broken before a coach ever touched it.
 
 `SessionPhase.targets`, nullable, four values: `two_goals`, `one_goal`, `lines`, `none`. Seeded by
 `MethodologyPhaseTemplate.defaultTargets` exactly as `defaultSpectrum` is, so the default path

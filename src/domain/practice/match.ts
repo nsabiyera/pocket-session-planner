@@ -1,6 +1,8 @@
 import {
   relativePlayingArea,
   spectrumLabel,
+  targetsPhrase,
+  type PhaseTargets,
   type PracticeArea,
   type PracticeSpectrum,
 } from '../practice';
@@ -114,6 +116,15 @@ export interface Representativeness {
   readonly spectrum: PracticeSpectrum | null;
   /** m² per player in that practice, when the coach recorded both halves. */
   readonly practiceArea: number | null;
+  /**
+   * What they were playing towards (ADR 0011 §2).
+   *
+   * **A qualifier on the practice clause, never a sentence of its own.** *"You finished on a
+   * practice to two goals"* with no spectrum and no area says nothing about how the practice
+   * compared with a match, so a session carrying only this still gets silence — the guard in
+   * {@link describeRepresentativeness} is unchanged.
+   */
+  readonly targets: PhaseTargets | null;
   readonly band: AgeBand | null;
 }
 
@@ -129,21 +140,25 @@ export interface Representativeness {
  * Null when there is nothing honest to compare — no final practice, or no age band.
  */
 export function describeRepresentativeness(input: Representativeness): string | null {
-  const { spectrum, practiceArea, band } = input;
+  const { spectrum, practiceArea, targets, band } = input;
   if (spectrum === null && practiceArea === null) return null;
 
   const parts: string[] = [];
 
+  // Direction rides on the end of whichever opening clause there is, rather than earning one
+  // of its own. See the note on `Representativeness.targets`.
+  const towards = targets === null ? '' : `, ${targetsPhrase(targets)}`;
+
   if (spectrum !== null && practiceArea !== null) {
     parts.push(
-      `You finished on ${article(spectrum)} ${spectrumLabel(spectrum).toLowerCase()} practice at ${Math.round(practiceArea)} m² a player.`,
+      `You finished on ${article(spectrum)} ${spectrumLabel(spectrum).toLowerCase()} practice at ${Math.round(practiceArea)} m² a player${towards}.`,
     );
   } else if (spectrum !== null) {
     parts.push(
-      `You finished on ${article(spectrum)} ${spectrumLabel(spectrum).toLowerCase()} practice.`,
+      `You finished on ${article(spectrum)} ${spectrumLabel(spectrum).toLowerCase()} practice${towards}.`,
     );
   } else {
-    parts.push(`Your last practice ran at ${Math.round(practiceArea!)} m² a player.`);
+    parts.push(`Your last practice ran at ${Math.round(practiceArea!)} m² a player${towards}.`);
   }
 
   if (band !== null) {

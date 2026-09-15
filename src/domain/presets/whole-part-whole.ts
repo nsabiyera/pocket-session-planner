@@ -24,6 +24,7 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
   phaseTemplates: [
     {
       id: 'wpw-warmup',
+      defaultTargets: 'none',
       order: 0,
       defaultConstraints: [{ letter: 'equipment', text: 'A ball each' }],
       defaultSpectrum: 'unopposed',
@@ -38,6 +39,7 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
     },
     {
       id: 'wpw-whole-1',
+      defaultTargets: 'two_goals',
       order: 1,
       defaultConstraints: [],
       defaultSpectrum: 'matched_up',
@@ -62,6 +64,7 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
     },
     {
       id: 'wpw-part',
+      defaultTargets: 'none',
       order: 2,
       defaultConstraints: [{ letter: 'people', text: 'No defender until the technique is clean' }],
       defaultSpectrum: 'unopposed',
@@ -87,6 +90,7 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
     },
     {
       id: 'wpw-whole-2',
+      defaultTargets: 'two_goals',
       order: 3,
       defaultConstraints: [],
       defaultSpectrum: 'matched_up',

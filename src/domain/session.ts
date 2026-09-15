@@ -19,6 +19,7 @@ import {
   MAX_GROUP_SIZE,
   MIN_GROUP_SIZE,
   PhaseConstraintSchema,
+  PhaseTargetsSchema,
   PracticeAreaSchema,
   PracticeSpectrumSchema,
 } from './practice';
@@ -136,6 +137,15 @@ export const SessionPhaseSchema = z.object({
   spectrum: PracticeSpectrumSchema.nullable().default(null),
   /** The grid, in metres. See the note on `PracticeAreaSchema` about metres vs yards. */
   area: PracticeAreaSchema.nullable().default(null),
+  /**
+   * **What they were playing towards** (ADR 0011 §2). Null means the coach did not say, never
+   * *nothing to score in* — that is the explicit `none`, and the difference is the whole
+   * reason this is nullable rather than defaulted to a value.
+   *
+   * Additive, defaulted and not indexed, so a session planned before this parses unchanged
+   * and the match comparison simply reads as it did before.
+   */
+  targets: PhaseTargetsSchema.nullable().default(null),
   /** Players in *this practice* — not the squad, and not `focusPlayerIds`. */
   groupSize: z.number().int().min(MIN_GROUP_SIZE).max(MAX_GROUP_SIZE).nullable().default(null),
   /**

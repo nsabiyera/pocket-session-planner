@@ -190,6 +190,11 @@ const RATIONALES = {
     why: 'The FA’s four practice types, from no defender at all to the full game. Your methodology already answered it for this phase — change it if the practice you actually ran was different.',
     source: PRACTICE_DESIGN_SOURCE,
   },
+  'report:phase-targets': {
+    framework: PRACTICE_SPECTRUM,
+    why: 'What they play towards, so the match comparison knows a possession box from a game. The four are not ranked — whether one goal beats a line to dribble over depends on the problem, and the app has no view.',
+    source: PRACTICE_DESIGN_SOURCE,
+  },
   'report:relative-playing-area': {
     framework: PRACTICE_SPECTRUM,
     why: 'Area ÷ players, in metres. No "small" or "large" attached: the FA publishes no figures and the research disagrees with itself by a factor of three, so the number is yours to judge.',

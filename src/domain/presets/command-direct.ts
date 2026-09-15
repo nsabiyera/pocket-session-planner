@@ -27,6 +27,7 @@ export const COMMAND_DIRECT: MethodologyPreset = MethodologyPresetSchema.parse({
   phaseTemplates: [
     {
       id: 'cmd-warmup',
+      defaultTargets: 'none',
       order: 0,
       defaultConstraints: [{ letter: 'equipment', text: 'One ball each' }],
       defaultSpectrum: 'unopposed',
@@ -63,6 +64,7 @@ export const COMMAND_DIRECT: MethodologyPreset = MethodologyPresetSchema.parse({
     },
     {
       id: 'cmd-unopposed',
+      defaultTargets: 'none',
       order: 2,
       defaultConstraints: [],
       defaultSpectrum: 'unopposed',
@@ -91,6 +93,7 @@ export const COMMAND_DIRECT: MethodologyPreset = MethodologyPresetSchema.parse({
     },
     {
       id: 'cmd-game',
+      defaultTargets: 'two_goals',
       order: 4,
       defaultConstraints: [
         { letter: 'task', text: 'The technique has to appear before you can score' },

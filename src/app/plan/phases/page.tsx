@@ -53,6 +53,9 @@ import {
   PRACTICE_SPECTRUM,
   spectrumDescription,
   spectrumShortLabel,
+  targetsDescription,
+  targetsShortLabel,
+  PHASE_TARGETS,
 } from '@/domain/practice';
 import {
   phasesInOrder,
@@ -516,6 +519,36 @@ function PhaseSheet({
         <p className="card-meta">
           {draft.spectrum ? spectrumDescription(draft.spectrum) : 'Not set.'}
           <Why id="report:practice-spectrum" />
+        </p>
+      </div>
+
+      {/*
+        **Direction** (ADR 0011 §2), directly under the spectrum because the two are one
+        thought: how close to the game, and towards what. Same chip row, same take-it-back
+        gesture on the pressed chip, and the methodology has usually answered it already.
+
+        Four across fits at 375px on the short labels, which is why `targetsShortLabel`
+        exists at all. **Nothing renders this in Do mode** — a coach standing in the practice
+        can see where the goals are. It is here and on `/review`, and the field's docstring
+        says so, so that nobody later "completes" the phase card with it.
+      */}
+      <div className="field">
+        <label id="phase-targets">What are they playing towards?</label>
+        <div className="row row--wrap" role="group" aria-labelledby="phase-targets">
+          {PHASE_TARGETS.map((targets) => (
+            <Chip
+              key={targets}
+              label={targetsShortLabel(targets)}
+              pressed={draft.targets === targets}
+              onClick={() =>
+                setDraft({ ...draft, targets: draft.targets === targets ? null : targets })
+              }
+            />
+          ))}
+        </div>
+        <p className="card-meta">
+          {draft.targets ? targetsDescription(draft.targets) : 'Not set.'}
+          <Why id="report:phase-targets" />
         </p>
       </div>
 

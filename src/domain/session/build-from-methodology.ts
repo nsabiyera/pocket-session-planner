@@ -142,6 +142,7 @@ function phaseFromTemplate(
     // preset has no idea how many turned up or how big the pitch is, and guessing an area
     // would put a number the coach never chose into a season report.
     spectrum: template.defaultSpectrum,
+    targets: template.defaultTargets,
     area: null,
     groupSize: null,
     organisation: '',
@@ -209,6 +210,7 @@ export function rescaleSessionPhases(
     // Only the durations are read back out of these, so the practice design is irrelevant
     // here — but carrying the phase's own spectrum keeps the pseudo-template honest.
     defaultSpectrum: phase.spectrum,
+    defaultTargets: phase.targets,
     defaultProgressions: [...phase.progressions],
     defaultRegressions: [...phase.regressions],
     defaultConstraints: phase.constraints.map((constraint) => ({ ...constraint })),
