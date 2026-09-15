@@ -1,8 +1,12 @@
 # Roadmap — Teaching Games for Understanding, as a spine the app can evidence
 
-- **Status:** **Phases 0 to 5 built** (2026-09-15). Phase 6 proposed. Phase 1 went first,
-  ahead of Phase 0, because none of the seven amendments touch it: they all concern fields in
-  phases 2–6, and Phase 1 adds no field.
+- **Status:** **All seven phases built** (2026-09-15) — Phase 0 and phases 1 to 6. Phase 1 went
+  first, ahead of Phase 0, because none of the seven amendments touched it: they all concerned
+  fields in phases 2–6, and Phase 1 added no field. **What remains is a pitch.** Every phase
+  here is either a derived line that is silent below its floor or a field that is absent until a
+  coach fills it in, which means a broken one looks exactly like a quiet one — see
+  [`field-test-checklist.md`](field-test-checklist.md), which now has a block per phase, and the
+  note at the end of this file.
 - **Date:** 2026-09-15
 - **Decided in:** [ADR 0011](adr/0011-teaching-games-for-understanding.md) (Accepted,
   2026-09-15, **amended 2026-09-15**), which this document sequences. The two disagreed in seven
@@ -500,6 +504,33 @@ four options plus the phase's existing tags has to stay inside a sheet that must
 glance, so if a coach's objective wants six options, the objective is two objectives.
 
 ### Phase 6 — Did it come back in the game
+
+> **Built, and the gate turned out to be a different kind of gate.** `session/transfer.ts`, one
+> banner on `/review`, 21 tests. Four things the build settled:
+>
+> - **The floor is structural, not statistical.** Every other report in this app waits for a
+>   sample — eight observations, twelve interventions, six sessions. This one waits for a
+>   *shape*: an isolated practice **and** a game in the same session. Below that there is no
+>   comparison to make at any sample size; above it, one observation is a real record of one
+>   thing appearing once. So there is no `MIN_` constant here, deliberately, and it is the first
+>   report in the app without one.
+> - **The unit is a tag, not a coaching point.** Any tag the coach tapped — a coaching point,
+>   one of Phase 5's options, a capability, a corner attribute — is tracked the same way. That
+>   makes the report general for free, and it is why `MAX_TRANSFER_LINES` exists: the tag bank
+>   is wide enough that a busy session carries a dozen distinct tags with a long tail of
+>   singletons.
+> - **`phase_of_play` counts as a game and `custom` does not.** A phase of play is opposed,
+>   directional and has a goal to attack, which is a game form even though it is not a whole
+>   game. A coach's own phase kind could be anything, and guessing would file half the report
+>   under an assumption.
+> - **Four headline wordings rather than one template.** *"1 thing logged in the practice, 0 of
+>   them logged in a game as well"* is what a template produces and it reads as though a machine
+>   wrote it. This is the sentence a coach judges the feature by, so the singular and the
+>   none-came-back cases get their own words.
+>
+> The amendment-5 silence rule earns its keep here more than anywhere: a session with no
+> isolated practice is *most* sessions, so a line explaining its own absence would have been the
+> line a coach saw most often.
 
 The last phase, and the only one that can be confidently wrong, which is why it is last.
 

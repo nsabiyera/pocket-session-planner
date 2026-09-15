@@ -247,6 +247,27 @@ length, as if a huddle were in front of you.
 
 ## Teaching Games for Understanding (ADR 0011)
 
+### Did it come back in the game? (phase 6)
+
+Needs a session shaped like Whole-Part-Whole or Play-Practice-Play: something isolated, and a
+game afterwards.
+
+- [ ] Run one, tagging the **same** coaching point in both the isolated practice and the final
+      game. Review: the headline counts it, and the line reads *"logged twice in the practice
+      and once in a game"*.
+- [ ] Tag something in the practice and **nothing** in the game. The line says *"nothing in a
+      game"* and **not** *"it did not transfer"*. Read it as a coach who had a busy second half:
+      does it feel like an accusation? It must not.
+- [ ] Tag something **only** in the final game. It appears, with *"nothing in the practice"* —
+      this is the case a drill-first session never produces.
+- [ ] Review a session with **no** isolated practice — two games and a warm-up. There is **no
+      transfer section at all**, not a line saying there is not enough evidence. Most sessions
+      are this shape, so this is the case that decides whether the report is noise.
+- [ ] Review a session that never reached a game. Same: nothing.
+- [ ] Tag heavily — coaching points, options, capabilities, corners — and check the list stops
+      at six lines rather than filling the screen.
+- [ ] A note logged in a **huddle** or a water break appears nowhere in this report.
+
 ### The options, as chips (phase 5)
 
 - [ ] Build a session from a chip with options — *When to keep it and when to go* is the purest.

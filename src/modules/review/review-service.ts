@@ -44,6 +44,13 @@ import { questioningSummary, type QuestioningSummary } from '@/domain/questionin
 import { describeRepresentativeness } from '@/domain/practice/match';
 import { comparePair, describePair, pairedPhases } from '@/domain/session/pairing';
 import {
+  describeAppearance,
+  describeTransfer,
+  hasEnoughForTransfer,
+  MAX_TRANSFER_LINES,
+  transferRecord,
+} from '@/domain/session/transfer';
+import {
   adjustmentSummary,
   choiceSummary,
   representativeness,
@@ -156,6 +163,15 @@ export interface ReviewDraftData {
    */
   pairedGames: string[];
   /**
+   * **Did the thing you isolated come back in the game?** (ADR 0011 §§6–7.)
+   *
+   * Null unless this session both isolated something and got to a game — a *shape* rather than
+   * a sample, so a single observation is enough and most sessions still get nothing. Null
+   * renders nothing at all rather than *"not enough evidence"*, which for the commonest case
+   * would be the line a coach sees most often.
+   */
+  transfer: { headline: string; appearances: string[] } | null;
+  /**
    * *"5 coaching points delivered. 1 checked."*
    *
    * The check-for-understanding line (ADR 0009). Counts of two things the coach did, across
@@ -222,6 +238,7 @@ export async function loadReviewData(
     choice: choiceSummary(session),
     representativeness: describeRepresentativeness(representativeness(session, squad?.ageGroup)),
     pairedGames: pairedPhases(session).map((pair) => describePair(comparePair(pair))),
+    transfer: transferOf(session, observations),
     coachingPointChecks: coachingPointChecks(
       session.phases.flatMap((phase) => phase.coachingPoints),
     ),
@@ -548,4 +565,25 @@ export async function dropAction(
     resolvedAt: at,
     updatedAt: at,
   });
+}
+
+/**
+ * The transfer report, or null when this session cannot make the comparison.
+ *
+ * Sliced to {@link MAX_TRANSFER_LINES}: the tag bank is wide — this phase's coaching points,
+ * the misconception, the options, six capabilities and the corner attributes are all one tap
+ * away — so a busy session carries a long tail of singletons, and a report a coach scrolls is
+ * a report a coach skims.
+ */
+function transferOf(
+  session: Session,
+  observations: readonly Observation[],
+): ReviewDraftData['transfer'] {
+  const record = transferRecord({ phases: session.phases, observations });
+  if (!hasEnoughForTransfer(record)) return null;
+
+  return {
+    headline: describeTransfer(record),
+    appearances: record.tags.slice(0, MAX_TRANSFER_LINES).map(describeAppearance),
+  };
 }
