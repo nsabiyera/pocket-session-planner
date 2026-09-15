@@ -91,6 +91,8 @@ export const WHOLE_PART_WHOLE: MethodologyPreset = MethodologyPresetSchema.parse
     {
       id: 'wpw-whole-2',
       defaultTargets: 'two_goals',
+      // The discipline of this methodology, finally as data rather than only as a prompt.
+      pairsWith: 'wpw-whole-1',
       order: 3,
       defaultConstraints: [],
       defaultSpectrum: 'matched_up',

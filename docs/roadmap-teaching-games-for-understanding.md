@@ -1,6 +1,6 @@
 # Roadmap — Teaching Games for Understanding, as a spine the app can evidence
 
-- **Status:** **Phases 0 to 3 built** (2026-09-15). Phases 4–6 proposed. Phase 1 went first,
+- **Status:** **Phases 0 to 4 built** (2026-09-15). Phases 5 and 6 proposed. Phase 1 went first,
   ahead of Phase 0, because none of the seven amendments touch it: they all concern fields in
   phases 2–6, and Phase 1 adds no field.
 - **Date:** 2026-09-15
@@ -383,6 +383,44 @@ for the representativeness sentence, and the docstring says so, so that nobody l
 Do mode by adding it to the phase card.
 
 ### Phase 4 — The Whole-Part-Whole pair
+
+> **Built, and it corrected this roadmap's own amendment.** The pairing is
+> `MethodologyPhaseTemplate.pairsWith` as planned — but **the comparison does need one field on
+> the session after all**, and the reason is the argument this roadmap used against ADR 0011's
+> version of §3.
+>
+> Phase 0 amendment 3 said the comparison would need no session state because the two phases
+> could be found through `fromTemplateId`. That is true only while the methodology document
+> still exists and still says the same thing. A methodology can be edited or deleted, and
+> `MethodologySnapshot` exists precisely so that cannot rewrite history — so a review line
+> that appeared or vanished depending on whether the coach later tidied their methodologies
+> would be the same drift, in a new place. `SessionPhase.pairedWithPhaseId` is therefore
+> resolved at build time and stored.
+>
+> **That is still not what ADR 0011 asked for**, and the distinction is the whole point: a
+> `PhaseId` pointing at another phase of the same session is not a frozen game form. The
+> comparison reads both phases *live*, so editing either one changes what the app says, which
+> is what makes the warning in the editor work at all.
+>
+> Four other things the build settled:
+>
+> - **Backwards-only makes a cycle unrepresentable rather than merely invalid.** Both
+>   refinements — `refineTemplates` and `refineSession` — require the target to have a lower
+>   `order`, so a loop cannot be expressed, let alone stored. That was worth more than a
+>   cycle-detection pass.
+> - **`cloneMethodology` needed the remap the roadmap predicted**, and one thing it did not:
+>   the methodology id has to be generated *before* the template ids to keep `FakeIdGenerator`'s
+>   sequence unchanged, or several existing tests silently assert different uuids.
+> - **Five comparisons, and `organisation` is not one of them.** ADR 0004 left that field
+>   unstructured so nothing would try, and a diff of two paragraphs is noise a coach cannot act
+>   on. There is a test asserting the prose is ignored.
+> - **A gap is not a difference.** A grid on one phase and nothing on the other is passed over
+>   in silence, which is why the no-difference sentence says *everything recorded* rather than
+>   *everything*.
+>
+> One wording bug found by reading the test output rather than by a failure: *"is missing 1 of
+> the first game's condition"* is not English. It ships as *"drops 1 condition the first had"*,
+> parallel with *"has 1 condition the first did not"*.
 
 The first phase with real cost, and the one ADR 0011 specified most expensively.
 

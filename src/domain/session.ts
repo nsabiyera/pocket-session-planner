@@ -176,6 +176,25 @@ export const SessionPhaseSchema = z.object({
   organisation: optionalText(500).default(''),
   /** Copied from the methodology template, shown in Do mode. */
   coachPrompts: z.array(nonEmptyText(200)).max(6).default([]),
+  /**
+   * **The earlier phase of this session that this one is supposed to match** (ADR 0011 §3).
+   *
+   * Resolved from `MethodologyPhaseTemplate.pairsWith` when the session is built, and
+   * **deliberately stored rather than looked up later.** The roadmap's Phase 0 amendment said
+   * the comparison would need no session state and be derived through `fromTemplateId`; that
+   * is true only while the methodology document still exists and still says the same thing.
+   * A methodology can be edited or deleted, and `MethodologySnapshot` exists precisely so
+   * that cannot rewrite history — a review line that appeared or vanished depending on
+   * whether the coach later tidied their methodologies would be the same drift in a new place.
+   *
+   * So this is a `PhaseId` within this session, and nothing outside the session is consulted
+   * to read it. It is **not** a frozen copy of the practice: the comparison reads both phases
+   * live, so editing either one changes what the app says, which is the entire point.
+   *
+   * Points backwards, at a phase with a lower `order` — see the note on `pairsWith` for why
+   * that rules out a cycle rather than merely discouraging one.
+   */
+  pairedWithPhaseId: PhaseIdSchema.nullable().default(null),
   /** Provenance back to the methodology that generated this phase. */
   fromTemplateId: PhaseTemplateIdSchema.nullable().default(null),
   sourceActionId: CarryForwardActionIdSchema.nullable().default(null),
@@ -303,6 +322,38 @@ function refineSession(session: z.infer<z.ZodObject<typeof SessionShape>>, ctx: 
           message: `Phase focus player ${playerId} is not a focus player of the session.`,
         });
       }
+    }
+  });
+
+  /*
+    The pairing has to resolve within this session, point backwards, and not point at itself —
+    the same three rules `refineTemplates` holds the methodology to, restated here because a
+    session can be edited long after the methodology that built it.
+  */
+  const orderById = new Map(session.phases.map((phase) => [phase.id, phase.order]));
+  session.phases.forEach((phase, index) => {
+    if (phase.pairedWithPhaseId === null) return;
+
+    const issue = (message: string) =>
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['phases', index, 'pairedWithPhaseId'],
+        message,
+      });
+
+    if (phase.pairedWithPhaseId === phase.id) {
+      issue('A phase cannot be paired with itself.');
+      return;
+    }
+
+    const pairedOrder = orderById.get(phase.pairedWithPhaseId);
+    if (pairedOrder === undefined) {
+      issue('Its paired phase is not in this session.');
+      return;
+    }
+
+    if (pairedOrder >= phase.order) {
+      issue('A paired phase must come earlier in the session.');
     }
   });
 

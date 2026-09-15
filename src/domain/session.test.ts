@@ -347,3 +347,45 @@ describe('checking for understanding on a session written before it existed', ()
     expect(parsed.checkedAt).toBeNull();
   });
 });
+
+describe('the paired-phase invariant', () => {
+  const twoPhases = (laterOver: Record<string, unknown>) =>
+    SessionSchema.safeParse({
+      ...aSession(),
+      phases: [aPhase('first', { order: 0 }), { ...aPhase('second', { order: 1 }), ...laterOver }],
+    });
+
+  it('accepts a pairing that points backwards', () => {
+    expect(twoPhases({ pairedWithPhaseId: phaseId('first') }).success).toBe(true);
+  });
+
+  it('rejects a pairing that points forwards', () => {
+    // Backwards-only is what makes a cycle unrepresentable rather than merely invalid.
+    const result = SessionSchema.safeParse({
+      ...aSession(),
+      phases: [
+        { ...aPhase('first', { order: 0 }), pairedWithPhaseId: phaseId('second') },
+        aPhase('second', { order: 1 }),
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a phase paired with itself', () => {
+    expect(twoPhases({ pairedWithPhaseId: phaseId('second') }).success).toBe(false);
+  });
+
+  it('rejects a pairing that names a phase this session does not have', () => {
+    // The re-planning case: a coach deletes the first WHOLE and the second still points at
+    // it. Rejecting the write is right — a dangling pair produces no comparison at all, which
+    // looks exactly like a methodology that never asked for one.
+    expect(twoPhases({ pairedWithPhaseId: phaseId('deleted') }).success).toBe(false);
+  });
+
+  it('is unpaired by default, so every session written before this parses unchanged', () => {
+    const session = aSession();
+    for (const phase of session.phases) {
+      expect(phase.pairedWithPhaseId).toBeNull();
+    }
+  });
+});

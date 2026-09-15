@@ -84,9 +84,23 @@ export function buildSessionFromMethodology(
   );
   const durations = scalePhaseDurations(templates, totalMin, stepMin);
 
-  const phases = templates.map((template, index) =>
+  const built = templates.map((template, index) =>
     phaseFromTemplate(template, index, durations.get(template.id), ids),
   );
+
+  /*
+    Resolve the methodology's pairing into phase ids, in a second pass because the phase a
+    template points at may not have been built yet on the first. A template whose pair was
+    dropped — an optional phase the coach declined, say — resolves to null and simply has no
+    comparison, rather than carrying an id this session does not contain.
+  */
+  const phaseIdByTemplateId = new Map(
+    built.map(({ phase }, index) => [templates[index]!.id, phase.id] as const),
+  );
+  const phases = built.map(({ phase, pairsWith }) => ({
+    ...phase,
+    pairedWithPhaseId: pairsWith === null ? null : (phaseIdByTemplateId.get(pairsWith) ?? null),
+  }));
 
   return SessionSchema.parse({
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -111,13 +125,19 @@ export function buildSessionFromMethodology(
   });
 }
 
+/**
+ * One phase, plus the template pairing its session has not resolved yet.
+ *
+ * The pairing is returned beside the phase rather than set on it because it names a *template*
+ * and the phase needs a *phase id* — see the second pass in `buildSessionFromMethodology`.
+ */
 function phaseFromTemplate(
   template: MethodologyPhaseTemplate,
   order: number,
   minutes: number | undefined,
   ids: IdGenerator,
-): SessionPhase {
-  return {
+): { phase: SessionPhase; pairsWith: MethodologyPhaseTemplate['pairsWith'] } {
+  const phase: SessionPhase = {
     id: asPhaseId(ids.uuid()),
     order,
     kind: template.kind,
@@ -150,7 +170,11 @@ function phaseFromTemplate(
     coachPrompts: [...template.coachPrompts],
     fromTemplateId: template.id,
     sourceActionId: null,
+    // Set by the second pass, which is the only place the target phase id is known.
+    pairedWithPhaseId: null,
   };
+
+  return { phase, pairsWith: template.pairsWith };
 }
 
 function methodologyCoachingPoint(text: string, ids: IdGenerator): CoachingPoint {
@@ -215,6 +239,9 @@ export function rescaleSessionPhases(
     defaultRegressions: [...phase.regressions],
     defaultConstraints: phase.constraints.map((constraint) => ({ ...constraint })),
     defaultPlayerChoice: phase.playerChoice,
+    // A rescale is a duration change. The pairing lives on the phases, which this function
+    // returns untouched apart from their minutes, so the pseudo-template carries none.
+    pairsWith: null,
     isOptional: false,
   }));
 

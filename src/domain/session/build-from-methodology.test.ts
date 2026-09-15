@@ -229,3 +229,38 @@ describe('practice design', () => {
     }
   });
 });
+
+describe('resolving the methodology pairing onto the session', () => {
+  it('turns the template pairing into a phase id of this session', () => {
+    // The template names a *template*; the session needs a *phase*. Resolved in a second pass
+    // because the phase a template points at may not have been built on the first.
+    const session = buildSessionFromMethodology(WHOLE_PART_WHOLE, {
+      squad: aSquad(),
+      objective,
+      now: T0,
+      ids: new FakeIdGenerator('dddd'),
+    });
+
+    const phases = phasesInOrder(session);
+    const later = phases.find((phase) => phase.fromTemplateId === 'wpw-whole-2')!;
+    const earlier = phases.find((phase) => phase.fromTemplateId === 'wpw-whole-1')!;
+
+    expect(later.pairedWithPhaseId).toBe(earlier.id);
+    expect(earlier.pairedWithPhaseId).toBeNull();
+    // And it is a phase id, not the template slug it came from.
+    expect(later.pairedWithPhaseId).not.toBe('wpw-whole-1');
+  });
+
+  it('leaves every phase unpaired for a methodology that pairs nothing', () => {
+    const session = buildSessionFromMethodology(PLAY_PRACTICE_PLAY, {
+      squad: aSquad(),
+      objective,
+      now: T0,
+      ids: new FakeIdGenerator('eeee'),
+    });
+
+    for (const phase of session.phases) {
+      expect(phase.pairedWithPhaseId, phase.title).toBeNull();
+    }
+  });
+});

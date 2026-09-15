@@ -42,6 +42,7 @@ import { coachingPointChecks, type CoachingPointChecks } from '@/domain/coaching
 import { followUpSummary, type DeliveredPoint, type FollowUpSummary } from '@/domain/checking';
 import { questioningSummary, type QuestioningSummary } from '@/domain/questioning';
 import { describeRepresentativeness } from '@/domain/practice/match';
+import { comparePair, describePair, pairedPhases } from '@/domain/session/pairing';
 import {
   adjustmentSummary,
   choiceSummary,
@@ -146,6 +147,15 @@ export interface ReviewDraftData {
    */
   representativeness: string | null;
   /**
+   * *"Both games match on everything recorded, so the comparison holds."* — or what changed
+   * between the two, when something did (ADR 0011 §3).
+   *
+   * **Empty for four of the five presets**, which pair nothing, so the screen shows nothing
+   * rather than explaining that this session had no pair to compare. One entry per pair: a
+   * methodology with two pairs would render two lines, and only Whole-Part-Whole ships one.
+   */
+  pairedGames: string[];
+  /**
    * *"5 coaching points delivered. 1 checked."*
    *
    * The check-for-understanding line (ADR 0009). Counts of two things the coach did, across
@@ -211,6 +221,7 @@ export async function loadReviewData(
     stepCoverage: stepCoverage(session.run?.practiceAdjustments ?? []),
     choice: choiceSummary(session),
     representativeness: describeRepresentativeness(representativeness(session, squad?.ageGroup)),
+    pairedGames: pairedPhases(session).map((pair) => describePair(comparePair(pair))),
     coachingPointChecks: coachingPointChecks(
       session.phases.flatMap((phase) => phase.coachingPoints),
     ),

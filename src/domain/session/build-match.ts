@@ -229,6 +229,7 @@ function blankPhase(ids: IdGenerator): SessionPhase {
     coachPrompts: [],
     fromTemplateId: null,
     sourceActionId: null,
+    pairedWithPhaseId: null,
   };
 }
 

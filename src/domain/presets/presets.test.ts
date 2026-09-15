@@ -435,3 +435,59 @@ describe('what the presets say the players play towards', () => {
     expect(practice.defaultTargets).toBeNull();
   });
 });
+
+describe('the paired games', () => {
+  it('is Whole-Part-Whole, and only Whole-Part-Whole', () => {
+    // The discipline is in one methodology. The other four make no claim of transfer between
+    // two phases, so a pairing on any of them would invent a comparison nobody asked for.
+    for (const preset of METHODOLOGY_PRESETS) {
+      const paired = preset.phaseTemplates.filter((template) => template.pairsWith !== null);
+      expect(paired.length, preset.id).toBe(preset.id === 'whole-part-whole' ? 1 : 0);
+    }
+  });
+
+  it('points the second WHOLE at the first, and never forwards', () => {
+    const wpw = METHODOLOGY_PRESETS.find((preset) => preset.id === 'whole-part-whole')!;
+    const templates = orderedTemplates(wpw);
+    const second = templates.find((template) => template.pairsWith !== null)!;
+    const first = templates.find((template) => template.id === second.pairsWith)!;
+
+    expect(second.id).toBe('wpw-whole-2');
+    expect(first.id).toBe('wpw-whole-1');
+    // Backwards only, which is what makes a cycle unrepresentable rather than merely invalid.
+    expect(first.order).toBeLessThan(second.order);
+  });
+
+  it('rejects a pairing that points forwards, at itself, or at nothing', () => {
+    const wpw = METHODOLOGY_PRESETS.find((preset) => preset.id === 'whole-part-whole')!;
+    const bend = (mutate: (templates: typeof wpw.phaseTemplates) => unknown[]) =>
+      MethodologyPresetSchema.safeParse({ ...wpw, phaseTemplates: mutate(wpw.phaseTemplates) });
+
+    // Forwards: the first WHOLE claiming to match the second.
+    expect(
+      bend((templates) =>
+        templates.map((template) =>
+          template.id === 'wpw-whole-1' ? { ...template, pairsWith: 'wpw-whole-2' } : template,
+        ),
+      ).success,
+    ).toBe(false);
+
+    // Itself.
+    expect(
+      bend((templates) =>
+        templates.map((template) =>
+          template.id === 'wpw-whole-2' ? { ...template, pairsWith: 'wpw-whole-2' } : template,
+        ),
+      ).success,
+    ).toBe(false);
+
+    // A template that is not there — the hand-edited import case.
+    expect(
+      bend((templates) =>
+        templates.map((template) =>
+          template.id === 'wpw-whole-2' ? { ...template, pairsWith: 'wpw-nope' } : template,
+        ),
+      ).success,
+    ).toBe(false);
+  });
+});

@@ -398,6 +398,18 @@ export default function ReviewPage() {
           ) : null}
 
           {/*
+            **Was the second game the same game?** Only Whole-Part-Whole pairs its phases, so
+            for four of the five presets this renders nothing at all — and nothing is the right
+            answer, rather than a line explaining that this session had no pair.
+          */}
+          {data.pairedGames.map((sentence) => (
+            <div key={sentence} className="banner banner--signal">
+              {sentence}
+              <Why id="report:paired-phases" />
+            </div>
+          ))}
+
+          {/*
             The FA's fourth area. Last of the derived lines because it is the newest and the
             least evidenced - the app is counting a toggle, and the `Why?` says so.
           */}

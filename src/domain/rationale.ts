@@ -190,6 +190,11 @@ const RATIONALES = {
     why: 'The FA’s four practice types, from no defender at all to the full game. Your methodology already answered it for this phase — change it if the practice you actually ran was different.',
     source: PRACTICE_DESIGN_SOURCE,
   },
+  'report:paired-phases': {
+    framework: PRACTICE_DESIGN,
+    why: 'Whole-Part-Whole only claims transfer if its two games are the same game. This compares what you recorded on both — size, numbers, practice type, direction, conditions — and never stops you changing one.',
+    source: PLANNING_MODEL_SOURCE,
+  },
   'report:phase-targets': {
     framework: PRACTICE_SPECTRUM,
     why: 'What they play towards, so the match comparison knows a possession box from a game. The four are not ranked — whether one goal beats a line to dribble over depends on the problem, and the app has no view.',

@@ -247,6 +247,32 @@ length, as if a huddle were in front of you.
 
 ## Teaching Games for Understanding (ADR 0011)
 
+### The same game, twice (phase 4)
+
+Whole-Part-Whole only. Plan a session with it and the two WHOLE games arrive paired.
+
+- [ ] Open the **second** WHOLE in the phase editor. It reads *"Both games match on everything
+      recorded, so the comparison holds."*
+- [ ] Shrink its grid by 5 m and **watch the line change while you are still in the sheet** —
+      before saving. That immediacy is the whole point of the editor surface.
+- [ ] **Save anyway.** It saves. Nothing is blocked, nothing is reverted, no confirm dialog.
+- [ ] Open the **first** WHOLE instead and change *its* grid. The same comparison appears —
+      breaking the first game breaks the claim just as thoroughly as breaking the second.
+- [ ] Add a condition to one game only. The line says *"has 1 condition the first did not"* or
+      *"drops 1 condition the first had"*, and the grammar reads properly in both.
+- [ ] Clear the spectrum on one of the two. The line stops mentioning practice type rather than
+      reporting it as a change — **a gap is not a difference**.
+- [ ] Run and review it. The same sentence appears once on `/review`, under the
+      representativeness line.
+- [ ] Plan a **Play-Practice-Play** session. No pairing line anywhere, in the editor or the
+      review — four of the five presets pair nothing and should say nothing.
+- [ ] **Save your own version of Whole-Part-Whole** from Settings, then plan with the clone. The
+      pairing still works. This is the case the clone remap exists for, and a failure here shows
+      up as an error naming a field you have never seen.
+- [ ] Delete the first WHOLE from a planned session. The app refuses the write rather than
+      leaving a pairing pointing at nothing — check the message is legible, not a Zod dump.
+- [ ] Open a Whole-Part-Whole session planned **before this shipped**. No pairing, no error.
+
 ### Direction and targets (phase 3)
 
 - [ ] Open a phase from a **Play-Practice-Play** plan. The `What are they playing towards?` row
