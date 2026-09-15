@@ -19,6 +19,7 @@ function draftFixture(over: Partial<Session> = {}): Session {
       sourceActionId: null,
       principleId: null,
       tacticalProblem: null,
+      options: [],
       commonMisconception: null,
     },
     now: T0,

@@ -13,6 +13,7 @@ const objective = {
   sourceActionId: null,
   principleId: null,
   tacticalProblem: null,
+  options: [],
   commonMisconception: null,
 };
 

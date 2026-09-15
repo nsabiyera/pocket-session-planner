@@ -103,6 +103,7 @@ export async function startDraft(
     // own objective gets null for both, and the two Do-mode lines simply do not appear —
     // silence over invention (ADR 0009 §1, ADR 0011 §1).
     tacticalProblem: template?.tacticalProblem ?? null,
+    options: [...(template?.options ?? [])],
     commonMisconception: template?.commonMisconception ?? null,
   };
 
@@ -166,6 +167,7 @@ export async function startMatchDraft(
     // own objective gets null for both, and the two Do-mode lines simply do not appear —
     // silence over invention (ADR 0009 §1, ADR 0011 §1).
     tacticalProblem: template?.tacticalProblem ?? null,
+    options: [...(template?.options ?? [])],
     commonMisconception: template?.commonMisconception ?? null,
   };
 
@@ -237,6 +239,7 @@ export async function addFixtures(
         sourceActionId: null,
         principleId: null,
         tacticalProblem: null,
+        options: [],
         commonMisconception: null,
       },
       match: details,

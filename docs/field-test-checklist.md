@@ -247,6 +247,23 @@ length, as if a huddle were in front of you.
 
 ## Teaching Games for Understanding (ADR 0011)
 
+### The options, as chips (phase 5)
+
+- [ ] Build a session from a chip with options — *When to keep it and when to go* is the purest.
+      Open the observation sheet: **The options** is the third group, under *This phase* and *The
+      mistake you expected*.
+- [ ] **Logging is still two taps.** Player, token, done — the options are there to be used, not
+      to be required, and a log with no option tapped saves exactly as before.
+- [ ] Tap an option. Open the session in history: the observation carries it verbatim as a tag.
+- [ ] **Nothing happens.** No offer bar, no regression prompt, no toast beyond the usual. An
+      option is not an error, and only the predicted misconception routes anywhere.
+- [ ] Build from **Scanning before receiving**. There is **no** options group at all — not an
+      empty heading. Same for a typed objective.
+- [ ] **Portrait, 667px.** The sheet still shows the three rating tokens without scrolling past
+      them to reach the tags. This is the group that could break the sheet.
+- [ ] Read the chips as a coach who has not read this file. Does the first one look like the
+      right answer? If it does, the order is doing the wrong job and phase 5 needs rethinking.
+
 ### The same game, twice (phase 4)
 
 Whole-Part-Whole only. Plan a session with it and the two WHOLE games arrive paired.

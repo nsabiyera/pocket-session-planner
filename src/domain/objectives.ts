@@ -59,6 +59,31 @@ export interface ObjectiveTemplate {
    * misconception keeps, and it matters for the same reason.
    */
   readonly tacticalProblem: string;
+  /**
+   * **The choices a player actually has in that problem** (ADR 0011 §4, as amended).
+   *
+   * The one genuinely new thing in §4's decision observation, and it ships as a **tag** rather
+   * than a field: the options appear as chips on the observation sheet, on the same rail
+   * `commonMisconception` already runs on, so recording which one happened stays one tap
+   * inside a log the coach was making anyway.
+   *
+   * **The app never says which option was right.** There is no correct-option field, no
+   * ranking, no correctness index, and nothing downstream counts them against each other.
+   * Some of these are plainly the thing a coach would rather not see — *"Dived in"*, *"Ran
+   * towards"*, *"Stood off"* — and the app still does not say so. The coach's view of it goes
+   * in the `good` / `working` / `struggled` token beside the tag, where a judgement belongs to
+   * the person making it.
+   *
+   * **Ordered as they occur in the game, and never sorted.** A coach reads the first chip as
+   * the recommended answer, so the order has to mean something other than preference.
+   *
+   * **Empty is a statement.** Two objectives have none: *scanning before receiving* and
+   * *communication and leadership* pose a perception and a habit rather than a choice between
+   * discrete actions, and inventing three alternatives for them would put the app's invention
+   * on the observation sheet. Same discipline as `defaultProgressions` shipping empty for the
+   * phases whose whole method is that nothing changes.
+   */
+  readonly options: readonly string[];
   /** Where the points belong when carry-forward has to place them. */
   readonly preferredPhaseKind: PhaseKind;
   /**
@@ -90,6 +115,16 @@ export const MAX_MISCONCEPTION = 160;
 export const MAX_TACTICAL_PROBLEM = 120;
 
 /**
+ * An option has to fit a chip on the observation sheet, beside this phase's coaching points,
+ * on a phone held in one hand during a game. Forty characters is about as long as that row
+ * can carry without wrapping to three lines.
+ */
+export const MAX_OPTION = 40;
+
+/** Above this the sheet stops being scannable, which costs the two-tap log it exists for. */
+export const MAX_OPTIONS_PER_OBJECTIVE = 4;
+
+/**
  * What an objective is about: one of the four moments, or the player rather than the team.
  *
  * **The moments come from `game-model.ts` rather than being spelled again here.** One
@@ -117,6 +152,7 @@ export function momentOf(theme: ObjectiveTheme): Moment | null {
 export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   {
     id: 'playing-out-from-the-back',
+    options: ['Played short', 'Went long', 'Held it and waited'],
     text: 'Playing out from the back',
     theme: 'offensive_organisation',
     successCriteria: [
@@ -139,6 +175,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'creating-width',
+    options: ['Stayed wide', 'Came inside', 'Switched it'],
     text: 'Creating and using width',
     theme: 'offensive_organisation',
     successCriteria: ['We switch the play at least once per attack', 'Wingers stay high and wide'],
@@ -157,6 +194,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'combination-play',
+    options: ['Set and spun', 'Played round', 'Went alone'],
     text: 'Combination play in tight areas',
     theme: 'offensive_organisation',
     successCriteria: [
@@ -178,6 +216,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'finishing',
+    options: ['Hit it first time', 'Took a touch', 'Squared it'],
     text: 'Finishing in the box',
     theme: 'offensive_organisation',
     successCriteria: ['Shots are on target', 'Someone attacks the near post every cross'],
@@ -196,6 +235,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'scanning',
+    // A perception and a habit, not a choice between discrete actions.
+    options: [],
     text: 'Scanning before receiving',
     theme: 'individual',
     successCriteria: ['Players look over their shoulder before the ball arrives'],
@@ -214,6 +255,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'first-touch',
+    options: ['Away from pressure', 'Back to safety', 'Into the turn'],
     text: 'First touch out of your feet',
     theme: 'individual',
     successCriteria: ['First touch goes into space, not under the body'],
@@ -232,6 +274,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'one-v-one-attacking',
+    options: ['Went outside', 'Went inside', 'Passed backwards'],
     text: '1v1 attacking',
     theme: 'individual',
     successCriteria: ['Players attack the defender rather than passing backwards'],
@@ -249,6 +292,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'pressing-as-a-unit',
+    options: ['Pressed together', 'Pressed alone', 'Dropped off'],
     text: 'Pressing as a unit',
     theme: 'defensive_organisation',
     successCriteria: ['The press is triggered together', 'We win the ball in their half'],
@@ -267,6 +311,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'defending-one-v-one',
+    options: ['Delayed them', 'Dived in', 'Showed them one way'],
     text: 'Defending 1v1',
     theme: 'defensive_organisation',
     successCriteria: ['Defenders delay rather than dive in'],
@@ -284,6 +329,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'compact-defensive-shape',
+    options: ['Tucked in', 'Followed the ball', 'Held the line'],
     text: 'Staying compact',
     theme: 'defensive_organisation',
     successCriteria: ['No gaps between the lines', 'The far winger tucks in'],
@@ -302,6 +348,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'counter-attacking',
+    options: ['Ran beyond', 'Ran towards', 'Slowed it down'],
     text: 'Counter-attacking',
     // We have just won it. This is the attacking transition.
     theme: 'transition_to_attack',
@@ -321,6 +368,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'reaction-to-losing-the-ball',
+    options: ['Pressed straight away', 'Recovered goal-side', 'Stood off'],
     text: 'Reacting to losing the ball',
     // We have just lost it. The defensive transition — the counter-press.
     theme: 'transition_to_defence',
@@ -340,6 +388,8 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'communication',
+    // A perception and a habit, not a choice between discrete actions.
+    options: [],
     text: 'Communication and leadership',
     theme: 'individual',
     successCriteria: ['Players give information before receiving'],
@@ -358,6 +408,7 @@ export const OBJECTIVE_LIBRARY: readonly ObjectiveTemplate[] = [
   },
   {
     id: 'game-understanding',
+    options: ['Went forward', 'Kept it', 'Went back to go forward'],
     text: 'When to keep it and when to go',
     theme: 'offensive_organisation',
     successCriteria: ['Fewer forced forward passes', 'We recycle rather than lose it'],

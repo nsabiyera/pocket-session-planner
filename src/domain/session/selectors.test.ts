@@ -32,6 +32,7 @@ function startedSession(preset = PLAY_PRACTICE_PLAY) {
       sourceActionId: null,
       principleId: null,
       tacticalProblem: null,
+      options: [],
       commonMisconception: null,
     },
     now: T0,

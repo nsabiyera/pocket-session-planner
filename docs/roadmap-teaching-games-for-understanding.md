@@ -1,6 +1,6 @@
 # Roadmap — Teaching Games for Understanding, as a spine the app can evidence
 
-- **Status:** **Phases 0 to 4 built** (2026-09-15). Phases 5 and 6 proposed. Phase 1 went first,
+- **Status:** **Phases 0 to 5 built** (2026-09-15). Phase 6 proposed. Phase 1 went first,
   ahead of Phase 0, because none of the seven amendments touch it: they all concern fields in
   phases 2–6, and Phase 1 adds no field.
 - **Date:** 2026-09-15
@@ -451,6 +451,28 @@ edited one of its two games.
 game is running, is the definition of a line a coach learns to dismiss.
 
 ### Phase 5 — The option, as a chip
+
+> **Built, and the sheet grew one group.** `ObjectiveTemplate.options` on twelve of the fourteen
+> entries, snapshotted onto `Objective`, offered as a third tag group in Do mode — under *This
+> phase* and *The mistake you expected*, above the capabilities. No new field on `Observation`,
+> no new store, no form, and the log is the same two taps it was. Three things worth recording:
+>
+> - **Two objectives ship no options, and that is the finding.** *Scanning before receiving* and
+>   *communication and leadership* pose a **perception** and a **habit**, not a choice between
+>   discrete actions. Inventing three alternatives for them would have put the app's invention on
+>   the screen a coach uses most, so `options` is an array with an empty default rather than a
+>   required two-to-four — and a test pins both at empty.
+> - **Some options are the thing a coach would rather not see**, and the app still does not say
+>   so. *"Dived in"*, *"Ran towards"*, *"Stood off"* are genuine alternatives that happen in the
+>   game; the coach's view of them goes in the `good` / `working` / `struggled` token beside the
+>   tag, where a judgement belongs to the person making it. A test asserts no option carries
+>   *best*, *correct*, *right*, *wrong*, *should* or an asterisk.
+> - **An option that duplicates a coaching point is dropped**, not shown twice. The sheet already
+>   dedupes this phase's points against the capability and corner banks, and the options join
+>   that same `used` set rather than getting their own rule.
+>
+> Two existing order assertions in `run-service.test.ts` had to move, which is the honest cost of
+> adding a group: the sheet's group order is a tested fact, and *The options* now sits third.
 
 `ObjectiveTemplate.options` — two to four per objective, the choices genuinely available in that
 problem — rendered on the observation sheet by the same route `commonMisconception` takes, and

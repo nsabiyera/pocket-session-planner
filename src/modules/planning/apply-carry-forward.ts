@@ -73,6 +73,7 @@ export function applyCarryForwardActions(
               sourceActionId: action.id,
               principleId: null,
               tacticalProblem: revisited?.tacticalProblem ?? null,
+              options: [...(revisited?.options ?? [])],
               commonMisconception: revisited?.commonMisconception ?? null,
             },
           };

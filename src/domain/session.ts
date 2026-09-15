@@ -26,7 +26,12 @@ import {
 import { MatchDetailsSchema, refineMatchDetails } from './match-day';
 import { EffortQualitySchema } from './morphocycle';
 import { MethodologySnapshotSchema, PhaseKindSchema } from './methodology';
-import { MAX_MISCONCEPTION, MAX_TACTICAL_PROBLEM } from './objectives';
+import {
+  MAX_MISCONCEPTION,
+  MAX_OPTION,
+  MAX_OPTIONS_PER_OBJECTIVE,
+  MAX_TACTICAL_PROBLEM,
+} from './objectives';
 import {
   DurationMinSchema,
   IsoDateTimeSchema,
@@ -99,6 +104,16 @@ export const ObjectiveSchema = z.object({
    * `commonMisconception` and `principleId` both took.
    */
   tacticalProblem: optionalText(MAX_TACTICAL_PROBLEM).nullable().default(null),
+  /**
+   * **The options this session's problem offers** (ADR 0011 §4), snapshotted off the library
+   * beside the problem itself.
+   *
+   * An array with a default rather than nullable, because unlike the problem there is no
+   * difference worth preserving between *the coach did not say* and *there are none*: either
+   * way the sheet shows no option chips. Empty is the honest value for a typed objective, for
+   * the two library entries that pose no choice, and for every session planned before this.
+   */
+  options: z.array(nonEmptyText(MAX_OPTION)).max(MAX_OPTIONS_PER_OBJECTIVE).default([]),
 });
 export type Objective = z.infer<typeof ObjectiveSchema>;
 
