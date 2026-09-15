@@ -43,6 +43,7 @@ import type {
   PocketDataStore,
   ReviewRepository,
   SessionRepository,
+  SquadListOptions,
   SquadRepository,
   StoreName,
 } from './data-store';
@@ -165,8 +166,10 @@ class FakeRepository<TId extends string, T extends { id: string; deletedAt?: Iso
 }
 
 class FakeSquadRepository extends FakeRepository<SquadId, Squad> implements SquadRepository {
-  async list(options?: ListOptions): Promise<Squad[]> {
-    const sorted = this.all().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  async list(options?: SquadListOptions): Promise<Squad[]> {
+    const sorted = this.all()
+      .filter((squad) => options?.includeArchived === true || squad.archivedAt === undefined)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     return applyListOptions(sorted, options, (squad) => squad.updatedAt);
   }
 }
@@ -245,15 +248,20 @@ class FakeSessionRepository
       .sort((a, b) => b.scheduledFor.localeCompare(a.scheduledFor));
   }
 
-  async findActive(): Promise<Session | undefined> {
+  async findActive(squadId?: SquadId): Promise<Session | undefined> {
     const candidates = this.all().filter(
       (session) => session.deletedAt === undefined && ACTIVE_STATUSES.has(session.status),
     );
-    // An in-progress run always wins: a coach standing on a pitch does not want the draft
-    // they started on the bus.
+    // An in-progress run always wins, and across every squad: a coach standing on a pitch
+    // does not want the draft they started on the bus, whoever it was with.
     const running = candidates.find((session) => session.status === 'in_progress');
     if (running) return running;
-    return candidates.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+
+    const scoped =
+      squadId === undefined
+        ? candidates
+        : candidates.filter((session) => session.squadId === squadId);
+    return scoped.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
   }
 
   async findDraft(squadId: SquadId): Promise<Session | undefined> {

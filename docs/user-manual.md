@@ -14,6 +14,7 @@ device unless you export it.
 - [Reviewing it](#reviewing-it)
 - [Between sessions](#between-sessions)
 - [Players and progress](#players-and-progress)
+- [More than one team](#more-than-one-team)
 - [The two FA models](#the-two-fa-models)
 - [Your data](#your-data)
 - [The extra planning set](#the-extra-planning-set)
@@ -21,7 +22,9 @@ device unless you export it.
 
 ## Before your first session
 
-On first open the app asks for one thing: **a squad name**. That is the whole setup.
+On first open the app asks for one thing: **a squad name**. That is the whole setup. If you
+coach more than one side, add the others later in `Settings -> Squads` — see
+[More than one team](#more-than-one-team).
 
 Then go to **Squad** and add your players. Either type them one at a time, or tap
 `Paste a whole team list` and paste the names from wherever you already keep them. Lines or
@@ -353,6 +356,47 @@ phases, everything you logged, and its review.
   one capability you intend to chase.
 - **Timeline** — everything you have logged about them, newest first.
 
+## More than one team
+
+If you coach two sides — the U12s and the U14s, a first team and reserves — keep them apart.
+They are separate squads, and everything belongs to one of them: its own players, its own
+sessions, its own observations and its own carried-forward points. Running two teams through
+one roster is the thing to avoid, because the progress reports then average two age groups
+together and tell you nothing about either.
+
+`Settings -> Squads` is where you set them up.
+
+**Add another squad** asks for a name and nothing else. The new squad starts empty and becomes
+the one you are on, so the next thing to do is go to **Squad** and add its players.
+
+**Switch to** moves the whole app across. Today, Plan, Squad, History and Review all change to
+the other team — including its half-finished draft, if you left one, because each squad keeps
+its own. Nothing about the team you are leaving changes.
+
+The squad you are on is named at the top of **Today** and at the top of **Squad**. Those are
+the two places to glance at if you are not sure, and it is worth the glance before you plan.
+
+**You cannot switch while a session is running.** Finish it or abandon it first. This is
+deliberate: every observation you log in Do mode is filed against the session's team, and
+switching halfway through is the one thing that could file a Tuesday's notes under the wrong
+side.
+
+**Rename** changes the name and nothing else — safe at any time, including mid-season.
+
+**Archive** is for a team you have finished with. It leaves the list, and **nothing is
+deleted**: every player, session, observation, review and 4 Corner check stays exactly where it
+is, the export still carries the lot, and `Show archived squads` → `Restore` brings it back
+whole. The toast offers `Undo` if you tapped it by mistake.
+
+Two things Archive will refuse, and both say so:
+
+- **Your only squad.** There would be nothing left to show you. Add the new team first, then
+  archive the old one.
+- **A squad that is mid-session.** Finish the session first.
+
+There is no delete. Rename covers a name typed wrong and Archive covers a season ended, and
+between them there is no case worth a button that can destroy a term of notes in one tap.
+
 ## The two FA models
 
 **The 4 Corner Model** — technical/tactical, physical, psychological, social — exists to stop
@@ -376,8 +420,9 @@ Everything is stored on the device, in the browser, and works with no signal.
   no browser chrome, and the home-screen icon gets shortcuts for `Start a session`, `Resume`
   and `Squad`.
 - **Export everything** writes a single JSON file — `psp-u12-reds-2026-05-19.json` — that
-  contains your squad, players, sessions, observations, reviews, carried points, 4 Corner
-  checks and capability scans. **It is the only backup there is.** Do it at the end of a term.
+  contains your squads, players, sessions, observations, reviews, carried points, 4 Corner
+  checks and capability scans. Every squad, archived ones included. **It is the only backup
+  there is.** Do it at the end of a term.
 - **Import a file** previews what it will do before touching anything: how many rows are new,
   updated or unchanged, and anything it will drop and why. Importing your own export is a
   clean no-op, and importing another coach's squad merges alongside yours rather than

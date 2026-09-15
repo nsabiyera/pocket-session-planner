@@ -302,6 +302,37 @@ will not get kept, and every number downstream of it is then absent rather than 
 - [ ] Run the same unresolved point through three sessions and confirm the planner warns:
       *"change the practice, not the point."*
 
+## Several squads (ADR 0010)
+
+Everything here needs two squads with real data in both, so seed the second one before you
+start: a couple of players and one completed session is enough.
+
+- [ ] `Settings -> Squads` on a one-squad install shows that squad marked `Current` and offers
+      `Add another squad`. It is visible **before** there is a second team to switch to.
+- [ ] Add a second squad. It becomes the current one, and `/squad` is empty — the roster you
+      just left is not leaking into it.
+- [ ] `Switch to` the first squad. Today's title, `/squad`'s roster, `/sessions` and the
+      carry-forward chips all change together, with no reload.
+- [ ] Leave a half-finished draft on each squad, then switch back and forth. **Each squad gets
+      its own draft**, and `/plan` never shows you the other team's.
+- [ ] Start a session, then try to switch squads. It refuses and names the running session.
+      Finish or abandon it and the switch works.
+- [ ] Log observations on one squad. Switch to the other and confirm `/squad/player` and the
+      corner-balance report show nothing of them. **This is the one that matters** — the
+      reports are the reason the squads are separate at all.
+- [ ] Rename a squad mid-season. The name changes on Today and `/squad` and nothing else moves.
+- [ ] Archive the squad you are not on. It leaves the list, the toast offers `Undo`, and the
+      squad you are on is untouched.
+- [ ] `Show archived squads` → `Restore`. The roster, the sessions and the observations are all
+      still there, word for word.
+- [ ] Try to archive your only squad. It refuses rather than dropping you to `Name your squad`.
+- [ ] Export with an archived squad present, wipe the browser's site data, and import the file.
+      **The archived squad comes back, archived.** The export is the only backup there is.
+- [ ] Import your own export twice over a two-squad install. The second import is a clean
+      no-op — no duplicate copy of the archived season.
+- [ ] Trigger a crash with two squads loaded and confirm **both** squad names are redacted in
+      the report, the archived one included.
+
 ## The tactical periodization flag (ADR 0008)
 
 The switched-off state is the default, so it is the one every other section is already

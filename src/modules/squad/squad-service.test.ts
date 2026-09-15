@@ -3,10 +3,13 @@ import {
   addPlayer,
   addPlayersFromList,
   archivePlayer,
+  archiveSquad,
   createSquad,
   deletePlayerIfUnreferenced,
   parseRosterLines,
   restorePlayer,
+  restoreSquad,
+  switchSquad,
   updatePlayer,
   updateSquad,
 } from './squad-service';
@@ -15,6 +18,8 @@ import { FakeClock } from '@/lib/fake-clock';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { asPlayerId, asSquadId } from '@/domain/ids';
 import { anAction, anObservation, playerId, T0, testId } from '@/test/builders';
+import { commitAndStart, startDraft } from '../planning/planning-service';
+import { isErr, unwrap } from '@/lib/result';
 import type { ServiceContext } from '../context';
 
 let ctx: ServiceContext;
@@ -88,6 +93,147 @@ describe('updateSquad', () => {
 
   it('returns undefined for a squad that does not exist', async () => {
     expect(await updateSquad(ctx, asSquadId(testId('ghost')), { name: 'X' })).toBeUndefined();
+  });
+});
+
+describe('several squads', () => {
+  /** Two squads — the shape ADR 0010 exists for. */
+  const twoSquads = async () => ({
+    reds: await createSquad(ctx, { name: 'U12 Reds' }),
+    greens: await createSquad(ctx, { name: 'U14 Greens' }),
+  });
+
+  it('switches which squad is current', async () => {
+    const { reds, greens } = await twoSquads();
+
+    expect(unwrap(await switchSquad(ctx, greens.id)).id).toBe(greens.id);
+    expect((await ctx.store.meta.get())?.activeSquadId).toBe(greens.id);
+
+    expect(unwrap(await switchSquad(ctx, reds.id)).id).toBe(reds.id);
+    expect((await ctx.store.meta.get())?.activeSquadId).toBe(reds.id);
+  });
+
+  it('switching to the squad already current is an Ok no-op', async () => {
+    const { reds } = await twoSquads();
+    await switchSquad(ctx, reds.id);
+    (ctx.clock as FakeClock).advanceMinutes(10);
+
+    expect(unwrap(await switchSquad(ctx, reds.id)).id).toBe(reds.id);
+  });
+
+  it('refuses a squad that is not there, or is archived', async () => {
+    const { reds, greens } = await twoSquads();
+    await switchSquad(ctx, reds.id);
+    unwrap(await archiveSquad(ctx, greens.id));
+
+    const ghost = await switchSquad(ctx, asSquadId(testId('ghost')));
+    expect(isErr(ghost) && ghost.error.kind).toBe('squad_not_found');
+
+    const archived = await switchSquad(ctx, greens.id);
+    expect(isErr(archived) && archived.error.kind).toBe('squad_archived');
+    // The refusal changed nothing.
+    expect((await ctx.store.meta.get())?.activeSquadId).toBe(reds.id);
+  });
+
+  it('refuses to switch mid-run, and says which session is in the way', async () => {
+    // The rule that makes several teams safe: every observation logged in Do mode is filed
+    // against the session's squad, so switching mid-run is the one move that could file a
+    // Tuesday's evidence under the wrong team.
+    const { reds, greens } = await twoSquads();
+    const draft = unwrap(await startDraft(ctx, { squadId: reds.id, objectiveText: 'Pressing' }));
+    const started = unwrap(await commitAndStart(ctx, draft.id));
+
+    const result = await switchSquad(ctx, greens.id);
+    expect(isErr(result) && result.error).toEqual({
+      kind: 'session_running',
+      sessionTitle: started.title,
+    });
+    expect((await ctx.store.meta.get())?.activeSquadId).toBe(reds.id);
+  });
+
+  it('lets a draft for another squad stand in nobody’s way', async () => {
+    // Drafts are one per squad, not one per device, so both survive the switch untouched.
+    const { reds, greens } = await twoSquads();
+    const redsDraft = unwrap(await startDraft(ctx, { squadId: reds.id, objectiveText: 'Press' }));
+
+    expect(unwrap(await switchSquad(ctx, greens.id)).id).toBe(greens.id);
+    expect(await ctx.store.sessions.get(redsDraft.id)).toBeDefined();
+  });
+
+  it('archives a squad without deleting a thing', async () => {
+    const { reds, greens } = await twoSquads();
+    const player = await addPlayer(ctx, { squadId: greens.id, name: 'Kai' });
+    const draft = unwrap(await startDraft(ctx, { squadId: greens.id, objectiveText: 'Press' }));
+    await switchSquad(ctx, reds.id);
+
+    const archived = unwrap(await archiveSquad(ctx, greens.id));
+    expect(archived.archivedAt).toBe(T0);
+    expect(await ctx.store.squads.list()).toHaveLength(1);
+    expect(await ctx.store.squads.list({ includeArchived: true })).toHaveLength(2);
+
+    // The roster and the season are exactly where they were.
+    expect(await ctx.store.players.get(player.id)).toBeDefined();
+    expect(await ctx.store.sessions.get(draft.id)).toBeDefined();
+  });
+
+  it('moves the pointer off a squad it archives', async () => {
+    const { reds, greens } = await twoSquads();
+    await switchSquad(ctx, greens.id);
+
+    unwrap(await archiveSquad(ctx, greens.id));
+    expect((await ctx.store.meta.get())?.activeSquadId).toBe(reds.id);
+  });
+
+  it('refuses to archive the only squad', async () => {
+    // Otherwise the app drops to `Name your squad` with a full database behind it, which
+    // reads as "my season is gone".
+    const reds = await createSquad(ctx, { name: 'U12 Reds' });
+
+    const result = await archiveSquad(ctx, reds.id);
+    expect(isErr(result) && result.error.kind).toBe('last_squad');
+    expect(await ctx.store.squads.list()).toHaveLength(1);
+  });
+
+  it('refuses to archive a squad that is mid-session', async () => {
+    const { greens } = await twoSquads();
+    const draft = unwrap(await startDraft(ctx, { squadId: greens.id, objectiveText: 'Press' }));
+    unwrap(await commitAndStart(ctx, draft.id));
+
+    const result = await archiveSquad(ctx, greens.id);
+    expect(isErr(result) && result.error.kind).toBe('session_running');
+  });
+
+  it('archives another squad happily while one is mid-session', async () => {
+    const { reds, greens } = await twoSquads();
+    const draft = unwrap(await startDraft(ctx, { squadId: reds.id, objectiveText: 'Press' }));
+    unwrap(await commitAndStart(ctx, draft.id));
+
+    expect(unwrap(await archiveSquad(ctx, greens.id)).archivedAt).toBe(T0);
+  });
+
+  it('archiving an already archived squad is an Ok no-op, and a ghost is not found', async () => {
+    const { greens } = await twoSquads();
+    unwrap(await archiveSquad(ctx, greens.id));
+
+    expect(unwrap(await archiveSquad(ctx, greens.id)).id).toBe(greens.id);
+
+    const ghost = await archiveSquad(ctx, asSquadId(testId('ghost')));
+    expect(isErr(ghost) && ghost.error.kind).toBe('squad_not_found');
+  });
+
+  it('restores without leaving a null key behind, and does not make it current', async () => {
+    const { reds, greens } = await twoSquads();
+    await switchSquad(ctx, reds.id);
+    unwrap(await archiveSquad(ctx, greens.id));
+
+    const restored = await restoreSquad(ctx, greens.id);
+    // Absent, not null — the same rule `restorePlayer` follows (ADR 0001).
+    expect(restored && 'archivedAt' in restored).toBe(false);
+    expect(await ctx.store.squads.list()).toHaveLength(2);
+    // Back in the switcher, but switching to it is a tap of its own.
+    expect((await ctx.store.meta.get())?.activeSquadId).toBe(reds.id);
+
+    expect(await restoreSquad(ctx, asSquadId(testId('ghost')))).toBeUndefined();
   });
 });
 

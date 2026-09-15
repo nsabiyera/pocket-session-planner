@@ -3,8 +3,12 @@
 Bugs and dead code found by reading, not by a failing test. Each entry names the symptom a coach
 would see, why the suite is green anyway, and the smallest honest fix.
 
-Turned up by [`review-checking-for-understanding.md`](review-checking-for-understanding.md), which
-depends on two of them.
+Issues 1 to 4 were turned up by
+[`review-checking-for-understanding.md`](review-checking-for-understanding.md), which depends on
+two of them. Issue 5 was turned up by
+[`roadmap-teaching-games-for-understanding.md`](roadmap-teaching-games-for-understanding.md),
+whose problem 3 is the general case: a plan-time field arrives with the pitch-side surface that
+renders it, or it joins this list.
 
 > **Issues 1 to 3 are fixed** (2026-09-10), by ADR 0009 phase 5, which could not build its two
 > reports until they were. Kept here rather than deleted: the interesting part is not the fix but
@@ -150,3 +154,46 @@ seen one.
 distinction is aspirational and say so where it is declared. For `coachPrompts`, it is one line
 in Do mode next to the `Expect` line that ADR 0009 phase 2 added — the same shape, in the same
 place, and the field is already populated.
+
+---
+
+## 5. `SessionPhase.organisation` is typed by the coach and read back by nothing
+
+- **Severity:** low in the model, high in the coach's opinion of the app. Nothing is wrong on
+  screen; something the coach wrote is simply gone from every screen.
+- **Found:** 2026-09-15, while writing
+  [`roadmap-teaching-games-for-understanding.md`](roadmap-teaching-games-for-understanding.md)
+  problem 3.
+
+The sibling of issue 4's `coachPrompts`, and worse in one way: a preset wrote those, whereas
+**this one the coach typed themselves.**
+
+`organisation` is the free-text half of ADR 0004 — the field that decision argued hardest to
+keep, on the grounds that *"the detail a schema should not chase has to go somewhere"*. It is
+500 characters, it holds *"two neutrals, keeper joins in when we score"*, and it is written on
+`/plan/phases:674`.
+
+No screen renders it. Not Do mode, not `/sessions/detail`, not `/review`:
+
+```
+$ grep -rn "organisation" src/app | grep -v layout.tsx | grep -v plan/phases
+$
+```
+
+So the one place a coach records how the practice is actually set up is write-only. It survives
+in the export, because the transfer envelope carries whole session documents — which means the
+data is not lost, only unreadable without exporting the database and opening the JSON.
+
+**Why the suite is green.** `organisation` has a default and no invariant, so every schema test
+round-trips it happily, and the phase-editor test asserts the field is written. Nothing tests
+that anything reads it, which is the same hole issues 3 and 4 fell through: the suite verifies
+the write and the shape, never the round trip to a screen.
+
+**Fix.** One line in Do mode, on the phase card, collapsed by default — it is prose and the
+phase card is glanceable, so it cannot be pinned open the way the *Expect* line is. The cheaper
+half-fix is `/sessions/detail`, which is already the read-only "what was planned" screen and has
+no glance constraint at all; that at least makes it recoverable without a JSON export.
+
+**Do not** solve this by structuring the field. ADR 0004 settled that, and
+[`roadmap-teaching-games-for-understanding.md`](roadmap-teaching-games-for-understanding.md)
+problem 2 settles it again for the TGfU fields that would have re-proposed it.

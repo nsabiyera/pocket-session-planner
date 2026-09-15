@@ -45,6 +45,7 @@ import type {
   PocketDataStore,
   ReviewRepository,
   SessionRepository,
+  SquadListOptions,
   SquadRepository,
   StoreName,
 } from '../ports/data-store';
@@ -235,8 +236,10 @@ class IdbRepository<TId extends string, T extends { id: string; deletedAt?: IsoD
 const squadRange = (squadId: string) => IDBKeyRange.bound([squadId, ''], [squadId, '￿']);
 
 class IdbSquadRepository extends IdbRepository<SquadId, Squad> implements SquadRepository {
-  async list(options?: ListOptions): Promise<Squad[]> {
-    const sorted = (await this.all()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  async list(options?: SquadListOptions): Promise<Squad[]> {
+    const sorted = (await this.all())
+      .filter((squad) => options?.includeArchived === true || squad.archivedAt === undefined)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     return applyListOptions(sorted, options, (squad) => squad.updatedAt);
   }
 }
@@ -307,8 +310,7 @@ class IdbSessionRepository extends IdbRepository<SessionId, Session> implements 
       .sort((a, b) => b.scheduledFor.localeCompare(a.scheduledFor));
   }
 
-  async findActive(): Promise<Session | undefined> {
-    // Across every squad: the coach has one session in flight, whoever it is with.
+  async findActive(squadId?: SquadId): Promise<Session | undefined> {
     const candidates: Session[] = [];
     for (const status of ACTIVE_STATUSES) {
       const rows = await this.fromIndex('by-status', status);
@@ -317,11 +319,16 @@ class IdbSessionRepository extends IdbRepository<SessionId, Session> implements 
       }
     }
 
-    // An in-progress run always wins: a coach standing on a pitch does not want the draft
-    // they started on the bus.
+    // An in-progress run always wins, and across every squad: the coach has one session in
+    // flight, whoever it is with, and they do not want the draft they started on the bus.
     const running = candidates.find((session) => session.status === 'in_progress');
     if (running) return running;
-    return candidates.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+
+    const scoped =
+      squadId === undefined
+        ? candidates
+        : candidates.filter((session) => session.squadId === squadId);
+    return scoped.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
   }
 
   async findDraft(squadId: SquadId): Promise<Session | undefined> {

@@ -6,6 +6,7 @@ import { showToast } from '../_components/toast-host';
 import { InstallRow } from '../_components/install-prompt';
 import { FeedbackBox } from '../_components/feedback-box';
 import { CrashReports } from '../_components/crash-reports';
+import { SquadsPanel } from '../_components/squads-panel';
 import {
   getServiceContext,
   periodizationEnabled,
@@ -34,11 +35,15 @@ type ThemeChoice = 'system' | 'light' | 'dark';
 type ContrastChoice = 'system' | 'normal' | 'high';
 
 /**
- * Settings: appearance, storage, and the export/import bridge.
+ * Settings: squads, appearance, storage, and the export/import bridge.
  *
  * With no backend, the JSON file is the only route between devices *and* the only backup, so
  * it gets the most space on this screen — and the storage row exists because IndexedDB is
  * evictable by default and a coach deserves to know whether that has been mitigated.
+ *
+ * Squads lead, above appearance: which team the app is about is the only setting here that
+ * changes what every other screen shows (ADR 0010), and a coach with two teams answers it far
+ * more often than they pick a theme.
  */
 export default function SettingsPage() {
   const state = useAppState();
@@ -111,6 +116,8 @@ export default function SettingsPage() {
       <ScreenHead eyebrow="Settings" title="Preferences" />
 
       <InstallRow />
+
+      <SquadsPanel />
 
       <Segmented
         legend="Theme"
