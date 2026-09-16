@@ -49,6 +49,7 @@ import {
   hasEnoughForTransfer,
   MAX_TRANSFER_LINES,
   transferRecord,
+  transferSubject,
 } from '@/domain/session/transfer';
 import {
   adjustmentSummary,
@@ -570,16 +571,22 @@ export async function dropAction(
 /**
  * The transfer report, or null when this session cannot make the comparison.
  *
- * Sliced to {@link MAX_TRANSFER_LINES}: the tag bank is wide — this phase's coaching points,
- * the misconception, the options, six capabilities and the corner attributes are all one tap
- * away — so a busy session carries a long tail of singletons, and a report a coach scrolls is
- * a report a coach skims.
+ * The subject is derived here rather than defaulted inside `transferRecord`, so that the one
+ * decision the report turns on — *which tags are evidence about this practice* — is visible at
+ * the call site instead of being something a caller can forget to pass.
+ *
+ * Sliced to {@link MAX_TRANSFER_LINES}: a session can name ten coaching points per phase, so
+ * even the narrowed subject has a long tail, and a report a coach scrolls is one a coach skims.
  */
 function transferOf(
   session: Session,
   observations: readonly Observation[],
 ): ReviewDraftData['transfer'] {
-  const record = transferRecord({ phases: session.phases, observations });
+  const record = transferRecord({
+    phases: session.phases,
+    subject: transferSubject(session),
+    observations,
+  });
   if (!hasEnoughForTransfer(record)) return null;
 
   return {

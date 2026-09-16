@@ -192,7 +192,7 @@ const RATIONALES = {
   },
   'report:transfer': {
     framework: PRACTICE_DESIGN,
-    why: 'Where each tag you tapped turned up: in the isolated practice, in a game, or both. It reports the record and nothing more — a point you coached hard is a point you were too busy to log.',
+    why: 'Where the things you planned turned up: in the isolated practice, in a game after it, or both. Only your coaching points, predicted mistake and options count, and a game before the practice is a diagnosis, not a return.',
     source: PLANNING_MODEL_SOURCE,
   },
   'report:paired-phases': {

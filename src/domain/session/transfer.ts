@@ -20,6 +20,29 @@ import type { PhaseId } from '../ids';
  * absence in the record*, because a coach coaching a point is a coach not logging. So the
  * sentences say *"nothing logged in a game"* and never *"it did not transfer"*.
  *
+ * ---
+ *
+ * **Two narrowings, because the first cut of this report joined too much.**
+ *
+ * **It counts only what the session named.** The observation sheet's tag bank is wide, and most
+ * of it is generic: six capabilities and the corner attributes are one tap away in every session
+ * ever planned. Counting those made the report answer a question nobody asked — *did "running
+ * with the ball" come back?* — when the practice had isolated something else entirely. So the
+ * join is restricted to {@link transferSubject}: this session's coaching points, its predicted
+ * misconception and the options its problem offers. Those are the tags a coach wrote down
+ * *before* the session as the thing they were working on, which is exactly what makes an
+ * appearance afterwards mean something. Everything else is still logged, still on the player's
+ * timeline, still in the corner counts — it is simply not evidence about *this* practice.
+ *
+ * **A game before the practice is a diagnosis, not a return.** Whole-Part-Whole opens with a
+ * WHOLE whose entire job is to find the problem, and Play-Practice-Play opens with a PLAY. Both
+ * are games, and counting them as *"logged in a game"* let the report claim a behaviour came
+ * back when it had only ever turned up on the way in. A game therefore counts only when it runs
+ * **after** the first isolated phase — {@link phaseRoles}, which needs `order` and is why
+ * {@link phaseRole} is no longer enough on its own. Whole-Part-Whole's `pairedWithPhaseId` gets
+ * no separate branch: its second WHOLE is after the PART by construction, so ordering already
+ * picks exactly the phase the pairing would have named.
+ *
  * **The gate is structural rather than statistical.** Every other report in this app waits for
  * a sample — eight observations, twelve interventions, six sessions. This one waits for a
  * *shape*: an isolated practice **and** a game in the same session. Below that there is no
@@ -52,13 +75,39 @@ const GAME_KINDS: ReadonlySet<PhaseKind> = new Set<PhaseKind>([
   'game',
 ]);
 
+/**
+ * The role a phase kind can play, before order is taken into account.
+ *
+ * On its own this is not enough to file an observation — a `game` here is any game form,
+ * including the one that ran before the practice. {@link phaseRoles} is the one to call.
+ */
 export function phaseRole(kind: PhaseKind): PhaseRole {
   if (ISOLATED_KINDS.has(kind)) return 'isolated';
   return GAME_KINDS.has(kind) ? 'game' : 'neither';
 }
 
+/**
+ * Every phase's role in this session, with the games before the practice demoted to `neither`.
+ *
+ * "Before the practice" is measured against the **first** isolated phase, not the nearest one: a
+ * session that isolates twice is still one arc, and a game between the two blocks is a return
+ * from the first of them. The module note explains why the pairing needs no branch here.
+ */
+export function phaseRoles(phases: readonly TransferPhase[]): Map<PhaseId, PhaseRole> {
+  const isolated = phases.filter((phase) => ISOLATED_KINDS.has(phase.kind));
+  const practiceAt = isolated.length > 0 ? Math.min(...isolated.map((p) => p.order)) : null;
+
+  const roles = new Map<PhaseId, PhaseRole>();
+  for (const phase of phases) {
+    const byKind = phaseRole(phase.kind);
+    const demoted = byKind === 'game' && (practiceAt === null || phase.order <= practiceAt);
+    roles.set(phase.id, demoted ? 'neither' : byKind);
+  }
+  return roles;
+}
+
 export interface TagAppearance {
-  /** The tag as the coach tapped it — a coaching point, an option, a capability, verbatim. */
+  /** In the plan's wording — a coaching point, the misconception, or one of the options. */
   readonly tag: string;
   readonly inPractice: number;
   readonly inGame: number;
@@ -66,27 +115,92 @@ export interface TagAppearance {
 
 export interface TransferRecord {
   readonly hasIsolatedPractice: boolean;
+  /** A game **after** the practice. A session that only played on the way in has none. */
   readonly hasGame: boolean;
-  /** Tags seen in an isolated practice or a game, most-logged first. */
+  /** Subject tags seen in an isolated practice or a later game, most-logged first. */
   readonly tags: readonly TagAppearance[];
 }
 
+/** `order` is load-bearing: it is what separates the diagnostic game from the return. */
+export interface TransferPhase {
+  readonly id: PhaseId;
+  readonly kind: PhaseKind;
+  readonly order: number;
+}
+
 export interface TransferInput {
-  readonly phases: readonly { readonly id: PhaseId; readonly kind: PhaseKind }[];
+  readonly phases: readonly TransferPhase[];
+  /**
+   * The tags this session named at plan time — the only ones counted. Usually
+   * {@link transferSubject} of the session; taken as a parameter so the rule stays one
+   * readable function rather than a lookup buried in the loop.
+   */
+  readonly subject: readonly string[];
   readonly observations: readonly Pick<Observation, 'phaseId' | 'tags'>[];
+}
+
+/** The shape {@link transferSubject} reads. Structural, so it fits a `Session` without importing one. */
+export interface TransferSubjectInput {
+  readonly objective: {
+    readonly commonMisconception: string | null;
+    readonly options: readonly string[];
+  };
+  readonly phases: readonly { readonly coachingPoints: readonly { readonly text: string }[] }[];
+}
+
+/**
+ * **What this session set out to work on**, as the tags a coach can actually tap.
+ *
+ * Three sources, and each one is something written down before the whistle: every phase's
+ * coaching points, the misconception the objective predicted, and the options its problem
+ * offers. The tactical problem itself is not here — it is a pinned line in Do mode, never a
+ * chip, so it can never be one of the tags on an observation.
+ *
+ * **Coaching points from every phase, not just the isolated one.** The practice and the game
+ * carry different points, and the whole question is whether the practice's point turns up while
+ * the coach is watching for the game's.
+ *
+ * Deduped case-insensitively, keeping the first wording, because that is the wording the report
+ * will quote back.
+ */
+export function transferSubject(session: TransferSubjectInput): string[] {
+  const texts = [
+    ...session.phases.flatMap((phase) => phase.coachingPoints.map((point) => point.text)),
+    session.objective.commonMisconception ?? '',
+    ...session.objective.options,
+  ];
+
+  const byKey = new Map<string, string>();
+  for (const raw of texts) {
+    const text = raw.trim();
+    if (text.length === 0) continue;
+    const key = text.toLowerCase();
+    if (!byKey.has(key)) byKey.set(key, text);
+  }
+  return [...byKey.values()];
 }
 
 /**
  * Below this many lines the report is a list; above it, it is a page a coach scrolls past.
  *
- * Six because the tag bank is wide — this phase's coaching points, the misconception, the
- * options, six capabilities and the corner attributes are all one tap away, so a busy session
- * can carry a dozen distinct tags and the long tail is all singletons.
+ * Six was set when the join counted the whole tag bank. It stays at six now the join is
+ * narrowed to {@link transferSubject}, because the subject is still wide enough to overflow it:
+ * ten coaching points per phase, a misconception and up to four options.
  */
 export const MAX_TRANSFER_LINES = 6;
 
 export function transferRecord(input: TransferInput): TransferRecord {
-  const roleByPhase = new Map(input.phases.map((phase) => [phase.id, phaseRole(phase.kind)]));
+  const roleByPhase = phaseRoles(input.phases);
+
+  // Keyed case-insensitively and reported in the plan's wording: a coach who typed the same
+  // point into two phases with different capitals meant one point, and the report says it once.
+  const subjectByKey = new Map<string, string>();
+  for (const raw of input.subject) {
+    const text = raw.trim();
+    if (text.length === 0) continue;
+    const key = text.toLowerCase();
+    if (!subjectByKey.has(key)) subjectByKey.set(key, text);
+  }
 
   const counts = new Map<string, { inPractice: number; inGame: number }>();
   for (const observation of input.observations) {
@@ -94,8 +208,9 @@ export function transferRecord(input: TransferInput): TransferRecord {
     if (role === undefined || role === 'neither') continue;
 
     for (const raw of observation.tags) {
-      const tag = raw.trim();
-      if (tag.length === 0) continue;
+      const tag = subjectByKey.get(raw.trim().toLowerCase());
+      // A capability chip or a corner attribute. Real, logged, and not about this practice.
+      if (tag === undefined) continue;
 
       const entry = counts.get(tag) ?? { inPractice: 0, inGame: 0 };
       if (role === 'isolated') entry.inPractice += 1;

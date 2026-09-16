@@ -4,26 +4,44 @@ import {
   describeTransfer,
   hasEnoughForTransfer,
   phaseRole,
+  phaseRoles,
   transferRecord,
+  transferSubject,
   type TransferInput,
 } from './transfer';
 import { asPhaseId } from '../ids';
 import type { PhaseKind } from '../methodology';
 
+const OPENING_GAME = asPhaseId('00000000-0000-4000-8000-0000000000b0');
 const PART = asPhaseId('00000000-0000-4000-8000-0000000000b1');
 const GAME = asPhaseId('00000000-0000-4000-8000-0000000000b2');
 const HUDDLE = asPhaseId('00000000-0000-4000-8000-0000000000b3');
 
 const PHASES: TransferInput['phases'] = [
-  { id: PART, kind: 'technical' },
-  { id: GAME, kind: 'game' },
-  { id: HUDDLE, kind: 'huddle' },
+  { id: PART, kind: 'technical', order: 1 },
+  { id: GAME, kind: 'game', order: 2 },
+  { id: HUDDLE, kind: 'huddle', order: 3 },
+];
+
+/**
+ * Everything the tests below tag, so that a test about ordering is not also a test about the
+ * subject filter. The filter has its own describe block.
+ */
+const SUBJECT = [
+  'Head up before you receive',
+  'Went long',
+  'Played short',
+  'Scanning',
+  'Zebra',
+  'Apple',
+  'Banana',
+  'x',
 ];
 
 const logged = (phaseId: typeof PART, ...tags: string[]) => ({ phaseId, tags });
 
 const recordOf = (...observations: TransferInput['observations']) =>
-  transferRecord({ phases: PHASES, observations });
+  transferRecord({ phases: PHASES, subject: SUBJECT, observations });
 
 describe('phaseRole', () => {
   it('reads the two isolating kinds as the practice', () => {
@@ -54,6 +72,90 @@ describe('phaseRole', () => {
   });
 });
 
+describe('phaseRoles', () => {
+  /** Whole-Part-Whole: play, find the problem, isolate it, play the same game again. */
+  const wholePartWhole: TransferInput['phases'] = [
+    { id: OPENING_GAME, kind: 'small_sided_game', order: 1 },
+    { id: PART, kind: 'technical', order: 2 },
+    { id: GAME, kind: 'small_sided_game', order: 3 },
+  ];
+
+  it('demotes the game that ran before the practice', () => {
+    // The first WHOLE is where the problem was found. Counting it as a return would let the
+    // report say a behaviour came back when it had only ever turned up on the way in.
+    const roles = phaseRoles(wholePartWhole);
+
+    expect(roles.get(OPENING_GAME)).toBe('neither');
+    expect(roles.get(PART)).toBe('isolated');
+    expect(roles.get(GAME)).toBe('game');
+  });
+
+  it('does not depend on the phases arriving in order', () => {
+    const roles = phaseRoles([...wholePartWhole].reverse());
+    expect(roles.get(OPENING_GAME)).toBe('neither');
+    expect(roles.get(GAME)).toBe('game');
+  });
+
+  it('measures from the first isolated phase when a session isolates twice', () => {
+    // A game between two practice blocks is a return from the first of them.
+    const between = asPhaseId('00000000-0000-4000-8000-0000000000b4');
+    const roles = phaseRoles([
+      { id: PART, kind: 'technical', order: 1 },
+      { id: between, kind: 'conditioned_game', order: 2 },
+      { id: GAME, kind: 'skill_practice', order: 3 },
+    ]);
+
+    expect(roles.get(between)).toBe('game');
+  });
+
+  it('demotes every game when nothing was isolated', () => {
+    const roles = phaseRoles([{ id: GAME, kind: 'game', order: 1 }]);
+    expect(roles.get(GAME)).toBe('neither');
+  });
+});
+
+describe('transferSubject', () => {
+  const point = (text: string) => ({ text });
+
+  it('takes the coaching points from every phase, not just the isolated one', () => {
+    // The practice and the game carry different points, and the whole question is whether the
+    // practice's point turns up while the coach is watching for the game's.
+    const subject = transferSubject({
+      objective: { commonMisconception: null, options: [] },
+      phases: [{ coachingPoints: [point('Head up')] }, { coachingPoints: [point('Play forward')] }],
+    });
+
+    expect(subject).toEqual(['Head up', 'Play forward']);
+  });
+
+  it('includes the predicted mistake and the options the problem offers', () => {
+    const subject = transferSubject({
+      objective: { commonMisconception: 'Turns into the pressure', options: ['Go long', 'Switch'] },
+      phases: [{ coachingPoints: [point('Head up')] }],
+    });
+
+    expect(subject).toEqual(['Head up', 'Turns into the pressure', 'Go long', 'Switch']);
+  });
+
+  it('dedupes case-insensitively, keeping the first wording for the report to quote', () => {
+    const subject = transferSubject({
+      objective: { commonMisconception: 'head up', options: ['HEAD UP'] },
+      phases: [{ coachingPoints: [point('Head up')] }, { coachingPoints: [point('  Head up  ')] }],
+    });
+
+    expect(subject).toEqual(['Head up']);
+  });
+
+  it('is empty for a typed objective with no points, mistake or options', () => {
+    const subject = transferSubject({
+      objective: { commonMisconception: null, options: [] },
+      phases: [{ coachingPoints: [] }],
+    });
+
+    expect(subject).toEqual([]);
+  });
+});
+
 describe('transferRecord', () => {
   it('counts a tag on both sides of the isolated block', () => {
     const record = recordOf(
@@ -75,7 +177,65 @@ describe('transferRecord', () => {
 
   it('ignores an observation against a phase this session does not have', () => {
     const orphan = { phaseId: asPhaseId('00000000-0000-4000-8000-0000000000ff'), tags: ['x'] };
-    expect(transferRecord({ phases: PHASES, observations: [orphan] }).tags).toEqual([]);
+    expect(
+      transferRecord({ phases: PHASES, subject: SUBJECT, observations: [orphan] }).tags,
+    ).toEqual([]);
+  });
+
+  it('counts only the tags the session named, not the generic bank', () => {
+    // "Running with the ball" is a capability chip, one tap away in every session ever
+    // planned. Counting it made the report answer a question nobody asked.
+    const record = transferRecord({
+      phases: PHASES,
+      subject: ['Head up before you receive'],
+      observations: [
+        logged(PART, 'Head up before you receive', 'Running with the ball'),
+        logged(GAME, 'Running with the ball'),
+      ],
+    });
+
+    expect(record.tags).toEqual([{ tag: 'Head up before you receive', inPractice: 1, inGame: 0 }]);
+  });
+
+  it('matches a tag to the subject ignoring case, and reports the plan wording', () => {
+    const record = transferRecord({
+      phases: PHASES,
+      subject: ['Head Up'],
+      observations: [logged(PART, 'head up'), logged(GAME, 'HEAD UP')],
+    });
+
+    expect(record.tags).toEqual([{ tag: 'Head Up', inPractice: 1, inGame: 1 }]);
+  });
+
+  it('counts nothing when the session named nothing', () => {
+    // A typed objective with no coaching points. There is no subject, so there is no report.
+    const record = transferRecord({
+      phases: PHASES,
+      subject: [],
+      observations: [logged(PART, 'Went long'), logged(GAME, 'Went long')],
+    });
+
+    expect(record.tags).toEqual([]);
+    expect(hasEnoughForTransfer(record)).toBe(false);
+  });
+
+  it('does not count a game played before the practice', () => {
+    // Whole-Part-Whole's first WHOLE. Its job is to find the problem, not to show it back.
+    const record = transferRecord({
+      phases: [
+        { id: OPENING_GAME, kind: 'small_sided_game', order: 1 },
+        { id: PART, kind: 'technical', order: 2 },
+        { id: GAME, kind: 'small_sided_game', order: 3 },
+      ],
+      subject: SUBJECT,
+      observations: [
+        logged(OPENING_GAME, 'Went long'),
+        logged(PART, 'Went long'),
+        logged(GAME, 'Went long'),
+      ],
+    });
+
+    expect(record.tags).toEqual([{ tag: 'Went long', inPractice: 1, inGame: 1 }]);
   });
 
   it('orders by how much was logged, then alphabetically for a stable render', () => {
@@ -113,9 +273,10 @@ describe('hasEnoughForTransfer', () => {
     // two games and a warm-up has isolated nothing, so there is nothing to compare.
     const record = transferRecord({
       phases: [
-        { id: GAME, kind: 'game' },
-        { id: HUDDLE, kind: 'huddle' },
+        { id: GAME, kind: 'game', order: 1 },
+        { id: HUDDLE, kind: 'huddle', order: 2 },
       ],
+      subject: SUBJECT,
       observations: [logged(GAME, 'Went long')],
     });
     expect(hasEnoughForTransfer(record)).toBe(false);
@@ -123,9 +284,26 @@ describe('hasEnoughForTransfer', () => {
 
   it('refuses a session that never got to a game', () => {
     const record = transferRecord({
-      phases: [{ id: PART, kind: 'technical' }],
+      phases: [{ id: PART, kind: 'technical', order: 1 }],
+      subject: SUBJECT,
       observations: [logged(PART, 'Went long')],
     });
+    expect(hasEnoughForTransfer(record)).toBe(false);
+  });
+
+  it('refuses a session whose only game ran before the practice', () => {
+    // There is a game in the record and a practice in the record, and still no return to
+    // compare — so the report renders nothing rather than reading the diagnosis backwards.
+    const record = transferRecord({
+      phases: [
+        { id: OPENING_GAME, kind: 'small_sided_game', order: 1 },
+        { id: PART, kind: 'technical', order: 2 },
+      ],
+      subject: SUBJECT,
+      observations: [logged(OPENING_GAME, 'Went long'), logged(PART, 'Went long')],
+    });
+
+    expect(record.hasGame).toBe(false);
     expect(hasEnoughForTransfer(record)).toBe(false);
   });
 
