@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   SessionSchema,
+  leadCoachPrompt,
   phasesInOrder,
   findPhase,
   isFocusPlayer,
@@ -243,6 +244,26 @@ describe('Session selectors', () => {
   it('totalPlannedPhaseMin need not equal plannedDurationMin — that is a warning, not a block', () => {
     expect(totalPlannedPhaseMin(session)).toBe(55);
     expect(session.plannedDurationMin).toBe(60);
+  });
+
+  it('leadCoachPrompt takes the first, because the presets rank them in writing them', () => {
+    // Whole-Part-Whole's WHOLE, verbatim: the first is the instruction for the next twelve
+    // minutes and the second is for the end of them.
+    const phase = aPhase('whole', {
+      order: 0,
+      coachPrompts: [
+        'Say almost nothing. You are diagnosing, not fixing.',
+        'Pick ONE problem to take into the PART.',
+      ],
+    });
+
+    expect(leadCoachPrompt(phase)).toBe('Say almost nothing. You are diagnosing, not fixing.');
+  });
+
+  it('leadCoachPrompt is null when the phase has none, so Do mode renders nothing', () => {
+    // A phase a coach added themselves, and every phase of a session built before presets
+    // wrote prompts. Neither gets an invented one.
+    expect(leadCoachPrompt(aPhase('mine', { order: 0 }))).toBeNull();
   });
 });
 

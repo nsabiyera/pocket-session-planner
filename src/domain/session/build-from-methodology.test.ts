@@ -7,7 +7,7 @@ import {
 import { CONSTRAINTS_LED, PLAY_PRACTICE_PLAY, WHOLE_PART_WHOLE } from '../presets';
 import { cloneMethodology } from '../methodology-clone';
 import { resolvePhaseIntervention } from '../intervention';
-import { phasesInOrder, totalPlannedPhaseMin } from '../session';
+import { leadCoachPrompt, phasesInOrder, totalPlannedPhaseMin } from '../session';
 import { isoDateTime } from '../primitives';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { aSquad, T0 } from '@/test/builders';
@@ -108,6 +108,14 @@ describe('buildSessionFromMethodology', () => {
     const session = build(WHOLE_PART_WHOLE);
     const whole = session.phases.find((p) => p.title.startsWith('WHOLE — play'));
     expect(whole?.coachPrompts).toContain('Pick ONE problem to take into the PART.');
+
+    // The round trip the title has always claimed, asserted rather than assumed: this is the
+    // exact value Do mode pins above the phase's coaching points. `known-issues.md` issue 4
+    // was "copies through" being true while nothing read it — which this half of the test is
+    // what now catches.
+    expect(whole && leadCoachPrompt(whole)).toBe(
+      'Say almost nothing. You are diagnosing, not fixing.',
+    );
   });
 
   it('records template provenance on every phase', () => {

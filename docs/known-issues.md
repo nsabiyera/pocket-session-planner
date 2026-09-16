@@ -131,6 +131,7 @@ checking-for-understanding roadmap has already planned two phases on the assumpt
 
 ## 4. Two more declared-and-never-written, found while building ADR 0009
 
+- **Status:** `coachPrompts` is **fixed** 2026-09-16 — see below. `effort` is still open.
 - **Severity:** low, and one of them is only a documentation problem.
 - **Found:** 2026-09-10
 
@@ -144,16 +145,31 @@ lines, because Hattie's split is the whole reason the card is safe to show a pla
 preference can never fire on data this app wrote. It is implemented for an imported file and
 named as a blind spot in the module, rather than quietly dropped.
 
-**`SessionPhase.coachPrompts`** (`session.ts:139`). Carried onto the phase by
-`build-from-methodology.ts:149` under the comment *"Carried through so Do mode can show the
-coach their own reminder of what this is for"* — and no screen renders it. Every preset writes
-them, several are genuinely useful (*"Let them tell you what changed."*), and no coach has ever
-seen one.
+**`SessionPhase.coachPrompts`** — ~~carried onto the phase by `build-from-methodology.ts`
+under the comment *"Carried through so Do mode can show the coach their own reminder of what
+this is for"*, and no screen rendered it. Every preset writes them, several are genuinely
+useful (*"Let them tell you what changed."*), and no coach had ever seen one.~~
+
+> **Fixed** 2026-09-16, after
+> [`review-watching-the-execution-against-tgfu.md`](review-watching-the-execution-against-tgfu.md)
+> finding 6 turned it up a second time. `leadCoachPrompt` pins the **first** prompt above the
+> phase's coaching points in Do mode, and the phase sheet lists all six.
+>
+> **Not next to the `Expect` line, which is what this entry proposed.** That advice was stale
+> by the time it was taken: ADR 0011 §1 has since added the `Problem` line, and both it and
+> `.run-problem` in `globals.css` now carry comments saying the header is at its 667px ceiling
+> and naming `Problem` as the line to cut if field testing fails. Spending that budget on a
+> third pinned line would have been overdrawing an account two other decisions had already
+> declared full. The points section below the dial scrolls, is phase-scoped like the prompt,
+> and costs the two 96px actions nothing.
+>
+> **Why the suite was green.** `build-from-methodology.test.ts` had a test called *"copies
+> coach prompts through for Do mode"* which asserted the copy and never the Do mode. It now
+> asserts `leadCoachPrompt` on a real preset session — the same hole issues 3, 4 and 5 all
+> fell through, closed one round trip at a time.
 
 **Fix.** For `effort`, either give the observation sheet a fourth token or accept that the
-distinction is aspirational and say so where it is declared. For `coachPrompts`, it is one line
-in Do mode next to the `Expect` line that ADR 0009 phase 2 added — the same shape, in the same
-place, and the field is already populated.
+distinction is aspirational and say so where it is declared.
 
 ---
 

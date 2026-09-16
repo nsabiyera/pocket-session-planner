@@ -76,7 +76,7 @@ import {
   type AdjustmentDirection,
   type StepLetter,
 } from '@/domain/practice';
-import type { SessionPhase } from '@/domain/session';
+import { leadCoachPrompt, type SessionPhase } from '@/domain/session';
 import { HuddleSheet } from '../_components/huddle-sheet';
 import { PlayerWordField } from '../_components/player-word';
 import { PhaseImageStrip } from '../_components/phase-images';
@@ -200,6 +200,7 @@ export default function RunPage() {
   const plan = resolvePhaseIntervention(session, phase);
   const summary = interventionSummary(session, now);
   const budget = interventionBudget(plan, summary.countByPhase.get(phase.id) ?? 0);
+  const prompt = leadCoachPrompt(phase);
   const openIntervention =
     session.run.openInterventionId === null
       ? null
@@ -461,6 +462,24 @@ export default function RunPage() {
       <TimerDial clock={clock} paused={paused} nextPhaseTitle={upcoming?.title} />
 
       <section className="run-points" aria-label="Challenges and coaching points">
+        {/*
+          **The methodology's prompt for this phase**, first in the section and above even the
+          challenges — because it is not another item, it is how to coach the items under it.
+          *"Say almost nothing. You are diagnosing, not fixing."* is an instruction about the
+          next twelve minutes, and it is worth nothing in a preset a coach never sees.
+
+          **Here rather than in the header**, which is the placement `known-issues.md` issue 4
+          proposed. The header is full: `.run-problem` already carries a comment naming itself
+          the line to cut if 667px fails, so a third pinned line would be spending a budget
+          that is already overdrawn. This section scrolls, sits directly under the dial, and is
+          phase-scoped like the prompt itself — so the prompt costs the two 96px actions
+          nothing.
+
+          One prompt, never all six: `leadCoachPrompt` carries the argument, and the phase
+          sheet lists the rest.
+        */}
+        {prompt ? <p className="run-prompt">{prompt}</p> : null}
+
         {/*
           Challenges come first. A coaching point is something the coach is carrying in their
           head anyway; a promise made to one player is the thing that gets forgotten at 7:40
@@ -1312,6 +1331,28 @@ function PhaseSheet({
         has no picture: the strip renders null.
       */}
       <PhaseImageStrip images={phaseImages} />
+
+      {/*
+        **Every prompt for this phase**, including the one already pinned in Do mode.
+        Repeating the pinned one costs a line and buys the list its meaning: *"these are the
+        prompts"* is a list a coach can trust, and *"these are the other prompts"* is a puzzle
+        about which one is missing.
+
+        Here rather than in Do mode because the sheet is a deliberate tap and has no height
+        budget — which is the whole reason Do mode can afford to show only one.
+      */}
+      {phase && phase.coachPrompts.length > 0 ? (
+        <div className="stack stack--tight">
+          <h3 className="eyebrow">Prompts</h3>
+          <ul className="stack stack--tight">
+            {phase.coachPrompts.map((text) => (
+              <li key={text} className="run-prompt">
+                {text}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="row">
         <button type="button" className="btn" onClick={() => void onExtend(-5)}>

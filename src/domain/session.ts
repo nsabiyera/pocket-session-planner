@@ -189,7 +189,11 @@ export const SessionPhaseSchema = z.object({
    * takes the part it should never try to — "two neutrals, keeper joins in when we score".
    */
   organisation: optionalText(500).default(''),
-  /** Copied from the methodology template, shown in Do mode. */
+  /**
+   * Copied from the methodology template. **The first is pinned in Do mode** above this
+   * phase's coaching points, and all six are listed in the phase sheet — see
+   * {@link leadCoachPrompt} for why one rather than all of them.
+   */
   coachPrompts: z.array(nonEmptyText(200)).max(6).default([]),
   /**
    * **The earlier phase of this session that this one is supposed to match** (ADR 0011 §3).
@@ -529,4 +533,27 @@ export function isFocusPlayer(session: Session, playerId: FocusPlayerAssignment[
 /** Sum of the planned phase durations, which need not equal `plannedDurationMin`. */
 export function totalPlannedPhaseMin(session: Session): number {
   return session.phases.reduce((total, phase) => total + phase.plannedDurationMin, 0);
+}
+
+/**
+ * **The one coach prompt Do mode shows for this phase**, and null when there is none.
+ *
+ * `coachPrompts` holds up to six. Do mode shows the **first** and the phase sheet lists them
+ * all, for three reasons that all point the same way:
+ *
+ * 1. **The presets already rank them.** Whole-Part-Whole's WHOLE reads *"Say almost nothing.
+ *    You are diagnosing, not fixing."* and then *"Pick ONE problem to take into the PART."*
+ *    The first is the instruction for the next twelve minutes; the second is for the end of
+ *    them. Written in that order, by a human, on purpose — so taking the first is reading the
+ *    author's intent rather than guessing at relevance.
+ * 2. **Rotating would be worse than picking.** A line that changes while a coach is looking
+ *    away is a line they cannot rely on, and it would need per-phase timer state to do it.
+ * 3. **Six at once is a paragraph.** Do mode fits 667px without scrolling; a block that grows
+ *    with the methodology is the one thing the header budget cannot absorb.
+ *
+ * The prompts past the first are not lost — {@link SessionPhase.coachPrompts} is listed in
+ * full in the phase sheet, which is a deliberate tap and has no height budget.
+ */
+export function leadCoachPrompt(phase: SessionPhase): string | null {
+  return phase.coachPrompts[0] ?? null;
 }
