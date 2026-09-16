@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cloneMethodology } from './methodology-clone';
 import { MethodologySchema, orderedTemplates, snapshotMethodology } from './methodology';
-import { CONSTRAINTS_LED, PLAY_PRACTICE_PLAY } from './presets';
+import { CONSTRAINTS_LED, PLAY_PRACTICE_PLAY, WHOLE_PART_WHOLE } from './presets';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { T0 } from '@/test/builders';
 
@@ -79,5 +79,30 @@ describe('cloneMethodology', () => {
       originKind: 'custom',
       name: 'Second generation',
     });
+  });
+});
+
+describe('cloning a methodology that pairs two of its phases', () => {
+  it('remaps the pairing onto the clone own ids', () => {
+    // The trap this exists for: `structuredClone` carries the source pairing verbatim, which
+    // points at a preset slug the clone does not contain — and `refineTemplates` would then
+    // reject the write, so saving your own Whole-Part-Whole would fail on a field you have
+    // never seen.
+    const custom = clone(WHOLE_PART_WHOLE);
+    expect(MethodologySchema.safeParse(custom).success).toBe(true);
+
+    const templates = orderedTemplates(custom);
+    const first = templates.find((template) => template.title.includes('find the problem'))!;
+    const second = templates.find((template) => template.title.includes('look for the change'))!;
+
+    expect(second.pairsWith).toBe(first.id);
+    expect(second.pairsWith).not.toBe('wpw-whole-1');
+    expect(first.pairsWith).toBeNull();
+  });
+
+  it('leaves the unpaired presets unpaired', () => {
+    for (const template of clone(PLAY_PRACTICE_PLAY).phaseTemplates) {
+      expect(template.pairsWith, template.title).toBeNull();
+    }
   });
 });

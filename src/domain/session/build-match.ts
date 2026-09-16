@@ -219,6 +219,7 @@ function blankPhase(ids: IdGenerator): SessionPhase {
     progressions: [],
     regressions: [],
     spectrum: null,
+    targets: null,
     area: null,
     groupSize: null,
     constraints: [],
@@ -228,6 +229,7 @@ function blankPhase(ids: IdGenerator): SessionPhase {
     coachPrompts: [],
     fromTemplateId: null,
     sourceActionId: null,
+    pairedWithPhaseId: null,
   };
 }
 

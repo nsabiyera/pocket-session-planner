@@ -3,7 +3,9 @@ import {
   capabilityCoverage,
   capabilityOfObservation,
   describeCapabilityCoverage,
+  describeExecutionSplit,
   describeMomentCoverage,
+  executionSplit,
   hasEnoughForCapabilityView,
   hasEnoughForMomentView,
   MIN_OBSERVATIONS_FOR_CAPABILITY_VIEW,
@@ -337,5 +339,116 @@ describe('describeCapabilityCoverage', () => {
     expect(describeCapabilityCoverage(stranded, 'Kai')).toBe(
       "3 observations for Kai: 3 scanning — nothing on timing, movement, positioning or techniques. Deception isn't taggable yet.",
     );
+  });
+});
+
+describe('executionSplit', () => {
+  it('puts techniques on one side and the other five on the other', () => {
+    const coverage = coverageOf(
+      tagged('o1', 'First touch'),
+      tagged('o2', 'Passing & receiving'),
+      tagged('o3', 'Scanning & awareness'),
+      tagged('o4', 'Positioning'),
+    );
+
+    expect(executionSplit(coverage)).toEqual({ execution: 2, around: 2, classified: 4 });
+  });
+
+  it('divides by what the lens could place, never by everything logged', () => {
+    // Two observations this lens cannot read. Counting them as "the rest of the action" would
+    // report the app's own sparse mapping back to the coach as their blind spot.
+    const coverage = coverageOf(
+      tagged('o1', 'First touch'),
+      tagged('o2', 'Teamwork'),
+      tagged('o3', 'Leadership'),
+    );
+
+    expect(coverage.total).toBe(3);
+    expect(executionSplit(coverage)).toEqual({ execution: 1, around: 0, classified: 1 });
+  });
+
+  it('is all zeroes when nothing was classified', () => {
+    expect(executionSplit(capabilityCoverage([]))).toEqual({
+      execution: 0,
+      around: 0,
+      classified: 0,
+    });
+  });
+});
+
+describe('describeExecutionSplit', () => {
+  const splitOf = (...observations: Observation[]) =>
+    executionSplit(capabilityCoverage(observations));
+
+  it('names both sides, and which was the bigger', () => {
+    const split = splitOf(
+      tagged('o1', 'First touch'),
+      tagged('o2', 'Passing & receiving'),
+      tagged('o3', 'Finishing'),
+      tagged('o4', 'Scanning & awareness'),
+    );
+
+    expect(describeExecutionSplit(split)).toBe(
+      '3 of the 4 were about the execution; the other 1 were about the rest of the action.',
+    );
+  });
+
+  it('says so plainly when every one was the execution', () => {
+    const split = splitOf(tagged('o1', 'First touch'), tagged('o2', 'Finishing'));
+    expect(describeExecutionSplit(split)).toBe('All 2 were about the execution.');
+  });
+
+  it('says so plainly when none of them was', () => {
+    const split = splitOf(tagged('o1', 'Scanning & awareness'), tagged('o2', 'Positioning'));
+    expect(describeExecutionSplit(split)).toBe('None of the 2 were about the execution.');
+  });
+
+  it('gets the singular right on both sides', () => {
+    expect(describeExecutionSplit(splitOf(tagged('o1', 'First touch')))).toBe(
+      'The only one was about the execution.',
+    );
+    expect(describeExecutionSplit(splitOf(tagged('o1', 'Deception')))).toBe(
+      'The only one was about the rest of the action, not the execution.',
+    );
+  });
+
+  it('is silent rather than describing zero', () => {
+    expect(describeExecutionSplit(splitOf())).toBeNull();
+    // Logged, but nothing this lens can place — the same silence, for a different reason.
+    expect(describeExecutionSplit(splitOf(tagged('o1', 'Teamwork')))).toBeNull();
+  });
+
+  it('never reaches for a word the app cannot support', () => {
+    // Rule 1 of the module note. `techniques` against the other five is a fact about which
+    // tag was tapped; "tactical" and "decision" would be claims about the player.
+    const sentences = [
+      describeExecutionSplit(splitOf(tagged('o1', 'First touch'), tagged('o2', 'Positioning'))),
+      describeExecutionSplit(splitOf(tagged('o1', 'First touch'))),
+      describeExecutionSplit(splitOf(tagged('o1', 'Positioning'))),
+      describeExecutionSplit(
+        splitOf(tagged('o1', 'Finishing'), tagged('o2', 'Passing & receiving')),
+      ),
+    ];
+
+    for (const sentence of sentences) {
+      expect(sentence).not.toBeNull();
+      expect(sentence).not.toMatch(/tactical|decision|understanding|technical/i);
+    }
+  });
+
+  it('shares the capability line floor rather than inventing a second one', () => {
+    // Eight classified observations is the gate for both, and there is deliberately no
+    // `hasEnoughForExecutionSplit`: the split is coarser, so the existing floor is ample.
+    const eight = Array.from({ length: MIN_OBSERVATIONS_FOR_CAPABILITY_VIEW }, (_, index) =>
+      tagged(`o${index}`, index % 2 === 0 ? 'First touch' : 'Scanning & awareness'),
+    );
+
+    const coverage = capabilityCoverage(eight);
+    expect(hasEnoughForCapabilityView(coverage)).toBe(true);
+    expect(describeExecutionSplit(executionSplit(coverage))).toBe(
+      '4 of the 8 were about the execution; the other 4 were about the rest of the action.',
+    );
+
+    expect(hasEnoughForCapabilityView(capabilityCoverage(eight.slice(1)))).toBe(false);
   });
 });

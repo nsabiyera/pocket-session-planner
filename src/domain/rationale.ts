@@ -165,6 +165,11 @@ const RATIONALES = {
     why: 'Which of the FA’s six your observations map onto. The FA publishes the six, not a crosswalk to this app’s attribute list — that mapping is ours, and deliberately sparse.',
     source: CAPABILITIES_SOURCE,
   },
+  'report:execution-split': {
+    framework: CAPABILITIES,
+    why: 'Five of the FA’s six describe what a player does around the ball; Techniques is the execution itself. Grouping them in two is ours, not the FA’s, and there is no right balance — a set-piece session should be all execution.',
+    source: CAPABILITIES_SOURCE,
+  },
   'report:moment-coverage': {
     framework: CAPABILITIES,
     why: 'Whether you were watching before, as, or after the player received the ball. Only observations where you set the moment count, and setting it is optional — so an empty view is a choice.',
@@ -183,6 +188,21 @@ const RATIONALES = {
   'report:practice-spectrum': {
     framework: PRACTICE_SPECTRUM,
     why: 'The FA’s four practice types, from no defender at all to the full game. Your methodology already answered it for this phase — change it if the practice you actually ran was different.',
+    source: PRACTICE_DESIGN_SOURCE,
+  },
+  'report:transfer': {
+    framework: PRACTICE_DESIGN,
+    why: 'Where the things you planned turned up: in the isolated practice, in a game after it, or both. Only your coaching points, predicted mistake and options count, and a game before the practice is a diagnosis, not a return.',
+    source: PLANNING_MODEL_SOURCE,
+  },
+  'report:paired-phases': {
+    framework: PRACTICE_DESIGN,
+    why: 'Whole-Part-Whole only claims transfer if its two games are the same game. This compares what you recorded on both — size, numbers, practice type, direction, conditions — and never stops you changing one.',
+    source: PLANNING_MODEL_SOURCE,
+  },
+  'report:phase-targets': {
+    framework: PRACTICE_SPECTRUM,
+    why: 'What they play towards, so the match comparison knows a possession box from a game. The four are not ranked — whether one goal beats a line to dribble over depends on the problem, and the app has no view.',
     source: PRACTICE_DESIGN_SOURCE,
   },
   'report:relative-playing-area': {

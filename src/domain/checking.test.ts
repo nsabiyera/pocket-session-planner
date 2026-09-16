@@ -138,6 +138,8 @@ describe('reachability on the default path', () => {
         sourceActionId: null,
         principleId: null,
         commonMisconception: template.commonMisconception,
+        tacticalProblem: template.tacticalProblem,
+        options: [...template.options],
       },
       now: T0,
       ids: new FakeIdGenerator(),

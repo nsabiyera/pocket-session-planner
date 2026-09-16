@@ -6,6 +6,7 @@ import {
   MAX_ADJUSTMENTS_PER_PHASE,
   MAX_CONSTRAINTS_PER_PHASE,
   PhaseConstraintSchema,
+  PhaseTargetsSchema,
   PracticeSpectrumSchema,
 } from './practice';
 import {
@@ -86,6 +87,19 @@ export const MethodologyPhaseTemplateSchema = z.object({
    */
   defaultSpectrum: PracticeSpectrumSchema.nullable().default(null),
   /**
+   * Seeds `SessionPhase.targets`, so direction costs zero taps on the default path too.
+   *
+   * **Null here is weaker than `defaultSpectrum`'s null**, and the difference matters. There,
+   * null means *this template is not a practice*. Here it means only *this methodology has no
+   * opinion*: Play-Practice-Play's PRACTICE is an overload, and whether the coach runs it to
+   * a goal or as a rondo is genuinely theirs to decide, so the preset says nothing rather
+   * than guessing on their behalf.
+   *
+   * Seeded only where the methodology actually dictates it — the games it insists are games,
+   * and the unopposed blocks where there is nothing to play towards by construction.
+   */
+  defaultTargets: PhaseTargetsSchema.nullable().default(null),
+  /**
    * Ways to make this practice harder or easier, seeding `SessionPhase.progressions` and
    * `.regressions`.
    *
@@ -123,6 +137,26 @@ export const MethodologyPhaseTemplateSchema = z.object({
    * entire method is the players' decision. Most phases are not, and default to `false`.
    */
   defaultPlayerChoice: z.boolean().default(false),
+  /**
+   * **The earlier phase this one has to match** (ADR 0011 §3).
+   *
+   * Whole-Part-Whole's whole method is in its two WHOLE games being *the same game*: its own
+   * coach prompt says *"Phase 4 must be the SAME game as phase 2, or you cannot claim
+   * transfer"*, and until now nothing enforced, compared or even recorded that. This is the
+   * claim, as data.
+   *
+   * **It points backwards, at a template with a lower `order`.** That is not a style rule —
+   * it is what makes a cycle unrepresentable rather than merely invalid, so the comparison
+   * can never loop. The later game references the earlier one, which is also the direction a
+   * coach reads it in.
+   *
+   * **On the template rather than the session**, because it is methodology knowledge: the
+   * methodology that wrote the two phases is the only thing that knows they are a pair.
+   * `cloneMethodology` remaps it, and {@link refineTemplates} rejects a reference that does
+   * not resolve. What lands on the session is a `PhaseId`, resolved at build time — see
+   * `SessionPhase.pairedWithPhaseId` for why it cannot be looked up later.
+   */
+  pairsWith: PhaseTemplateIdSchema.nullable().default(null),
   isOptional: z.boolean().default(false),
 });
 export type MethodologyPhaseTemplate = z.infer<typeof MethodologyPhaseTemplateSchema>;
@@ -181,6 +215,40 @@ function refineTemplates(
       message: 'Phase template ids must be unique.',
     });
   }
+
+  /*
+    The pairing has to resolve, point backwards, and not point at itself. Enforced here rather
+    than at the call site so a hand-edited import file and a coach-built custom methodology are
+    held to the same rule — and because a dangling pair would silently produce no comparison at
+    all, which looks exactly like a methodology that never asked for one.
+  */
+  const byId = new Map(templates.map((template) => [template.id, template]));
+  templates.forEach((template, index) => {
+    if (template.pairsWith === null) return;
+
+    const issue = (message: string) =>
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['phaseTemplates', index, 'pairsWith'],
+        message,
+      });
+
+    if (template.pairsWith === template.id) {
+      issue('A phase cannot be paired with itself.');
+      return;
+    }
+
+    const target = byId.get(template.pairsWith);
+    if (!target) {
+      issue('Its paired phase is missing.');
+      return;
+    }
+
+    // Backwards only, which is what rules out a cycle.
+    if (target.order >= template.order) {
+      issue('A paired phase must come earlier in the session.');
+    }
+  });
 
   const sum = templates.reduce((total, t) => total + t.durationWeight, 0);
   if (Math.abs(sum - 1) > 0.001) {

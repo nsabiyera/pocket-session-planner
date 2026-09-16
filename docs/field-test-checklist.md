@@ -245,6 +245,149 @@ length, as if a huddle were in front of you.
 - [ ] Open a session you ran **before this shipped**. It reads as unchecked, parses without
       error, and nothing in the app calls it a failure.
 
+## Teaching Games for Understanding (ADR 0011)
+
+### Did it come back in the game? (phase 6)
+
+Needs a session shaped like Whole-Part-Whole or Play-Practice-Play: something isolated, and a
+game afterwards.
+
+- [ ] Run one, tagging the **same** coaching point in both the isolated practice and the final
+      game. Review: the headline counts it, and the line reads *"logged twice in the practice
+      and once in a game"*.
+- [ ] Tag something in the practice and **nothing** in the game. The line says *"nothing in a
+      game"* and **not** *"it did not transfer"*. Read it as a coach who had a busy second half:
+      does it feel like an accusation? It must not.
+- [ ] Tag something **only** in the final game. It appears, with *"nothing in the practice"* —
+      this is the case a drill-first session never produces.
+- [ ] Review a session with **no** isolated practice — two games and a warm-up. There is **no
+      transfer section at all**, not a line saying there is not enough evidence. Most sessions
+      are this shape, so this is the case that decides whether the report is noise.
+- [ ] Review a session that never reached a game. Same: nothing.
+- [ ] Tag heavily — coaching points, options, capabilities, corners — and check the list stops
+      at six lines rather than filling the screen.
+- [ ] A note logged in a **huddle** or a water break appears nowhere in this report.
+
+### The options, as chips (phase 5)
+
+- [ ] Build a session from a chip with options — *When to keep it and when to go* is the purest.
+      Open the observation sheet: **The options** is the third group, under *This phase* and *The
+      mistake you expected*.
+- [ ] **Logging is still two taps.** Player, token, done — the options are there to be used, not
+      to be required, and a log with no option tapped saves exactly as before.
+- [ ] Tap an option. Open the session in history: the observation carries it verbatim as a tag.
+- [ ] **Nothing happens.** No offer bar, no regression prompt, no toast beyond the usual. An
+      option is not an error, and only the predicted misconception routes anywhere.
+- [ ] Build from **Scanning before receiving**. There is **no** options group at all — not an
+      empty heading. Same for a typed objective.
+- [ ] **Portrait, 667px.** The sheet still shows the three rating tokens without scrolling past
+      them to reach the tags. This is the group that could break the sheet.
+- [ ] Read the chips as a coach who has not read this file. Does the first one look like the
+      right answer? If it does, the order is doing the wrong job and phase 5 needs rethinking.
+
+### The same game, twice (phase 4)
+
+Whole-Part-Whole only. Plan a session with it and the two WHOLE games arrive paired.
+
+- [ ] Open the **second** WHOLE in the phase editor. It reads *"Both games match on everything
+      recorded, so the comparison holds."*
+- [ ] Shrink its grid by 5 m and **watch the line change while you are still in the sheet** —
+      before saving. That immediacy is the whole point of the editor surface.
+- [ ] **Save anyway.** It saves. Nothing is blocked, nothing is reverted, no confirm dialog.
+- [ ] Open the **first** WHOLE instead and change *its* grid. The same comparison appears —
+      breaking the first game breaks the claim just as thoroughly as breaking the second.
+- [ ] Add a condition to one game only. The line says *"has 1 condition the first did not"* or
+      *"drops 1 condition the first had"*, and the grammar reads properly in both.
+- [ ] Clear the spectrum on one of the two. The line stops mentioning practice type rather than
+      reporting it as a change — **a gap is not a difference**.
+- [ ] Run and review it. The same sentence appears once on `/review`, under the
+      representativeness line.
+- [ ] Plan a **Play-Practice-Play** session. No pairing line anywhere, in the editor or the
+      review — four of the five presets pair nothing and should say nothing.
+- [ ] **Save your own version of Whole-Part-Whole** from Settings, then plan with the clone. The
+      pairing still works. This is the case the clone remap exists for, and a failure here shows
+      up as an error naming a field you have never seen.
+- [ ] Delete the first WHOLE from a planned session. The app refuses the write rather than
+      leaving a pairing pointing at nothing — check the message is legible, not a Zod dump.
+- [ ] Open a Whole-Part-Whole session planned **before this shipped**. No pairing, no error.
+
+### Direction and targets (phase 3)
+
+- [ ] Open a phase from a **Play-Practice-Play** plan. The `What are they playing towards?` row
+      sits directly under the spectrum, and both PLAY phases already read **Two goals** without
+      you tapping anything.
+- [ ] **Four chips across at 375px**, on one row, no wrapping mid-label and no chip under 44px.
+- [ ] Tap the pressed chip again. It clears back to `Not set.` — the same take-it-back gesture
+      the spectrum and the challenge verdicts use.
+- [ ] Open the **PRACTICE** phase of that same plan. It is **not set**, and that is correct: the
+      methodology has no view on whether your overload runs to a goal or as a rondo.
+- [ ] **Do mode shows none of this.** Check the phase card and the header — direction appears
+      nowhere while the session runs, by design.
+- [ ] Plan a session ending on a matched-up game at a known grid with a group size, run it, and
+      review. The representativeness line reads *"…at N m² a player, **to two goals**"*.
+- [ ] Set the last practice to **No target** instead and review again. The same line reads
+      *"…with nothing to score in"*. These two sessions used to be the same record — that
+      difference is the whole phase.
+- [ ] Leave direction unset and review. The line reads exactly as it did before phase 3, with no
+      trailing comma and no gap.
+- [ ] A session with direction set but **no** spectrum and **no** grid shows **no**
+      representativeness line at all, rather than half a sentence.
+- [ ] Tap the `?` beside the chip row. It says the four are not ranked.
+- [ ] Open a session planned **before this shipped** in history. No direction, no error.
+- [ ] Export, re-import onto a second device, and check a seeded phase still reads **Two goals**.
+
+### The game problem, pinned (phase 2)
+
+- [ ] **Portrait, 667px, with both the `Problem` and `Expect` lines showing.** Do mode still
+      reaches the two 96px actions with no scrolling. **This is the item most likely to fail in
+      the whole checklist** — it was already the tightest thing on the screen with one pinned
+      line, and there are now two. If it fails, the fix is written down: cut the `Problem` line,
+      not the `Expect` one.
+- [ ] Both lines are legible at arm's length in daylight. They are `--fs-xs` and quiet by
+      design, but a reminder you have to squint at during a game is a reminder you ignore.
+- [ ] Build a session from an objective **chip**. The `Problem` line is above `Expect`, and it
+      is a question.
+- [ ] Build one by **typing** your own objective. There is **no** `Problem` line at all — not an
+      empty one, not a placeholder — and no `Expect` line either.
+- [ ] A problem long enough to wrap clamps at two lines rather than pushing the header down.
+- [ ] Review an objective, accept the `Revisit:` chip, start the next session. The `Problem`
+      line **comes back with it**, same as `Expect`.
+- [ ] Open a session planned **before this shipped**. No `Problem` line, no error, no blank row.
+- [ ] A **match** day session has no `Problem` line: the objective there is the fixture, and
+      there is no template behind it to snapshot one from.
+- [ ] **The judgement call.** Read both lines during a real session. If the `Problem` line tells
+      you nothing the objective text above it did not already, say so — it is one field and one
+      revert, and phases 3 to 6 all hang off it.
+
+### The execution, and the rest of the action (phase 1)
+
+Derived from observations already being logged, so **there is historic data behind this one** —
+unlike the ADR 0009 phases above, a session reviewed before today will show the line correctly.
+
+- [ ] Review a session with **fewer than eight** classifiable observations. There is **no**
+      execution line and no capability line either — not an empty one, not a placeholder.
+- [ ] Review a session with eight or more. **Both** lines appear, capability tally first,
+      execution split directly under it. Neither ever shows without the other.
+- [ ] The split line does **not** repeat *"for this session"*. It reads as the second sentence
+      of the line above it, not as a second report.
+- [ ] Log mostly technique tags. The line says *"N of the M were about the execution; the other
+      K were about the rest of the action."*
+- [ ] Log **only** technique tags — *"All M were about the execution."* No suggestion attached,
+      no nudge to watch something else. This is the wording to check hardest: a set-piece
+      session should be all execution and the app must not imply otherwise.
+- [ ] Log **no** technique tags — *"None of the M were about the execution."* Equally unjudged.
+- [ ] The sentence never contains *tactical*, *decision*, *understanding* or *technical*. There
+      is a test for this, but read it on the screen once anyway.
+- [ ] Log several observations with tags this lens cannot place (`Teamwork`, `Leadership`). They
+      do **not** inflate either side of the split — the denominator is what the lens could read,
+      and the capability line above is where the unreadable ones are accounted for.
+- [ ] Tap the `?` on the split line. It says the two-way grouping is this app's, not the FA's.
+- [ ] **Portrait, 667px.** `/review` has two more banners than it did. It still reaches the
+      `Save review` button without the report block pushing it off the screen.
+- [ ] **The one that decides phase 2.** Read the line after a real session and ask whether it
+      told you something you did not know. If it did not, the expensive phases are aimed at a
+      problem you do not have, and stopping here is the honest answer.
+
 ## The FA 4 Corner Model
 
 - [ ] Open the observation sheet: tags are grouped under the four corners, and every corner is
@@ -301,6 +444,37 @@ will not get kept, and every number downstream of it is then absent rather than 
       players and coaching points are pre-seeded and marked *carried*.
 - [ ] Run the same unresolved point through three sessions and confirm the planner warns:
       *"change the practice, not the point."*
+
+## Several squads (ADR 0010)
+
+Everything here needs two squads with real data in both, so seed the second one before you
+start: a couple of players and one completed session is enough.
+
+- [ ] `Settings -> Squads` on a one-squad install shows that squad marked `Current` and offers
+      `Add another squad`. It is visible **before** there is a second team to switch to.
+- [ ] Add a second squad. It becomes the current one, and `/squad` is empty — the roster you
+      just left is not leaking into it.
+- [ ] `Switch to` the first squad. Today's title, `/squad`'s roster, `/sessions` and the
+      carry-forward chips all change together, with no reload.
+- [ ] Leave a half-finished draft on each squad, then switch back and forth. **Each squad gets
+      its own draft**, and `/plan` never shows you the other team's.
+- [ ] Start a session, then try to switch squads. It refuses and names the running session.
+      Finish or abandon it and the switch works.
+- [ ] Log observations on one squad. Switch to the other and confirm `/squad/player` and the
+      corner-balance report show nothing of them. **This is the one that matters** — the
+      reports are the reason the squads are separate at all.
+- [ ] Rename a squad mid-season. The name changes on Today and `/squad` and nothing else moves.
+- [ ] Archive the squad you are not on. It leaves the list, the toast offers `Undo`, and the
+      squad you are on is untouched.
+- [ ] `Show archived squads` → `Restore`. The roster, the sessions and the observations are all
+      still there, word for word.
+- [ ] Try to archive your only squad. It refuses rather than dropping you to `Name your squad`.
+- [ ] Export with an archived squad present, wipe the browser's site data, and import the file.
+      **The archived squad comes back, archived.** The export is the only backup there is.
+- [ ] Import your own export twice over a two-squad install. The second import is a clean
+      no-op — no duplicate copy of the archived season.
+- [ ] Trigger a crash with two squads loaded and confirm **both** squad names are redacted in
+      the report, the archived one included.
 
 ## The tactical periodization flag (ADR 0008)
 

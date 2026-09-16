@@ -507,7 +507,7 @@ describe('challenges in Do mode', () => {
 });
 
 describe('the corner-grouped tag bank', () => {
-  it('leads with this phase own coaching points, then the expected mistake, then capabilities, then the corners', () => {
+  it('leads with this phase own coaching points, then the mistake, then the options, then capabilities, then the corners', () => {
     const withPoints = session.phases.find((p) => p.coachingPoints.length > 0)!;
     const groups = observationTagGroups(session, withPoints.id);
 
@@ -515,8 +515,11 @@ describe('the corner-grouped tag bank', () => {
     // Second, because the moment a coach reaches for this sheet is usually the moment it has
     // just gone wrong (ADR 0009).
     expect(groups[1]).toMatchObject({ corner: null, label: 'The mistake you expected' });
-    expect(groups[2]).toMatchObject({ corner: null, label: 'Core capabilities' });
-    expect(groups.slice(3).map((group) => group.corner)).toEqual([
+    // Third: the mistake is what a coach reaches for when it has just gone wrong, and the
+    // options are what they reach for the rest of the time (ADR 0011 §4).
+    expect(groups[2]).toMatchObject({ corner: null, label: 'The options' });
+    expect(groups[3]).toMatchObject({ corner: null, label: 'Core capabilities' });
+    expect(groups.slice(4).map((group) => group.corner)).toEqual([
       'technical_tactical',
       'physical',
       'psychological',
@@ -549,8 +552,9 @@ describe('the corner-grouped tag bank', () => {
     // No "This phase" group, but the expected mistake, the capabilities and every corner are
     // still one tap away — which is the point: the empty corner is visible at the moment of
     // logging, not just in the report.
-    expect(groups).toHaveLength(6);
+    expect(groups).toHaveLength(7);
     expect(groups.map((g) => g.label)).toContain('Core capabilities');
+    expect(groups.map((g) => g.label)).toContain('The options');
     expect(groups.flatMap((g) => g.tags)).toContain('Communication');
     expect(groups.flatMap((g) => g.tags)).toContain('Balance');
   });
@@ -811,5 +815,37 @@ describe('heartbeat', () => {
 
     expect(beaten.run?.lastHeartbeatAt).toBe(clock().nowIso());
     expect(beaten.run?.phaseRuns).toEqual(session.run?.phaseRuns);
+  });
+});
+
+describe('the options, as chips', () => {
+  it('offers them in the objective own order, never sorted', () => {
+    // A coach reads the first chip as the recommended answer, so the order has to carry
+    // something other than preference — it is the order these happen in the game.
+    const groups = observationTagGroups(session);
+    const group = groups.find((candidate) => candidate.label === 'The options')!;
+
+    expect(group.tags).toEqual([...session.objective.options]);
+    expect(group.corner).toBeNull();
+  });
+
+  it('offers no group at all for an objective that poses no choice', () => {
+    // Two library entries, and every typed objective. An empty group would be a heading with
+    // nothing under it on the screen a coach uses most.
+    const noOptions = { ...session, objective: { ...session.objective, options: [] } };
+    const labels = observationTagGroups(noOptions).map((group) => group.label);
+    expect(labels).not.toContain('The options');
+  });
+
+  it('drops an option that duplicates a coaching point, rather than showing it twice', () => {
+    const phase = session.phases.find((p) => p.coachingPoints.length > 0)!;
+    const duplicated = {
+      ...session,
+      objective: { ...session.objective, options: [phase.coachingPoints[0]!.text, 'Went long'] },
+    };
+
+    const groups = observationTagGroups(duplicated, phase.id);
+    const group = groups.find((candidate) => candidate.label === 'The options')!;
+    expect(group.tags).toEqual(['Went long']);
   });
 });

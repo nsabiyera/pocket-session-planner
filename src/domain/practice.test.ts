@@ -16,6 +16,8 @@ import {
   describePracticeArea,
   describeSessionShape,
   MAX_GROUP_SIZE,
+  PHASE_TARGETS,
+  PhaseTargetsSchema,
   PRACTICE_SPECTRUM,
   PracticeAreaSchema,
   PracticeSpectrumSchema,
@@ -23,6 +25,10 @@ import {
   relativePlayingArea,
   spectrumDescription,
   spectrumLabel,
+  targetsDescription,
+  targetsLabel,
+  targetsPhrase,
+  targetsShortLabel,
   spectrumRank,
   spectrumShortLabel,
   type PracticeSpectrum,
@@ -347,5 +353,44 @@ describe('describeStepCoverage', () => {
     ] as StepLetter[][]) {
       expect(line(...steps)).not.toMatch(/should|try|balance|even|more of|too much/i);
     }
+  });
+});
+
+describe('direction and targets', () => {
+  it('labels, shortens, describes and phrases all four', () => {
+    for (const targets of PHASE_TARGETS) {
+      expect(targetsLabel(targets).length, targets).toBeGreaterThan(0);
+      expect(targetsShortLabel(targets).length, targets).toBeGreaterThan(0);
+      expect(targetsDescription(targets).length, targets).toBeGreaterThan(10);
+      expect(targetsPhrase(targets).length, targets).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps the short labels short enough for four across a 375px row', () => {
+    for (const targets of PHASE_TARGETS) {
+      expect(targetsShortLabel(targets).length, targets).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it('phrases read inside a sentence rather than as buttons', () => {
+    // The phrase is what `describeRepresentativeness` splices in, so it has to begin with a
+    // preposition rather than a capital.
+    for (const targets of PHASE_TARGETS) {
+      expect(targetsPhrase(targets), targets).toMatch(/^(to|with) /);
+    }
+  });
+
+  it('covers exactly the four values, and no more', () => {
+    expect([...PHASE_TARGETS].sort()).toEqual(['lines', 'none', 'one_goal', 'two_goals']);
+    expect(PhaseTargetsSchema.safeParse('two_goals').success).toBe(true);
+    expect(PhaseTargetsSchema.safeParse('goals').success).toBe(false);
+  });
+
+  it('claims no ordering, unlike the practice spectrum', () => {
+    // `PHASE_TARGETS` is a render order. If anything ever derives a rank from its index the
+    // way `spectrumRank` does, that is a decision the app has no grounds for — this test is
+    // here to make the intent explicit rather than to assert behaviour.
+    expect(PHASE_TARGETS).toHaveLength(4);
+    expect(PHASE_TARGETS[0]).toBe('two_goals');
   });
 });

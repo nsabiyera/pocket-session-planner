@@ -42,6 +42,15 @@ import { coachingPointChecks, type CoachingPointChecks } from '@/domain/coaching
 import { followUpSummary, type DeliveredPoint, type FollowUpSummary } from '@/domain/checking';
 import { questioningSummary, type QuestioningSummary } from '@/domain/questioning';
 import { describeRepresentativeness } from '@/domain/practice/match';
+import { comparePair, describePair, pairedPhases } from '@/domain/session/pairing';
+import {
+  describeAppearance,
+  describeTransfer,
+  hasEnoughForTransfer,
+  MAX_TRANSFER_LINES,
+  transferRecord,
+  transferSubject,
+} from '@/domain/session/transfer';
 import {
   adjustmentSummary,
   choiceSummary,
@@ -146,6 +155,24 @@ export interface ReviewDraftData {
    */
   representativeness: string | null;
   /**
+   * *"Both games match on everything recorded, so the comparison holds."* — or what changed
+   * between the two, when something did (ADR 0011 §3).
+   *
+   * **Empty for four of the five presets**, which pair nothing, so the screen shows nothing
+   * rather than explaining that this session had no pair to compare. One entry per pair: a
+   * methodology with two pairs would render two lines, and only Whole-Part-Whole ships one.
+   */
+  pairedGames: string[];
+  /**
+   * **Did the thing you isolated come back in the game?** (ADR 0011 §§6–7.)
+   *
+   * Null unless this session both isolated something and got to a game — a *shape* rather than
+   * a sample, so a single observation is enough and most sessions still get nothing. Null
+   * renders nothing at all rather than *"not enough evidence"*, which for the commonest case
+   * would be the line a coach sees most often.
+   */
+  transfer: { headline: string; appearances: string[] } | null;
+  /**
    * *"5 coaching points delivered. 1 checked."*
    *
    * The check-for-understanding line (ADR 0009). Counts of two things the coach did, across
@@ -211,6 +238,8 @@ export async function loadReviewData(
     stepCoverage: stepCoverage(session.run?.practiceAdjustments ?? []),
     choice: choiceSummary(session),
     representativeness: describeRepresentativeness(representativeness(session, squad?.ageGroup)),
+    pairedGames: pairedPhases(session).map((pair) => describePair(comparePair(pair))),
+    transfer: transferOf(session, observations),
     coachingPointChecks: coachingPointChecks(
       session.phases.flatMap((phase) => phase.coachingPoints),
     ),
@@ -537,4 +566,31 @@ export async function dropAction(
     resolvedAt: at,
     updatedAt: at,
   });
+}
+
+/**
+ * The transfer report, or null when this session cannot make the comparison.
+ *
+ * The subject is derived here rather than defaulted inside `transferRecord`, so that the one
+ * decision the report turns on — *which tags are evidence about this practice* — is visible at
+ * the call site instead of being something a caller can forget to pass.
+ *
+ * Sliced to {@link MAX_TRANSFER_LINES}: a session can name ten coaching points per phase, so
+ * even the narrowed subject has a long tail, and a report a coach scrolls is one a coach skims.
+ */
+function transferOf(
+  session: Session,
+  observations: readonly Observation[],
+): ReviewDraftData['transfer'] {
+  const record = transferRecord({
+    phases: session.phases,
+    subject: transferSubject(session),
+    observations,
+  });
+  if (!hasEnoughForTransfer(record)) return null;
+
+  return {
+    headline: describeTransfer(record),
+    appearances: record.tags.slice(0, MAX_TRANSFER_LINES).map(describeAppearance),
+  };
 }

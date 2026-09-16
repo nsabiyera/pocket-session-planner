@@ -1161,6 +1161,36 @@ summary {
 }
 
 /*
+  The game problem (ADR 0011 §1). Deliberately styled as the misconception's twin — same
+  eyebrow, same size, same clamp — because the two are halves of one thought, and a second
+  visual treatment would read as a second kind of information.
+
+  These two blocks are the only part of the Do-mode header that grows with the prose, and the
+  header has to leave the two 96px actions on a 667px screen. If the field test fails on that,
+  **this is the line to cut**: it is the newer of the two, and the objective text directly
+  above already names the problem in short form.
+*/
+.run-problem {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+
+.run-problem .eyebrow {
+  flex: none;
+}
+
+.run-problem-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/*
   The predicted misconception. Quiet by default — it is a reminder, not an alarm.
 
   **Two lines, then clamped.** Do mode has to fit 667px with no scrolling, so a header that
@@ -1268,6 +1298,25 @@ summary {
   border-radius: var(--radius);
   padding: var(--sp-3);
   background: var(--card);
+}
+
+/*
+  The methodology's prompt for this phase (known-issues.md issue 4), first in the points
+  section and styled as an aside rather than an item: no bullet, no tap target, no tick.
+  It is the only thing in this section the coach cannot act on, and it has to read that way
+  or it will be mistaken for a coaching point they have forgotten to deliver.
+
+  The same class does the list in the phase sheet, where `list-style: none` is what stops the
+  `<li>` growing a marker the Do-mode `<p>` never had.
+*/
+.run-prompt {
+  list-style: none;
+  margin-bottom: var(--sp-2);
+  padding-left: var(--sp-3);
+  border-left: 2px solid var(--line);
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--ink-soft);
 }
 
 .point {

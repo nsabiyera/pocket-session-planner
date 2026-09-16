@@ -134,6 +134,10 @@ house conventions in `hodorhub`; the rest are modelling calls this app had to ma
   behind a default-off flag in Settings
 - [ADR 0009](docs/adr/0009-checking-for-understanding.md) — checking for understanding as
   records of coach actions, never a measurement of a player
+- [ADR 0010](docs/adr/0010-several-squads-switched-in-settings.md) — several squads, switched in
+  Settings, with one pointer deciding which squad every screen is about
+- [ADR 0011](docs/adr/0011-teaching-games-for-understanding.md) — Teaching Games for Understanding
+  as a game-centred planning and review spine
 
 ## Testing
 

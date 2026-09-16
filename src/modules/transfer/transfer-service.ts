@@ -52,7 +52,9 @@ export async function exportAll(
 }
 
 async function collect(store: PocketDataStore, squadId?: SquadId): Promise<TransferData> {
-  const squads = (await store.squads.list({ includeDeleted: true })).filter(
+  // Archived squads included, and this is load-bearing: last season's U12s are the *most*
+  // likely thing a coach would be devastated to find missing from their only backup.
+  const squads = (await store.squads.list({ includeDeleted: true, includeArchived: true })).filter(
     (squad) => squadId === undefined || squad.id === squadId,
   );
 
@@ -453,12 +455,13 @@ async function checkReferences(
 }
 
 async function idsOf(store: PocketDataStore, name: 'squads' | 'players' | 'sessions') {
+  // Archived squads count as present, or an import would diff their rows as brand new and
+  // write a second copy of last season alongside the first.
+  const options = { includeDeleted: true, includeArchived: true };
   if (name === 'squads') {
-    return new Set(
-      (await store.squads.list({ includeDeleted: true })).map((row) => row.id as string),
-    );
+    return new Set((await store.squads.list(options)).map((row) => row.id as string));
   }
-  const squads = await store.squads.list({ includeDeleted: true });
+  const squads = await store.squads.list(options);
   const rows = (
     await Promise.all(
       squads.map((squad) =>

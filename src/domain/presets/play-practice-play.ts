@@ -26,6 +26,7 @@ export const PLAY_PRACTICE_PLAY: MethodologyPreset = MethodologyPresetSchema.par
   phaseTemplates: [
     {
       id: 'ppp-play-1',
+      defaultTargets: 'two_goals',
       order: 0,
       defaultConstraints: [],
       defaultSpectrum: 'matched_up',
@@ -94,6 +95,7 @@ export const PLAY_PRACTICE_PLAY: MethodologyPreset = MethodologyPresetSchema.par
     },
     {
       id: 'ppp-play-2',
+      defaultTargets: 'two_goals',
       order: 3,
       defaultConstraints: [],
       defaultSpectrum: 'matched_up',

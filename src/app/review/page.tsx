@@ -38,7 +38,9 @@ import { REFLECTION_PROMPTS } from '@/domain/practice/match';
 import { describeAdjustments, describeStepCoverage, hasEnoughForStepView } from '@/domain/practice';
 import {
   describeCapabilityCoverage,
+  describeExecutionSplit,
   describeMomentCoverage,
+  executionSplit,
   hasEnoughForCapabilityView,
   hasEnoughForMomentView,
 } from '@/domain/capabilities/coverage';
@@ -396,6 +398,38 @@ export default function ReviewPage() {
           ) : null}
 
           {/*
+            **Was the second game the same game?** Only Whole-Part-Whole pairs its phases, so
+            for four of the five presets this renders nothing at all — and nothing is the right
+            answer, rather than a line explaining that this session had no pair.
+          */}
+          {data.pairedGames.map((sentence) => (
+            <div key={sentence} className="banner banner--signal">
+              {sentence}
+              <Why id="report:paired-phases" />
+            </div>
+          ))}
+
+          {/*
+            **Did it come back in the game?** Only for a session that both isolated something
+            and got to a game, which is why most reviews show nothing here — and nothing,
+            rather than a line explaining that this session had no comparison to make.
+
+            The headline first, then a line per tag: the counts are the report, and the tags
+            are quoted as the coach tapped them.
+          */}
+          {data.transfer ? (
+            <div className="banner banner--signal">
+              {data.transfer.headline}
+              <Why id="report:transfer" />
+              <ul className="stack stack--tight">
+                {data.transfer.appearances.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {/*
             The FA's fourth area. Last of the derived lines because it is the newest and the
             least evidenced - the app is counting a toggle, and the `Why?` says so.
           */}
@@ -498,10 +532,24 @@ export default function ReviewPage() {
             coach learns to ignore the app.
           */}
           {hasEnoughForCapabilityView(data.capabilityCoverage) ? (
-            <div className="banner banner--signal">
-              {describeCapabilityCoverage(data.capabilityCoverage, 'this session')}
-              <Why id="report:capability-coverage" />
-            </div>
+            <>
+              <div className="banner banner--signal">
+                {describeCapabilityCoverage(data.capabilityCoverage, 'this session')}
+                <Why id="report:capability-coverage" />
+              </div>
+
+              {/*
+                The same six, regrouped once: the execution against the rest of the action.
+                Behind the *same* gate deliberately — it is a coarser cut of the line above,
+                so it needs no floor of its own, and it reads as that line's second sentence
+                rather than as a second report. See `coverage.ts` on why it never says
+                "tactical".
+              */}
+              <div className="banner banner--signal">
+                {describeExecutionSplit(executionSplit(data.capabilityCoverage))}
+                <Why id="report:execution-split" />
+              </div>
+            </>
           ) : null}
 
           {/*

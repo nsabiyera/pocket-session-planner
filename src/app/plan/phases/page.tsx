@@ -53,6 +53,9 @@ import {
   PRACTICE_SPECTRUM,
   spectrumDescription,
   spectrumShortLabel,
+  targetsDescription,
+  targetsShortLabel,
+  PHASE_TARGETS,
 } from '@/domain/practice';
 import {
   phasesInOrder,
@@ -60,6 +63,7 @@ import {
   type Session,
   type SessionPhase,
 } from '@/domain/session';
+import { comparePair, describePair } from '@/domain/session/pairing';
 import { shortPlayerName, type Player } from '@/domain/player';
 import { isErr } from '@/lib/result';
 
@@ -366,6 +370,7 @@ export default function PhaseEditorPage() {
 
       <PhaseSheet
         phase={editing}
+        pairedWith={pairedWithOf(session, editing)}
         sessionId={session.id}
         rosterSize={state.players.length}
         onClose={() => setEditing(null)}
@@ -397,14 +402,40 @@ function describeChallengePlan(session: Session, roster: readonly Player[]): str
   return rest === 0 ? `${head}.` : `${head}, and ${rest} other${rest === 1 ? '' : 's'}.`;
 }
 
+/**
+ * The other half of a paired practice, and which half it is (ADR 0011 §3).
+ *
+ * The sheet only ever holds one phase, so the comparison needs the other one handed to it —
+ * and it has to work from whichever end the coach opened. Editing the second WHOLE gives the
+ * first as `earlier`; editing the first gives the second as `later`, because a coach who
+ * shrinks the *first* game has broken the comparison just as thoroughly.
+ */
+function pairedWithOf(
+  session: Session,
+  phase: SessionPhase | null,
+): { phase: SessionPhase; role: 'earlier' | 'later' } | null {
+  if (!phase) return null;
+
+  if (phase.pairedWithPhaseId !== null) {
+    const earlier = session.phases.find((other) => other.id === phase.pairedWithPhaseId);
+    return earlier ? { phase: earlier, role: 'earlier' } : null;
+  }
+
+  const later = session.phases.find((other) => other.pairedWithPhaseId === phase.id);
+  return later ? { phase: later, role: 'later' } : null;
+}
+
 function PhaseSheet({
   phase,
+  pairedWith,
   sessionId,
   rosterSize,
   onClose,
   onSave,
 }: {
   phase: SessionPhase | null;
+  /** Null for every phase of the four presets that pair nothing. */
+  pairedWith: { phase: SessionPhase; role: 'earlier' | 'later' } | null;
   sessionId: SessionId;
   /** Seeds the group-size stepper. See the note on the stepper itself. */
   rosterSize: number;
@@ -518,6 +549,57 @@ function PhaseSheet({
           <Why id="report:practice-spectrum" />
         </p>
       </div>
+
+      {/*
+        **Direction** (ADR 0011 §2), directly under the spectrum because the two are one
+        thought: how close to the game, and towards what. Same chip row, same take-it-back
+        gesture on the pressed chip, and the methodology has usually answered it already.
+
+        Four across fits at 375px on the short labels, which is why `targetsShortLabel`
+        exists at all. **Nothing renders this in Do mode** — a coach standing in the practice
+        can see where the goals are. It is here and on `/review`, and the field's docstring
+        says so, so that nobody later "completes" the phase card with it.
+      */}
+      <div className="field">
+        <label id="phase-targets">What are they playing towards?</label>
+        <div className="row row--wrap" role="group" aria-labelledby="phase-targets">
+          {PHASE_TARGETS.map((targets) => (
+            <Chip
+              key={targets}
+              label={targetsShortLabel(targets)}
+              pressed={draft.targets === targets}
+              onClick={() =>
+                setDraft({ ...draft, targets: draft.targets === targets ? null : targets })
+              }
+            />
+          ))}
+        </div>
+        <p className="card-meta">
+          {draft.targets ? targetsDescription(draft.targets) : 'Not set.'}
+          <Why id="report:phase-targets" />
+        </p>
+      </div>
+
+      {/*
+        **The paired game, compared against this draft as it is typed** (ADR 0011 §3).
+
+        It recomputes from `draft` rather than from the saved phase, which is the whole value:
+        the coach sees the comparison break while they are breaking it, not twenty minutes
+        later on `/review`. It **never blocks the save** — a coach shrinking the pitch because
+        half the squad did not turn up has done nothing wrong.
+      */}
+      {pairedWith ? (
+        <p className="banner banner--signal">
+          {describePair(
+            comparePair(
+              pairedWith.role === 'earlier'
+                ? { earlier: pairedWith.phase, later: draft }
+                : { earlier: draft, later: pairedWith.phase },
+            ),
+          )}
+          <Why id="report:paired-phases" />
+        </p>
+      ) : null}
 
       {/*
         **Everything the methodology already answered, behind one disclosure.**

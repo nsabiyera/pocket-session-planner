@@ -4,6 +4,9 @@ import {
   findObjectiveTemplateByText,
   objectiveUsageFrom,
   MAX_MISCONCEPTION,
+  MAX_OPTION,
+  MAX_OPTIONS_PER_OBJECTIVE,
+  MAX_TACTICAL_PROBLEM,
   OBJECTIVE_LIBRARY,
   OBJECTIVE_THEMES,
   momentOf,
@@ -47,6 +50,129 @@ describe('the objective library', () => {
    * interpretable. It ships with all fourteen so the default path stays typing-free, and the
    * guards below are the honesty rules rather than mere presence checks.
    */
+  /**
+   * ADR 0011 §1: the game problem is what a TGfU session starts from, and the field the rest
+   * of that ADR hangs off. The guards here are the same shape as the misconception's below —
+   * honesty rules, not presence checks — plus one the misconception does not need: it has to
+   * be a question, because §5 asks it out loud without rewriting it.
+   */
+  describe('the game problem', () => {
+    it('ships with every objective, so the default path costs no typing', () => {
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem.trim().length, objective.id).toBeGreaterThan(20);
+        expect(objective.tacticalProblem.length, objective.id).toBeLessThanOrEqual(
+          MAX_TACTICAL_PROBLEM,
+        );
+      }
+    });
+
+    it('is a question, in all fourteen', () => {
+      // Not a stylistic rule. ADR 0011 §5 offers this string to the coach as a prompt, and a
+      // problem written as a statement would have to be rewritten before it could be asked.
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem.trim(), objective.id).toMatch(/\?$/);
+      }
+    });
+
+    it('describes the situation, never the child', () => {
+      const person = /lazy|stupid|careless|thick|slow|weak|useless|cannot be bothered|no good/i;
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem, objective.id).not.toMatch(person);
+      }
+    });
+
+    it('poses a problem rather than claiming anything about understanding', () => {
+      // ADR 0009 §1 again, and it binds every string this feature adds.
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem, objective.id).not.toMatch(
+          /understood|comprehen|grasped|learned/i,
+        );
+      }
+    });
+
+    it('is distinct per objective — a shared problem would pose nothing', () => {
+      const all = OBJECTIVE_LIBRARY.map((objective) => objective.tacticalProblem);
+      expect(new Set(all).size).toBe(all.length);
+    });
+
+    it('is not the misconception said twice', () => {
+      // They are different halves: the problem is the situation, the misconception is what
+      // will go wrong in it. An entry where they matched would mean one of them was wasted.
+      for (const objective of OBJECTIVE_LIBRARY) {
+        expect(objective.tacticalProblem, objective.id).not.toBe(objective.commonMisconception);
+      }
+    });
+  });
+
+  /**
+   * ADR 0011 §4 as amended: the options are the one genuinely new thing in the decision
+   * observation, and they ship as chips rather than a form. The guards are about what the app
+   * must not imply.
+   */
+  describe('the options', () => {
+    const withOptions = OBJECTIVE_LIBRARY.filter((objective) => objective.options.length > 0);
+
+    it('covers most of the library, and says nothing where there is no choice to make', () => {
+      // Scanning poses a perception and communication poses a habit. Inventing three
+      // alternatives for either would put the app's invention on the observation sheet.
+      expect(withOptions.length).toBeGreaterThanOrEqual(10);
+      expect(findObjectiveTemplate('scanning')!.options).toEqual([]);
+      expect(findObjectiveTemplate('communication')!.options).toEqual([]);
+    });
+
+    it('offers two to four, each short enough for a chip', () => {
+      for (const objective of withOptions) {
+        expect(objective.options.length, objective.id).toBeGreaterThanOrEqual(2);
+        expect(objective.options.length, objective.id).toBeLessThanOrEqual(
+          MAX_OPTIONS_PER_OBJECTIVE,
+        );
+        for (const option of objective.options) {
+          expect(option.length, `${objective.id}: ${option}`).toBeLessThanOrEqual(MAX_OPTION);
+          expect(option.trim(), objective.id).toBe(option);
+        }
+      }
+    });
+
+    it('is distinct within an objective', () => {
+      for (const objective of withOptions) {
+        expect(new Set(objective.options).size, objective.id).toBe(objective.options.length);
+      }
+    });
+
+    it('never repeats the misconception as an option', () => {
+      // They are different things on the sheet: one is the error you predicted, the others
+      // are the choices available. The same string in both groups would be one button twice.
+      for (const objective of withOptions) {
+        for (const option of objective.options) {
+          expect(objective.commonMisconception, objective.id).not.toBe(option);
+        }
+      }
+    });
+
+    it('describes an action, and never labels the player', () => {
+      // Some options are plainly the thing a coach would rather not see — "Dived in", "Stood
+      // off". That is fine: they are actions. A word about the child would not be.
+      // Whole words only: "Slowed it down" is an action a coach watches for, and a blunt
+      // /slow/ would have rejected it as a label about the child.
+      const person = /\b(lazy|stupid|careless|thick|slow|weak|useless|selfish|bad|poor)\b/i;
+      for (const objective of withOptions) {
+        for (const option of objective.options) {
+          expect(option, objective.id).not.toMatch(person);
+        }
+      }
+    });
+
+    it('marks none of them as the right answer, in any form', () => {
+      // No asterisk, no "(best)", no ordering hint in the text. The app has no view, and the
+      // coach's view goes in the rating token beside the tag.
+      for (const objective of withOptions) {
+        for (const option of objective.options) {
+          expect(option, objective.id).not.toMatch(/best|correct|right|wrong|should|ideal|\*/i);
+        }
+      }
+    });
+  });
+
   describe('the predicted misconception', () => {
     it('ships with every objective, so the default path costs no typing', () => {
       for (const objective of OBJECTIVE_LIBRARY) {
@@ -115,6 +241,8 @@ describe('orderObjectives', () => {
     successCriteria: ['x'],
     coachingPoints: ['a', 'b', 'c', 'd'],
     commonMisconception: 'They do the wrong thing, in the way we expected.',
+    tacticalProblem: 'The situation keeps arising. How do we solve it?',
+    options: ['One way', 'The other way'],
     preferredPhaseKind: 'skill_practice',
     primaryCorner: 'technical_tactical',
   });

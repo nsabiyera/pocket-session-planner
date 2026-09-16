@@ -8,6 +8,7 @@ import {
   MAX_ADJUSTMENT_TEXT,
   MAX_ADJUSTMENTS_PER_PHASE,
   MAX_CONSTRAINTS_PER_PHASE,
+  PHASE_TARGETS,
   PRACTICE_SPECTRUM,
   STEP_LETTERS,
 } from '../practice';
@@ -368,5 +369,125 @@ describe('preset player choice', () => {
     const counts = METHODOLOGY_PRESETS.map((preset) => choiceTemplates(preset.id).length);
     expect(Math.max(...counts)).toBeGreaterThan(0);
     expect(Math.min(...counts)).toBe(0);
+  });
+});
+
+/**
+ * Direction (ADR 0011 §2). Seeded **only where the methodology actually dictates it**, which
+ * is the difference between this and `defaultSpectrum`: a null here means the preset has no
+ * opinion, not that the phase is not a practice.
+ */
+describe('what the presets say the players play towards', () => {
+  const NOT_A_PRACTICE = new Set<PhaseKind>(['huddle', 'player_review', 'water_break']);
+
+  it.each(METHODOLOGY_PRESETS)('$name never gives a huddle something to score in', (preset) => {
+    for (const template of preset.phaseTemplates) {
+      if (!NOT_A_PRACTICE.has(template.kind)) continue;
+      expect(template.defaultTargets, `${template.id} is a ${template.kind}`).toBeNull();
+    }
+  });
+
+  it.each(METHODOLOGY_PRESETS)('$name only ever uses the four', (preset) => {
+    for (const template of preset.phaseTemplates) {
+      if (template.defaultTargets === null) continue;
+      expect(PHASE_TARGETS).toContain(template.defaultTargets);
+    }
+  });
+
+  it.each(METHODOLOGY_PRESETS)('$name sends every matched-up game to goals', (preset) => {
+    // A matched-up practice is "the game, or as close to it as the space allows". One with
+    // nothing to score in is a contradiction the seeding must not contain.
+    for (const template of preset.phaseTemplates) {
+      if (template.defaultSpectrum !== 'matched_up') continue;
+      if (template.defaultTargets === null) continue;
+      expect(template.defaultTargets, template.id).not.toBe('none');
+    }
+  });
+
+  it('gives an unopposed block nothing to play towards, where it said so at all', () => {
+    for (const preset of METHODOLOGY_PRESETS) {
+      for (const template of preset.phaseTemplates) {
+        if (template.defaultSpectrum !== 'unopposed') continue;
+        if (template.defaultTargets === null) continue;
+        expect(template.defaultTargets, template.id).toBe('none');
+      }
+    }
+  });
+
+  it('agrees with itself across the two Whole-Part-Whole games', () => {
+    // The precondition for the roadmap's next phase: if the two WHOLEs disagreed on direction
+    // out of the box, the transfer comparison would be broken before a coach touched it.
+    const wpw = METHODOLOGY_PRESETS.find((preset) => preset.id === 'whole-part-whole')!;
+    const first = wpw.phaseTemplates.find((template) => template.id === 'wpw-whole-1')!;
+    const second = wpw.phaseTemplates.find((template) => template.id === 'wpw-whole-2')!;
+
+    expect(first.defaultTargets).toBe('two_goals');
+    expect(second.defaultTargets).toBe(first.defaultTargets);
+    expect(second.defaultSpectrum).toBe(first.defaultSpectrum);
+  });
+
+  it('says nothing where the coach genuinely decides', () => {
+    // Play-Practice-Play's PRACTICE is an overload, and whether it runs to a goal or as a
+    // rondo is the coach's call. A preset guessing here would put a number the coach never
+    // chose into the match comparison.
+    const ppp = METHODOLOGY_PRESETS.find((preset) => preset.id === 'play-practice-play')!;
+    const practice = ppp.phaseTemplates.find((template) => template.id === 'ppp-practice')!;
+    expect(practice.defaultTargets).toBeNull();
+  });
+});
+
+describe('the paired games', () => {
+  it('is Whole-Part-Whole, and only Whole-Part-Whole', () => {
+    // The discipline is in one methodology. The other four make no claim of transfer between
+    // two phases, so a pairing on any of them would invent a comparison nobody asked for.
+    for (const preset of METHODOLOGY_PRESETS) {
+      const paired = preset.phaseTemplates.filter((template) => template.pairsWith !== null);
+      expect(paired.length, preset.id).toBe(preset.id === 'whole-part-whole' ? 1 : 0);
+    }
+  });
+
+  it('points the second WHOLE at the first, and never forwards', () => {
+    const wpw = METHODOLOGY_PRESETS.find((preset) => preset.id === 'whole-part-whole')!;
+    const templates = orderedTemplates(wpw);
+    const second = templates.find((template) => template.pairsWith !== null)!;
+    const first = templates.find((template) => template.id === second.pairsWith)!;
+
+    expect(second.id).toBe('wpw-whole-2');
+    expect(first.id).toBe('wpw-whole-1');
+    // Backwards only, which is what makes a cycle unrepresentable rather than merely invalid.
+    expect(first.order).toBeLessThan(second.order);
+  });
+
+  it('rejects a pairing that points forwards, at itself, or at nothing', () => {
+    const wpw = METHODOLOGY_PRESETS.find((preset) => preset.id === 'whole-part-whole')!;
+    const bend = (mutate: (templates: typeof wpw.phaseTemplates) => unknown[]) =>
+      MethodologyPresetSchema.safeParse({ ...wpw, phaseTemplates: mutate(wpw.phaseTemplates) });
+
+    // Forwards: the first WHOLE claiming to match the second.
+    expect(
+      bend((templates) =>
+        templates.map((template) =>
+          template.id === 'wpw-whole-1' ? { ...template, pairsWith: 'wpw-whole-2' } : template,
+        ),
+      ).success,
+    ).toBe(false);
+
+    // Itself.
+    expect(
+      bend((templates) =>
+        templates.map((template) =>
+          template.id === 'wpw-whole-2' ? { ...template, pairsWith: 'wpw-whole-2' } : template,
+        ),
+      ).success,
+    ).toBe(false);
+
+    // A template that is not there — the hand-edited import case.
+    expect(
+      bend((templates) =>
+        templates.map((template) =>
+          template.id === 'wpw-whole-2' ? { ...template, pairsWith: 'wpw-nope' } : template,
+        ),
+      ).success,
+    ).toBe(false);
   });
 });

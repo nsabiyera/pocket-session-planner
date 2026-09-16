@@ -60,6 +60,11 @@ export function applyCarryForwardActions(
       case 'objective': {
         if (!objectiveTaken) {
           objectiveTaken = true;
+          // A revisited objective keeps the game problem and the predicted error it arrived
+          // with, which is the case where both have already earned their keep once. Found by
+          // text, because that is all a stored action carries — see
+          // `findObjectiveTemplateByText`, and note it is deliberately not a fuzzy match.
+          const revisited = findObjectiveTemplateByText(payload.text);
           session = {
             ...session,
             objective: {
@@ -67,11 +72,9 @@ export function applyCarryForwardActions(
               successCriteria: payload.successCriteria.slice(0, 5),
               sourceActionId: action.id,
               principleId: null,
-              // A revisited objective keeps its predicted error, which is the case where the
-              // prediction has already earned its keep once. Found by text, because that is
-              // all a stored action carries — see `findObjectiveTemplateByText`.
-              commonMisconception:
-                findObjectiveTemplateByText(payload.text)?.commonMisconception ?? null,
+              tacticalProblem: revisited?.tacticalProblem ?? null,
+              options: [...(revisited?.options ?? [])],
+              commonMisconception: revisited?.commonMisconception ?? null,
             },
           };
           applied.push(action.id);

@@ -98,9 +98,12 @@ export async function startDraft(
     successCriteria: [...(template?.successCriteria ?? [])],
     sourceActionId: null,
     principleId: null,
-    // Rides in with the objective chip, so the predicted error costs no typing on the path
-    // almost every session takes. A coach who typed their own objective gets null, and the
-    // Do-mode line simply does not appear — silence over invention (ADR 0009 §1).
+    // Both ride in with the objective chip, so neither the game problem nor the predicted
+    // error costs any typing on the path almost every session takes. A coach who typed their
+    // own objective gets null for both, and the two Do-mode lines simply do not appear —
+    // silence over invention (ADR 0009 §1, ADR 0011 §1).
+    tacticalProblem: template?.tacticalProblem ?? null,
+    options: [...(template?.options ?? [])],
     commonMisconception: template?.commonMisconception ?? null,
   };
 
@@ -159,9 +162,12 @@ export async function startMatchDraft(
     successCriteria: [...(template?.successCriteria ?? [])],
     sourceActionId: null,
     principleId: null,
-    // Rides in with the objective chip, so the predicted error costs no typing on the path
-    // almost every session takes. A coach who typed their own objective gets null, and the
-    // Do-mode line simply does not appear — silence over invention (ADR 0009 §1).
+    // Both ride in with the objective chip, so neither the game problem nor the predicted
+    // error costs any typing on the path almost every session takes. A coach who typed their
+    // own objective gets null for both, and the two Do-mode lines simply do not appear —
+    // silence over invention (ADR 0009 §1, ADR 0011 §1).
+    tacticalProblem: template?.tacticalProblem ?? null,
+    options: [...(template?.options ?? [])],
     commonMisconception: template?.commonMisconception ?? null,
   };
 
@@ -232,6 +238,8 @@ export async function addFixtures(
         successCriteria: [],
         sourceActionId: null,
         principleId: null,
+        tacticalProblem: null,
+        options: [],
         commonMisconception: null,
       },
       match: details,

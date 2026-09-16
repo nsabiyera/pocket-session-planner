@@ -79,6 +79,23 @@ describe('startDraft', () => {
     expect(practice?.coachingPoints.some((p) => p.source === 'coach')).toBe(true);
   });
 
+  it('brings the game problem with it, so Do mode has something to pin', async () => {
+    const draft = await draftFor();
+    expect(draft.objective.tacticalProblem).toBe(
+      'They press us high. How do we get the ball past their first line without giving it away?',
+    );
+  });
+
+  it('leaves the game problem null for a coach who typed their own objective', async () => {
+    // No template, so nothing to snapshot. The pinned line is absent rather than invented,
+    // which is the same treatment the misconception gets — ADR 0011 §1.
+    const draft = await draftFor({
+      objectiveText: 'Third-man runs off the six',
+      objectiveTemplateId: undefined,
+    });
+    expect(draft.objective.tacticalProblem).toBeNull();
+  });
+
   it('brings the predicted misconception with it, so Do mode has something to pin', async () => {
     const draft = await draftFor();
     expect(draft.objective.commonMisconception).toBe(
@@ -241,6 +258,8 @@ describe('updateDraft', () => {
           successCriteria: [],
           sourceActionId: null,
           principleId: null,
+          tacticalProblem: null,
+          options: [],
           commonMisconception: null,
         },
       }),
@@ -258,6 +277,8 @@ describe('updateDraft', () => {
           successCriteria: [],
           sourceActionId: null,
           principleId: null,
+          tacticalProblem: null,
+          options: [],
           commonMisconception: null,
         },
       }),

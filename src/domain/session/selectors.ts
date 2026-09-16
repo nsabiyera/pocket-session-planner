@@ -348,6 +348,7 @@ export function representativeness(session: Session, ageGroup: string | undefine
   return {
     spectrum: phase?.spectrum ?? null,
     practiceArea: area,
+    targets: phase?.targets ?? null,
     band: ageBandOf(ageGroup),
   };
 }

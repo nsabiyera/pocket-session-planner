@@ -19,13 +19,19 @@ import {
   MAX_GROUP_SIZE,
   MIN_GROUP_SIZE,
   PhaseConstraintSchema,
+  PhaseTargetsSchema,
   PracticeAreaSchema,
   PracticeSpectrumSchema,
 } from './practice';
 import { MatchDetailsSchema, refineMatchDetails } from './match-day';
 import { EffortQualitySchema } from './morphocycle';
 import { MethodologySnapshotSchema, PhaseKindSchema } from './methodology';
-import { MAX_MISCONCEPTION } from './objectives';
+import {
+  MAX_MISCONCEPTION,
+  MAX_OPTION,
+  MAX_OPTIONS_PER_OBJECTIVE,
+  MAX_TACTICAL_PROBLEM,
+} from './objectives';
 import {
   DurationMinSchema,
   IsoDateTimeSchema,
@@ -85,6 +91,29 @@ export const ObjectiveSchema = z.object({
    * reason (ADR 0009 §8).
    */
   commonMisconception: optionalText(MAX_MISCONCEPTION).nullable().default(null),
+  /**
+   * **The game problem the session was built around** (ADR 0011 §1), snapshotted off the
+   * objective library exactly as `successCriteria` and `commonMisconception` are, and for the
+   * same reason: a library entry reworded next season must not rewrite what a coach was
+   * working from in March.
+   *
+   * **Null means the coach did not say**, and that reads honestly for both coaches who get it
+   * — one who planned before this existed, and one who typed their own objective. Neither is
+   * handed an invented problem: the pinned line simply does not appear. Additive, defaulted
+   * and not indexed, so this needs no migration (ADR 0009 §8), the same free path
+   * `commonMisconception` and `principleId` both took.
+   */
+  tacticalProblem: optionalText(MAX_TACTICAL_PROBLEM).nullable().default(null),
+  /**
+   * **The options this session's problem offers** (ADR 0011 §4), snapshotted off the library
+   * beside the problem itself.
+   *
+   * An array with a default rather than nullable, because unlike the problem there is no
+   * difference worth preserving between *the coach did not say* and *there are none*: either
+   * way the sheet shows no option chips. Empty is the honest value for a typed objective, for
+   * the two library entries that pose no choice, and for every session planned before this.
+   */
+  options: z.array(nonEmptyText(MAX_OPTION)).max(MAX_OPTIONS_PER_OBJECTIVE).default([]),
 });
 export type Objective = z.infer<typeof ObjectiveSchema>;
 
@@ -123,6 +152,15 @@ export const SessionPhaseSchema = z.object({
   spectrum: PracticeSpectrumSchema.nullable().default(null),
   /** The grid, in metres. See the note on `PracticeAreaSchema` about metres vs yards. */
   area: PracticeAreaSchema.nullable().default(null),
+  /**
+   * **What they were playing towards** (ADR 0011 §2). Null means the coach did not say, never
+   * *nothing to score in* — that is the explicit `none`, and the difference is the whole
+   * reason this is nullable rather than defaulted to a value.
+   *
+   * Additive, defaulted and not indexed, so a session planned before this parses unchanged
+   * and the match comparison simply reads as it did before.
+   */
+  targets: PhaseTargetsSchema.nullable().default(null),
   /** Players in *this practice* — not the squad, and not `focusPlayerIds`. */
   groupSize: z.number().int().min(MIN_GROUP_SIZE).max(MAX_GROUP_SIZE).nullable().default(null),
   /**
@@ -151,8 +189,31 @@ export const SessionPhaseSchema = z.object({
    * takes the part it should never try to — "two neutrals, keeper joins in when we score".
    */
   organisation: optionalText(500).default(''),
-  /** Copied from the methodology template, shown in Do mode. */
+  /**
+   * Copied from the methodology template. **The first is pinned in Do mode** above this
+   * phase's coaching points, and all six are listed in the phase sheet — see
+   * {@link leadCoachPrompt} for why one rather than all of them.
+   */
   coachPrompts: z.array(nonEmptyText(200)).max(6).default([]),
+  /**
+   * **The earlier phase of this session that this one is supposed to match** (ADR 0011 §3).
+   *
+   * Resolved from `MethodologyPhaseTemplate.pairsWith` when the session is built, and
+   * **deliberately stored rather than looked up later.** The roadmap's Phase 0 amendment said
+   * the comparison would need no session state and be derived through `fromTemplateId`; that
+   * is true only while the methodology document still exists and still says the same thing.
+   * A methodology can be edited or deleted, and `MethodologySnapshot` exists precisely so
+   * that cannot rewrite history — a review line that appeared or vanished depending on
+   * whether the coach later tidied their methodologies would be the same drift in a new place.
+   *
+   * So this is a `PhaseId` within this session, and nothing outside the session is consulted
+   * to read it. It is **not** a frozen copy of the practice: the comparison reads both phases
+   * live, so editing either one changes what the app says, which is the entire point.
+   *
+   * Points backwards, at a phase with a lower `order` — see the note on `pairsWith` for why
+   * that rules out a cycle rather than merely discouraging one.
+   */
+  pairedWithPhaseId: PhaseIdSchema.nullable().default(null),
   /** Provenance back to the methodology that generated this phase. */
   fromTemplateId: PhaseTemplateIdSchema.nullable().default(null),
   sourceActionId: CarryForwardActionIdSchema.nullable().default(null),
@@ -280,6 +341,38 @@ function refineSession(session: z.infer<z.ZodObject<typeof SessionShape>>, ctx: 
           message: `Phase focus player ${playerId} is not a focus player of the session.`,
         });
       }
+    }
+  });
+
+  /*
+    The pairing has to resolve within this session, point backwards, and not point at itself —
+    the same three rules `refineTemplates` holds the methodology to, restated here because a
+    session can be edited long after the methodology that built it.
+  */
+  const orderById = new Map(session.phases.map((phase) => [phase.id, phase.order]));
+  session.phases.forEach((phase, index) => {
+    if (phase.pairedWithPhaseId === null) return;
+
+    const issue = (message: string) =>
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['phases', index, 'pairedWithPhaseId'],
+        message,
+      });
+
+    if (phase.pairedWithPhaseId === phase.id) {
+      issue('A phase cannot be paired with itself.');
+      return;
+    }
+
+    const pairedOrder = orderById.get(phase.pairedWithPhaseId);
+    if (pairedOrder === undefined) {
+      issue('Its paired phase is not in this session.');
+      return;
+    }
+
+    if (pairedOrder >= phase.order) {
+      issue('A paired phase must come earlier in the session.');
     }
   });
 
@@ -440,4 +533,27 @@ export function isFocusPlayer(session: Session, playerId: FocusPlayerAssignment[
 /** Sum of the planned phase durations, which need not equal `plannedDurationMin`. */
 export function totalPlannedPhaseMin(session: Session): number {
   return session.phases.reduce((total, phase) => total + phase.plannedDurationMin, 0);
+}
+
+/**
+ * **The one coach prompt Do mode shows for this phase**, and null when there is none.
+ *
+ * `coachPrompts` holds up to six. Do mode shows the **first** and the phase sheet lists them
+ * all, for three reasons that all point the same way:
+ *
+ * 1. **The presets already rank them.** Whole-Part-Whole's WHOLE reads *"Say almost nothing.
+ *    You are diagnosing, not fixing."* and then *"Pick ONE problem to take into the PART."*
+ *    The first is the instruction for the next twelve minutes; the second is for the end of
+ *    them. Written in that order, by a human, on purpose — so taking the first is reading the
+ *    author's intent rather than guessing at relevance.
+ * 2. **Rotating would be worse than picking.** A line that changes while a coach is looking
+ *    away is a line they cannot rely on, and it would need per-phase timer state to do it.
+ * 3. **Six at once is a paragraph.** Do mode fits 667px without scrolling; a block that grows
+ *    with the methodology is the one thing the header budget cannot absorb.
+ *
+ * The prompts past the first are not lost — {@link SessionPhase.coachPrompts} is listed in
+ * full in the phase sheet, which is a deliberate tap and has no height budget.
+ */
+export function leadCoachPrompt(phase: SessionPhase): string | null {
+  return phase.coachPrompts[0] ?? null;
 }

@@ -19,6 +19,8 @@ const objective = {
   successCriteria: [],
   sourceActionId: null,
   principleId: null,
+  tacticalProblem: null,
+  options: [],
   commonMisconception: null,
 };
 

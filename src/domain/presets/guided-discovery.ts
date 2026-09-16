@@ -104,6 +104,7 @@ export const GUIDED_DISCOVERY: MethodologyPreset = MethodologyPresetSchema.parse
     },
     {
       id: 'gd-test',
+      defaultTargets: 'two_goals',
       order: 4,
       defaultConstraints: [],
       defaultSpectrum: 'matched_up',

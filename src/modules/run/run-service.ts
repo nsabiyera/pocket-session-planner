@@ -589,6 +589,30 @@ export function observationTagGroups(session: Session, phaseId?: PhaseId): Obser
   }
 
   /*
+   * **The options the problem offers, as chips** (ADR 0011 §4, as amended).
+   *
+   * §4 asked for a decision observation with four fields. Three of them already had homes —
+   * the situation is `actionMoment`, the outcome is the rating token, the player's own words
+   * are `playerChallenge.playerSaid` — and this is the fourth, the only new one, reduced to a
+   * tap on the rail the misconception already runs on.
+   *
+   * Third, under the mistake: the mistake is the thing a coach reaches for when it has just
+   * gone wrong, and these are what they reach for the rest of the time. `corner: null` and no
+   * attribute, so the observation stays unclassified rather than filed under a guess.
+   *
+   * **In the objective's own order, never sorted**, and with nothing marking one of them out.
+   * A coach reads the first chip as the recommended answer, so the order has to carry
+   * something other than preference — it is the order these happen in the game.
+   */
+  const optionTags = session.objective.options
+    .map((option) => option.trim())
+    .filter((option) => option.length > 0 && !used.has(option.toLowerCase()));
+  if (optionTags.length > 0) {
+    groups.push({ corner: null, label: 'The options', tags: optionTags });
+    for (const option of optionTags) used.add(option.toLowerCase());
+  }
+
+  /*
    * The FA's six core capabilities, above the corners.
    *
    * `corner: null` like this phase's points, because the group is not a corner — the corner

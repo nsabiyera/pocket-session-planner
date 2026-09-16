@@ -7,7 +7,7 @@ import {
 import { CONSTRAINTS_LED, PLAY_PRACTICE_PLAY, WHOLE_PART_WHOLE } from '../presets';
 import { cloneMethodology } from '../methodology-clone';
 import { resolvePhaseIntervention } from '../intervention';
-import { phasesInOrder, totalPlannedPhaseMin } from '../session';
+import { leadCoachPrompt, phasesInOrder, totalPlannedPhaseMin } from '../session';
 import { isoDateTime } from '../primitives';
 import { FakeIdGenerator } from '@/lib/fake-id-generator';
 import { aSquad, T0 } from '@/test/builders';
@@ -17,6 +17,8 @@ const objective = {
   successCriteria: [],
   sourceActionId: null,
   principleId: null,
+  tacticalProblem: null,
+  options: [],
   commonMisconception: null,
 };
 
@@ -106,6 +108,14 @@ describe('buildSessionFromMethodology', () => {
     const session = build(WHOLE_PART_WHOLE);
     const whole = session.phases.find((p) => p.title.startsWith('WHOLE — play'));
     expect(whole?.coachPrompts).toContain('Pick ONE problem to take into the PART.');
+
+    // The round trip the title has always claimed, asserted rather than assumed: this is the
+    // exact value Do mode pins above the phase's coaching points. `known-issues.md` issue 4
+    // was "copies through" being true while nothing read it — which this half of the test is
+    // what now catches.
+    expect(whole && leadCoachPrompt(whole)).toBe(
+      'Say almost nothing. You are diagnosing, not fixing.',
+    );
   });
 
   it('records template provenance on every phase', () => {
@@ -225,6 +235,41 @@ describe('practice design', () => {
     for (const phase of phasesInOrder(build(PLAY_PRACTICE_PLAY))) {
       expect(phase.area).toBeNull();
       expect(phase.groupSize).toBeNull();
+    }
+  });
+});
+
+describe('resolving the methodology pairing onto the session', () => {
+  it('turns the template pairing into a phase id of this session', () => {
+    // The template names a *template*; the session needs a *phase*. Resolved in a second pass
+    // because the phase a template points at may not have been built on the first.
+    const session = buildSessionFromMethodology(WHOLE_PART_WHOLE, {
+      squad: aSquad(),
+      objective,
+      now: T0,
+      ids: new FakeIdGenerator('dddd'),
+    });
+
+    const phases = phasesInOrder(session);
+    const later = phases.find((phase) => phase.fromTemplateId === 'wpw-whole-2')!;
+    const earlier = phases.find((phase) => phase.fromTemplateId === 'wpw-whole-1')!;
+
+    expect(later.pairedWithPhaseId).toBe(earlier.id);
+    expect(earlier.pairedWithPhaseId).toBeNull();
+    // And it is a phase id, not the template slug it came from.
+    expect(later.pairedWithPhaseId).not.toBe('wpw-whole-1');
+  });
+
+  it('leaves every phase unpaired for a methodology that pairs nothing', () => {
+    const session = buildSessionFromMethodology(PLAY_PRACTICE_PLAY, {
+      squad: aSquad(),
+      objective,
+      now: T0,
+      ids: new FakeIdGenerator('eeee'),
+    });
+
+    for (const phase of session.phases) {
+      expect(phase.pairedWithPhaseId, phase.title).toBeNull();
     }
   });
 });
